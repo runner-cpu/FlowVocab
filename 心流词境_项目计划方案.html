@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>「心流词境」FlowVocab · 游戏化四六级英语学习平台 项目计划方案</title>
+<style>
+  :root{
+    --accent:#9BBBF4; --accent-deep:#5B7FD4; --ink:#1A1B1C; --ink-2:#4B5563;
+    --muted:#6B7280; --bg:#F7F6F2; --card:#FFFFFF; --line:rgba(0,0,0,0.08);
+    --ok:#52C41A; --warn:#FAAD14; --err:#EA6668;
+  }
+  *{box-sizing:border-box;margin:0;padding:0;}
+  body{font-family:'Roboto','PingFang SC','Segoe UI','Microsoft YaHei',Arial,sans-serif;background:var(--bg);color:var(--ink);line-height:1.65;font-size:14px;}
+  .wrap{max-width:1080px;margin:0 auto;padding:0 20px 80px;}
+  /* Header */
+  header{background:linear-gradient(135deg,#EAF0FC,#F7FAFF);border-bottom:1px solid var(--line);padding:44px 0 36px;margin-bottom:36px;}
+  .hd-inner{max-width:1080px;margin:0 auto;padding:0 20px;}
+  .badge{display:inline-block;font-size:12px;font-weight:600;color:var(--accent-deep);background:rgba(155,187,244,0.18);border-radius:20px;padding:4px 12px;margin-bottom:14px;}
+  h1{font-size:30px;font-weight:700;letter-spacing:0.5px;}
+  .slogan{font-size:15px;color:var(--accent-deep);font-weight:600;margin-top:10px;}
+  .meta{font-size:12px;color:var(--muted);margin-top:12px;}
+  /* TOC */
+  .toc{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:20px 24px;margin-bottom:36px;}
+  .toc h2{font-size:14px;font-weight:700;margin-bottom:12px;color:var(--accent-deep);}
+  .toc ol{columns:2;column-gap:32px;padding-left:20px;font-size:13px;}
+  .toc li{margin-bottom:6px;break-inside:avoid;}
+  .toc a{color:var(--ink);text-decoration:none;border-bottom:1px dashed rgba(0,0,0,0.2);}
+  .toc a:hover{color:var(--accent-deep);}
+  /* Section */
+  section{margin-bottom:40px;}
+  .sec-head{display:flex;align-items:center;gap:12px;margin-bottom:16px;padding-bottom:10px;border-bottom:2px solid var(--accent);}
+  .sec-num{background:var(--accent);color:#fff;font-size:13px;font-weight:700;border-radius:8px;width:30px;height:30px;display:flex;align-items:center;justify-content:center;flex:none;}
+  .sec-head h2{font-size:20px;font-weight:700;}
+  .sec-head .en{font-size:12px;color:var(--muted);font-weight:400;}
+  p{margin-bottom:10px;}
+  .lead{font-size:15px;}
+  /* Cards */
+  .grid{display:flex;flex-wrap:wrap;gap:14px;}
+  .card{flex:1 1 300px;min-width:0;background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;}
+  .card h3{font-size:14px;font-weight:700;margin-bottom:8px;color:var(--accent-deep);}
+  .card p,.card li{font-size:13px;color:var(--ink-2);}
+  .card ul{padding-left:18px;}
+  .card li{margin-bottom:4px;}
+  /* Key strip */
+  .strip{background:linear-gradient(135deg,rgba(155,187,244,0.16),rgba(155,187,244,0.30));border:1px solid var(--line);border-radius:14px;padding:16px 18px;margin-bottom:14px;}
+  .strip h3{font-size:14px;font-weight:700;color:var(--accent-deep);margin-bottom:6px;}
+  .strip p,.strip li{font-size:13px;color:var(--ink);}
+  .strip ul{padding-left:18px;}
+  /* Table */
+  table{width:100%;border-collapse:collapse;background:var(--card);border:1px solid var(--line);border-radius:12px;overflow:hidden;font-size:13px;margin:10px 0 16px;}
+  th{background:#EAF0FC;color:var(--accent-deep);font-weight:700;text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);}
+  td{padding:10px 12px;border-bottom:1px solid var(--line);color:var(--ink-2);vertical-align:top;}
+  tr:last-child td{border-bottom:none;}
+  td:first-child{font-weight:600;color:var(--ink);}
+  .tag{display:inline-block;font-size:11px;font-weight:600;border-radius:10px;padding:2px 8px;margin:2px 2px 2px 0;}
+  .t-blue{background:rgba(155,187,244,0.18);color:var(--accent-deep);}
+  .t-green{background:rgba(82,196,26,0.14);color:#3C8A14;}
+  .t-orange{background:rgba(250,173,20,0.16);color:#B26A00;}
+  .t-red{background:rgba(234,102,104,0.14);color:#B33A3C;}
+  .t-gray{background:rgba(0,0,0,0.06);color:var(--ink-2);}
+  /* Steps / roadmap */
+  .road{display:flex;flex-wrap:wrap;gap:14px;}
+  .phase{flex:1 1 230px;min-width:0;background:var(--card);border:1px solid var(--line);border-top:4px solid var(--accent);border-radius:12px;padding:14px 16px;}
+  .phase .p-name{font-size:14px;font-weight:700;color:var(--accent-deep);}
+  .phase .p-time{font-size:11px;color:var(--muted);margin:2px 0 8px;}
+  .phase ul{padding-left:16px;}
+  .phase li{font-size:12.5px;color:var(--ink-2);margin-bottom:3px;}
+  .note{font-size:12px;color:var(--muted);border-left:3px solid var(--accent);padding:6px 12px;background:rgba(155,187,244,0.08);border-radius:0 8px 8px 0;margin:8px 0;}
+  code{background:rgba(0,0,0,0.05);border-radius:4px;padding:1px 5px;font-size:12.5px;font-family:Consolas,Menlo,monospace;color:var(--accent-deep);}
+  footer{margin-top:48px;padding-top:20px;border-top:1px solid var(--line);font-size:12px;color:var(--muted);text-align:center;}
+  @media(max-width:640px){
+    h1{font-size:24px;}
+    .toc ol{columns:1;}
+    .sec-head h2{font-size:17px;}
+  }
+</style>
+</head>
+<body>
+
+<header>
+  <div class="hd-inner">
+    <span class="badge">游戏化英语学习平台 · 项目计划方案 v2.0</span>
+    <h1>「心流词境」FlowVocab</h1>
+    <div class="slogan">不背单词，打游戏顺便过级 · 不刷题海，保持心流刚好进步</div>
+    <div class="meta">定位：面向四六级考生的游戏化学习 Web 平台 ｜ 形态：纯前端 PWA（MVP 阶段） ｜ 版本日期：2026-09-04 ｜ 状态：方案整合优化稿（C+B+感官心流层）</div>
+  </div>
+</header>
+
+<div class="wrap">
+
+  <!-- TOC -->
+  <div class="toc">
+    <h2>目录</h2>
+    <ol>
+      <li><a href="#s1">项目概述与差异化定位</a></li>
+      <li><a href="#s2">设计哲学：心流通道</a></li>
+      <li><a href="#s3">产品架构总览</a></li>
+      <li><a href="#s4">核心玩法引擎详设</a></li>
+      <li><a href="#s5">六大技能模块详设</a></li>
+      <li><a href="#s6">游戏系统详设</a></li>
+      <li><a href="#s7">数据智能层</a></li>
+      <li><a href="#s8">技术架构与数据模型</a></li>
+      <li><a href="#s9">开发路线图（P0–P3）</a></li>
+      <li><a href="#s10">风险与对策</a></li>
+      <li><a href="#s11">竞品对标与差异化</a></li>
+      <li><a href="#s12">MVP 验收清单</a></li>
+    </ol>
+  </div>
+
+  <!-- 01 -->
+  <section id="s1">
+    <div class="sec-head"><span class="sec-num">01</span><h2>项目概述与差异化定位 <span class="en">Overview &amp; Positioning</span></h2></div>
+    <p class="lead"><b>痛点诊断</b>：市面主流产品（百词斩、不背单词、墨墨、扇贝）的差异化集中在"记忆法"，游戏化停留在打卡、积分、皮肤等表层；学习主流程仍是"刷词工具"，缺少<b>即时反馈、动态挑战、情感联结</b>。多邻国的成功证明：让用户坚持的不是内容，而是反馈、目标与情感设计。</p>
+    <div class="grid">
+      <div class="card">
+        <h3>目标用户</h3>
+        <ul>
+          <li>备考四六级、缺乏持续动力的在校大学生（核心）</li>
+          <li>词汇/听力/写作单项薄弱、需要专项训练的考生</li>
+          <li>对游戏化、数据化学习体验有偏好的年轻学习者</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>核心承诺</h3>
+        <ul>
+          <li>每次答题都有"打节拍"式的手感反馈（暴击/连击/怒气）</li>
+          <li>难度永远"刚好难一点"（动态难度阀门）</li>
+          <li>六大技能（词/语/句/听/写/读）全部游戏化覆盖</li>
+          <li>进步可视化：热力图、六维雷达、难度流轨迹</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>差异化定位</h3>
+        <ul>
+          <li>现有产品做"更好的背词工具" → 我们做"值得上瘾的备考游戏"</li>
+          <li>现有产品游戏化=打卡积分 → 我们游戏化=学习闭环本身</li>
+          <li>空白地带：写作 AI 批改 + 听力语音实时反馈 + 六维能力可视化</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 02 -->
+  <section id="s2">
+    <div class="sec-head"><span class="sec-num">02</span><h2>设计哲学：心流通道 <span class="en">Flow Channel</span></h2></div>
+    <div class="strip">
+      <h3>一切机制的源头：心流三条件</h3>
+      <p>热情的真正来源不是"内容有趣"，而是<b>心流通道</b>——挑战难度始终略高于当前技能（挑战 ≈ 技能 + 1），且每步操作都有性感的正向反馈。据此制定三条铁律：</p>
+      <ul>
+        <li><b>铁律一 · 动态挑战</b>：AI 实时监测正确率与反应速度，难度随时调整，让用户始终处在"有点难，但再努把力就能赢"的区间。杜绝"太简单想睡、太难想摔手机"。</li>
+        <li><b>铁律二 · 即时反馈</b>：每一次作答立即产生视听反馈——正确且快=暴击（屏幕震动+金币飞溅+合成音效），连续答对=连击升温。反馈延迟不超过 0.3 秒。</li>
+        <li><b>铁律三 · 正向延迟满足</b>：所有机制只做"少赚"不做"扣减"。连击中断只是停止生长、少拿资源，植物/星球不会死亡——用正向激励替代惩罚焦虑。</li>
+      </ul>
+    </div>
+    <p><b>对旧方案的吸收与修正</b>：保留 C 养成（地基）与 B 竞技（引擎），但把核心交互升级为<b>节奏打击式答题</b>并引入<b>动态难度阀门</b>，同时吸收 A/D 的剧情要素（叙事仅作内容包装，控制成本）、E 的听写工坊（补足听力口语刚需）。</p>
+  </section>
+
+  <!-- 03 -->
+  <section id="s3">
+    <div class="sec-head"><span class="sec-num">03</span><h2>产品架构总览 <span class="en">Product Architecture</span></h2></div>
+    <table>
+      <tr><th style="width:120px;">层级</th><th>内容</th></tr>
+      <tr><td>L0 设计哲学</td><td>心流通道：挑战≈技能+1 ｜ 即时正向反馈 ｜ 明确可感目标</td></tr>
+      <tr><td>L1 核心玩法引擎</td><td>节奏打击式答题（连击/暴击/怒气值·双倍经验）＋ 动态难度阀门（AI 自适应，>85% 升 / &lt;60% 降）——贯穿全部模块的同一套"手感"</td></tr>
+      <tr><td>L2 技能维度层</td><td>① 词汇·词魂战场 ② 语法·技能树 ③ 句子·拆解工坊 ④ 听力·ASMR 听写 ⑤ 写作·卡牌对战 ⑥ 阅读·叙事副本</td></tr>
+      <tr><td>L3 游戏系统层</td><td>养成（词汇星球/能量电池）＋ 竞技（个人纪录 PK → 远期联机段位）＋ 收集（称号/皮肤/卡牌/徽章）＋ 剧情（副本章节）</td></tr>
+      <tr><td>L4 数据智能层</td><td>AI 智能体（动态出题/错题讲解/写作批改/语音评分）＋ 遗忘曲线引擎 ＋ 六维可视化仪表盘</td></tr>
+    </table>
+    <div class="note">设计原则：六大模块共享 L1 心流引擎（同一套连击/难度逻辑），各自拥有独立玩法形态，保证"每个技能都有新鲜玩法"而非"六种换皮刷题"。</div>
+  </section>
+
+  <!-- 04 -->
+  <section id="s4">
+    <div class="sec-head"><span class="sec-num">04</span><h2>核心玩法引擎详设 <span class="en">Core Gameplay Engine</span></h2></div>
+
+    <h3 style="font-size:15px;margin:14px 0 8px;">4.1 节奏打击式答题（统一交互范式）</h3>
+    <table>
+      <tr><th style="width:130px;">机制</th><th>触发条件</th><th>反馈表现</th><th>数值建议（初值，需实测调参）</th></tr>
+      <tr><td>基础答对</td><td>选择正确</td><td>金币 + 能量 + 音效"叮"</td><td>经验 +10，金币 +5，能量 +1</td></tr>
+      <tr><td>暴击</td><td>正确 且 用时 &lt; 该难度历史中位用时 × 0.7</td><td>屏幕震动 + 金币飞溅粒子 + 打击音效</td><td>经验 ×2，金币 ×3</td></tr>
+      <tr><td>连击 Combo</td><td>连续答对，计数 +1；答错归零</td><td>顶部火焰特效随连击升温；连击&gt;10 触发称号"🔥 词汇大师"</td><td>连击每 +1 追加 +1 能量</td></tr>
+      <tr><td>怒气值</td><td>连击 ≥ 5</td><td>怒气条充满动画 + 全屏渐变</td><td>触发 30 秒"双倍经验时间"</td></tr>
+      <tr><td>答错</td><td>选择错误</td><td>柔和震动 + 显示正确释义与例句（不扣资源）</td><td>经验 +2（安慰分），连击归零，错题自动入库</td></tr>
+    </table>
+
+    <h3 style="font-size:15px;margin:20px 0 8px;">4.2 动态难度阀门（心流核心）</h3>
+    <table>
+      <tr><th style="width:130px;">条件</th><th>动作</th><th>可视化反馈</th></tr>
+      <tr><td>近 10 题正确率 &gt; 85%</td><td>升档：四级核心 → 四级高频 → 六级 → 六级高频 → 考研/超纲；或缩短限时</td><td>界面边框/主题色升级：绿 → 蓝 → 紫 → 金</td></tr>
+      <tr><td>近 10 题正确率 60%–85%</td><td>保持当前档位，微调抽取权重</td><td>维持当前色阶</td></tr>
+      <tr><td>近 10 题正确率 &lt; 60%</td><td>降档：退回上一难度，开启释义提示与例句辅助</td><td>柔和回落色阶 + "帮你稳一稳"文案</td></tr>
+    </table>
+    <div class="note">实现要点：① 用滑动窗口（最近 10 题）而非全局统计，响应更快；② 反应速度作为第二信号，正确但超慢也算"吃力"，触发降档倾向；③ 难度切换对用户半透明——只展示色阶与"挑战升级"提示，不暴露算法细节。</div>
+
+    <h3 style="font-size:15px;margin:20px 0 8px;">4.3 反馈设计规范</h3>
+    <ul style="padding-left:20px;font-size:13px;color:var(--ink-2);">
+      <li>视听反馈全链路：Web Audio API 合成音效（无版权风险）+ CSS/Canvas 粒子，反馈延迟 &lt; 0.3s。</li>
+      <li>所有"失去"都是机会成本而非惩罚：断连 = 少赚能量 = 星球停止生长，永不枯萎死亡。</li>
+      <li>提供"禅模式"开关：关闭音效/震动的专注选项，兼顾自习室场景。</li>
+    </ul>
+  </section>
+
+  <!-- 05 -->
+  <section id="s5">
+    <div class="sec-head"><span class="sec-num">05</span><h2>六大技能模块详设 <span class="en">Six Skill Modules</span></h2></div>
+
+    <table>
+      <tr><th style="width:150px;">模块</th><th>玩法形态</th><th>游戏化机制</th><th>考试题型映射</th><th style="width:120px;">数据指标</th></tr>
+      <tr>
+        <td>① 词汇<br>词魂战场</td>
+        <td>节奏打击主战场：左右滑卡（认识/不认识）、四选一点选、听音辨义；词库分四级核心/高频/六级/考研多池</td>
+        <td><span class="tag t-blue">连击暴击</span><span class="tag t-blue">动态难度</span><span class="tag t-blue">音效反馈</span></td>
+        <td>全题型地基（阅读/听力/翻译的词汇基础）</td>
+        <td>连击纪录、掌握率、平均反应时</td>
+      </tr>
+      <tr>
+        <td>② 语法<br>技能树</td>
+        <td>语法点=技能节点（时态/从句/非谓语/虚拟语气…），解语法题=点亮节点；错题自动回到技能树未点亮状态；"拆弹"模式：限时排除错误选项</td>
+        <td><span class="tag t-blue">技能点亮</span><span class="tag t-blue">进度树</span><span class="tag t-orange">拆弹倒计时</span></td>
+        <td>选词填空、写作句法准确性、翻译句式</td>
+        <td>技能树覆盖率、单点正确率</td>
+      </tr>
+      <tr>
+        <td>③ 句子<br>拆解工坊</td>
+        <td>长难句拼图：把句子拆成主干/从句/修饰碎片，拖拽重组还原；翻译对决：中英互译限时对战（先对 AI，后期真人）</td>
+        <td><span class="tag t-blue">拼图进度</span><span class="tag t-green">竞速奖励</span></td>
+        <td>翻译（汉译英）、阅读长难句理解</td>
+        <td>拆解正确率、平均耗时</td>
+      </tr>
+      <tr>
+        <td>④ 听力<br>ASMR 听写</td>
+        <td>真题同源原声片段，逐句播放：听一句 → 跟读（语音识别打分）或拼写（听写填空）；波形可视化实时显示音准差异，"唱吧"式反馈</td>
+        <td><span class="tag t-green">波形反馈</span><span class="tag t-green">音准评分</span><span class="tag t-blue">逐句闯关</span></td>
+        <td>听力全题型（新闻/长对话/篇章/讲座）</td>
+        <td>听写正确率、音准得分、回放次数</td>
+      </tr>
+      <tr>
+        <td>⑤ 写作<br>卡牌对战</td>
+        <td>收集"高级句型卡"（因果/让步/倒装/强调/插入语…），写作时组牌出招；AI 批改给出结构、词汇、语法三维评分与提升建议</td>
+        <td><span class="tag t-blue">卡牌收集</span><span class="tag t-orange">AI 批改</span><span class="tag t-blue">组合策略</span></td>
+        <td>短文写作、翻译句式升级</td>
+        <td>卡牌收集率、平均分提升曲线</td>
+      </tr>
+      <tr>
+        <td>⑥ 阅读<br>叙事副本</td>
+        <td>真题同源语料改编互动故事，选择影响剧情走向，考点藏在剧情里（推理/主旨/词义）；另有"限时悬赏"模式：限时完成阅读任务链</td>
+        <td><span class="tag t-blue">剧情推进</span><span class="tag t-orange">限时悬赏</span><span class="tag t-gray">AI 生成语料</span></td>
+        <td>阅读全题型（选词填空/匹配/仔细阅读）</td>
+        <td>剧情完成率、正确率、阅读速度</td>
+      </tr>
+    </table>
+    <div class="note">内容策略：词汇/语法/句子为"主线高频内容"（题库现成、开发成本低）；听力/写作/阅读为"深度内容"（AI 辅助生产语料、真题复用），控制内容消耗速度与成本。</div>
+  </section>
+
+  <!-- 06 -->
+  <section id="s6">
+    <div class="sec-head"><span class="sec-num">06</span><h2>游戏系统详设 <span class="en">Game Systems</span></h2></div>
+    <div class="grid">
+      <div class="card">
+        <h3>养成 · 词汇星球（地基）</h3>
+        <ul>
+          <li>连击/答题产出能量 → 喂养星球/能量电池（纯 CSS + 数据可视化，无需画师）</li>
+          <li>遗忘曲线 = 星球生长节奏：到期未复习则停止生长（不枯萎），复习即恢复生长并加速</li>
+          <li>目标驱动：每日能量目标达成 → 星球进化阶段 + 今日格子亮金</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>竞技 · 纪录 PK（引擎）</h3>
+        <ul>
+          <li>MVP：只和自己比——个人最佳连击、连续达标天数、历史纪录曲线；生成分享海报（Canvas）</li>
+          <li>P3 远期：联机对战、段位（青铜→王者）、ELO 积分、校园战队赛</li>
+          <li>规避新手劝退：MVP 阶段不引入陌生人负反馈</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>收集 · 称号皮肤徽章</h3>
+        <ul>
+          <li>连击称号：🔥词汇大师（&gt;10 连击）、连击纪录称号</li>
+          <li>六维成就徽章：语法全点亮、句型卡全收集、听写全对等</li>
+          <li>星球皮肤：能量电池 → 行星 → 星系外观解锁（CSS 实现）</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>剧情 · 叙事副本（包装）</h3>
+        <ul>
+          <li>章节制，每章绑定一组词汇/语法考点（AI 批量生成语料 + 人工审校）</li>
+          <li>定位为"内容副本"而非主干：主线仍是六大技能训练</li>
+          <li>用于拉新与留存钩子：每日开放一章，保持新鲜感</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 07 -->
+  <section id="s7">
+    <div class="sec-head"><span class="sec-num">07</span><h2>数据智能层 <span class="en">Data &amp; AI Layer</span></h2></div>
+    <div class="grid">
+      <div class="card">
+        <h3>AI 智能体（护城河）</h3>
+        <ul>
+          <li>动态难度出题：基于正确率+反应速度实时选档</li>
+          <li>错题讲解：答错后即时生成针对性解析（先模板，后 LLM）</li>
+          <li>写作批改：结构/词汇/语法三维评分 + 修改建议</li>
+          <li>语音评分：听写跟读的音准/流利度评分</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>遗忘曲线引擎</h3>
+        <ul>
+          <li>基于艾宾浩斯升级的间隔重复调度（参考墨墨/扇贝做法）</li>
+          <li>动态计算每个词/句/点的下次复习时间：熟悉词拉长间隔，薄弱词优先安排</li>
+          <li>产出直接驱动养成系统"生长/停滞"状态——曲线可视化</li>
+        </ul>
+      </div>
+      <div class="card">
+        <h3>六维可视化仪表盘</h3>
+        <ul>
+          <li>GitHub 风格学习热力图：每日达标格子亮金</li>
+          <li>六维能力雷达：词 / 语 / 句 / 听 / 写 / 读</li>
+          <li>难度流轨迹：动态难度变化曲线（心流质量可视化）</li>
+          <li>连击纪录榜、错题趋势、复习准时率</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- 08 -->
+  <section id="s8">
+    <div class="sec-head"><span class="sec-num">08</span><h2>技术架构与数据模型 <span class="en">Tech Stack &amp; Data Model</span></h2></div>
+    <h3 style="font-size:15px;margin-bottom:8px;">8.1 技术选型</h3>
+    <table>
+      <tr><th style="width:150px;">层次</th><th>方案</th><th>说明</th></tr>
+      <tr><td>前端框架</td><td>React 18 + Vite + TypeScript</td><td>组件化六大模块，TS 保证数据模型稳定</td></tr>
+      <tr><td>状态管理</td><td>Zustand</td><td>轻量，适合游戏状态（连击/怒气/难度）高频更新</td></tr>
+      <tr><td>本地存储</td><td>Dexie.js（IndexedDB）</td><td>MVP 无后端，全量本地持久化；PWA 离线可用</td></tr>
+      <tr><td>动画与音效</td><td>Framer Motion + CSS + Web Audio API</td><td>音效用合成器生成，零版权风险、零资源体积</td></tr>
+      <tr><td>可视化</td><td>ECharts</td><td>热力图/雷达图/难度流</td></tr>
+      <tr><td>语音能力</td><td>Web Speech API（MVP）→ 云端 ASR（P2）</td><td>听写跟读打分；评分模型可先做规则版</td></tr>
+      <tr><td>AI 能力</td><td>先模板规则引擎 → 后接 LLM API</td><td>写作批改/错题讲解/语料生成分期接入</td></tr>
+      <tr><td>部署</td><td>Vercel / GitHub Pages</td><td>静态部署，免费；PWA manifest</td></tr>
+    </table>
+
+    <h3 style="font-size:15px;margin:18px 0 8px;">8.2 核心数据模型（IndexedDB 表）</h3>
+    <table>
+      <tr><th style="width:150px;">表</th><th>关键字段</th></tr>
+      <tr><td><code>word_pool</code></td><td>id, word, phonetic, meaning, example, level(4/6/kaoyan), frequency, pos, collocations</td></tr>
+      <tr><td><code>user_word</code></td><td>wordId, status(new/learning/mastered), lastReview, nextReview, interval, lapses, correctCount, totalCount, avgTime</td></tr>
+      <tr><td><code>skill_node</code> / <code>user_skill</code></td><td>语法技能树节点：parent, rules, quizIds ｜ 用户进度：level, xp, unlocked</td></tr>
+      <tr><td><code>card</code> / <code>user_card</code></td><td>句型卡：type(因果/让步/倒装/强调), pattern, example ｜ 拥有与等级</td></tr>
+      <tr><td><code>audio_clip</code> / <code>sentence_quest</code></td><td>听力原声：source, transcript, level ｜ 句子题：type(puzzle/translate), content, answer, difficulty</td></tr>
+      <tr><td><code>narrative</code></td><td>副本章节：chapterId, nodes, choices, vocabTags</td></tr>
+      <tr><td><code>session</code> / <code>daily_stat</code></td><td>每轮答题会话：comboMax, difficultyFlow ｜ 每日汇总：date, totalXp, energy, moduleStats</td></tr>
+      <tr><td><code>user</code></td><td>profile, settings(禅模式), streak, energy, badges, planetState</td></tr>
+    </table>
+  </section>
+
+  <!-- 09 -->
+  <section id="s9">
+    <div class="sec-head"><span class="sec-num">09</span><h2>开发路线图 <span class="en">Roadmap</span></h2></div>
+    <div class="road">
+      <div class="phase">
+        <div class="p-name">P0 · 心流原型验证</div>
+        <div class="p-time">第 1–2 周</div>
+        <ul>
+          <li>词汇·词魂战场 MVP：左右滑卡 + 连击/暴击 + 动态难度（规则版）</li>
+          <li>能量电池雏形（纯 CSS 星球）+ 热力图</li>
+          <li>Web Audio 合成音效 + 震动反馈</li>
+        </ul>
+        <div style="font-size:11.5px;color:var(--accent-deep);margin-top:6px;font-weight:600;">验收：完成一轮 30 题会话，难度可见变化，连击反馈可感</div>
+      </div>
+      <div class="phase">
+        <div class="p-name">P1 · 六维闭环</div>
+        <div class="p-time">第 3–6 周</div>
+        <ul>
+          <li>句子拼图、语法技能树、阅读叙事副本（2 章）</li>
+          <li>写作卡牌 + 模板批改（规则版）</li>
+          <li>ASMR 听写（Web Speech 识别 + 波形可视化）</li>
+          <li>六维雷达、错题本、个人纪录 + 分享海报</li>
+        </ul>
+        <div style="font-size:11.5px;color:var(--accent-deep);margin-top:6px;font-weight:600;">验收：六模块均可玩，一次完整学习闭环产生全部可视化数据</div>
+      </div>
+      <div class="phase">
+        <div class="p-name">P2 · 智能升级</div>
+        <div class="p-time">第 7–10 周</div>
+        <ul>
+          <li>AI 动态出题/错题讲解接入</li>
+          <li>写作 AI 批改（结构/词汇/语法三维）</li>
+          <li>语音 AI 评分 + 遗忘曲线参数自学习</li>
+          <li>PWA 离线 + 数据导出</li>
+        </ul>
+        <div style="font-size:11.5px;color:var(--accent-deep);margin-top:6px;font-weight:600;">验收：AI 讲解准确率抽检达标，遗忘曲线调度与墨墨口径对齐</div>
+      </div>
+      <div class="phase">
+        <div class="p-name">P3 · 竞技与增长</div>
+        <div class="p-time">第 11–16 周</div>
+        <ul>
+          <li>联机对战、段位 ELO、校园战队赛</li>
+          <li>AI 批量语料生产工具 + 人工审校流</li>
+          <li>数据分析后台、留存看板、A/B 测试框架</li>
+        </ul>
+        <div style="font-size:11.5px;color:var(--accent-deep);margin-top:6px;font-weight:600;">验收：7 日留存 &gt; 30%（对标多邻国方法论），内容周更</div>
+      </div>
+    </div>
+    <div class="note">优先级依据：P0 验证"心流假设"是否成立（最核心风险）；P1 补齐六维覆盖；P2 用 AI 建立壁垒；P3 再上社交放大。若 P0 留存数据不理想，P1 起调整玩法而非继续堆内容。</div>
+  </section>
+
+  <!-- 10 -->
+  <section id="s10">
+    <div class="sec-head"><span class="sec-num">10</span><h2>风险与对策 <span class="en">Risks &amp; Mitigation</span></h2></div>
+    <table>
+      <tr><th style="width:200px;">风险</th><th>来源</th><th>对策</th></tr>
+      <tr><td>内容消耗快</td><td>A/D 剧情、听力/阅读语料</td><td>叙事定位为"副本"非主干；AI 批量生成 + 真题复用 + 人工审校；主线以题库类内容为主</td></tr>
+      <tr><td>竞技劝退</td><td>B 联机匹配不准、输的负反馈</td><td>MVP 只做"与自己比"的纪录 PK；联机延后至 P3，ELO 用宽松分池</td></tr>
+      <tr><td>养成麻木</td><td>C 新鲜感消退</td><td>正向延迟满足（断连只停滞不惩罚）+ 心流层持续新鲜感 + 每日随机事件/挑战</td></tr>
+      <tr><td>音效动效过度</td><td>反馈层喧宾夺主</td><td>提供"禅模式"开关；默认强度适中，全部可调</td></tr>
+      <tr><td>AI 能力依赖</td><td>批改/评分质量不稳</td><td>先规则引擎后 LLM；评分只给建议不给绝对结论；错题讲解有兜底模板</td></tr>
+      <tr><td>学习效果质疑</td><td>游戏化 vs 应试有效性</td><td>数据闭环证明：六维雷达 + 真题模考对标；路线图内置正确率校准</td></tr>
+    </table>
+  </section>
+
+  <!-- 11 -->
+  <section id="s11">
+    <div class="sec-head"><span class="sec-num">11</span><h2>竞品对标与差异化 <span class="en">Competitive Landscape</span></h2></div>
+    <table>
+      <tr><th style="width:150px;">竞品</th><th>强项</th><th>缺口</th><th>我们的打法</th></tr>
+      <tr><td>百词斩</td><td>图背词、好友 PK</td><td>"只记得图不记得词"、娱乐化伤效度</td><td>心流反馈 + 语境记忆（剧情/例句）+ 六维覆盖</td></tr>
+      <tr><td>不背单词</td><td>真实语境、原声例句</td><td>界面极简偏工具、激励弱</td><td>互动叙事副本 + ASMR 听写，语境=玩法而非装饰</td></tr>
+      <tr><td>墨墨 / 扇贝</td><td>遗忘曲线精准、复习调度</td><td>学习流程仍是"刷词"，无即时反馈</td><td>遗忘曲线游戏化（星球生长/停滞可视化）+ 节奏反馈</td></tr>
+      <tr><td>多邻国</td><td>连胜、段位、拟人化情感</td><td>面向通用语言，非应试导向</td><td>本土化四六级题库 + 心流反馈层更重 + 写作/听力补强</td></tr>
+      <tr><td>行业空白</td><td>—</td><td>写作 AI 批改、语音实时反馈、六维能力可视化</td><td>L2–L4 三层直接切入空白地带</td></tr>
+    </table>
+  </section>
+
+  <!-- 12 -->
+  <section id="s12">
+    <div class="sec-head"><span class="sec-num">12</span><h2>MVP 验收清单 <span class="en">MVP Acceptance Checklist</span></h2></div>
+    <table>
+      <tr><th style="width:36px;">#</th><th>验收项</th><th>标准</th></tr>
+      <tr><td>1</td><td>心流手感</td><td>一轮 30 题会话中：暴击/连击/怒气至少各触发 1 次，反馈延迟 &lt; 0.3s</td></tr>
+      <tr><td>2</td><td>动态难度</td><td>10 题滑动窗口正确率 &gt; 85% 时难度可感知升级（色阶+词库档位），&lt; 60% 可感知降档</td></tr>
+      <tr><td>3</td><td>六维覆盖</td><td>词/语/句/听/写/读六模块均可完成一次完整练习并产出数据</td></tr>
+      <tr><td>4</td><td>养成闭环</td><td>答题能量驱动星球生长；隔日不复习 → 停滞（非死亡）；复习恢复生长</td></tr>
+      <tr><td>5</td><td>可视化</td><td>热力图、六维雷达、难度流、连击纪录四类图表数据真实可复核</td></tr>
+      <tr><td>6</td><td>数据持久化</td><td>刷新/重开浏览器后进度、连击纪录、星球状态完整保留（IndexedDB）</td></tr>
+      <tr><td>7</td><td>移动端</td><td>480px 宽可流畅操作（滑卡、点选、听写），触控目标 ≥ 44px</td></tr>
+      <tr><td>8</td><td>可分享</td><td>分享海报（Canvas）可生成并保存，含连击纪录与六维摘要</td></tr>
+    </table>
+  </section>
+
+  <footer>
+    「心流词境」FlowVocab · 项目计划方案 v2.0 ｜ 生成日期 2026-09-04 ｜ 方案整合来源：用户迭代意见（C+B+感官心流层、动态难度阀门、ASMR 听写）+ 竞品调研（多邻国/百词斩/不背单词/墨墨/扇贝）
+  </footer>
+
+</div>
+</body>
+</html>

@@ -1,0 +1,15 @@
+# 依赖与构建
+node_modules/
+dist/
+*.tsbuildinfo
+
+# 词库源数据缓存（KyleBing 源文件，可用 scripts/import_words.py 重新下载导入）
+data-src/
+
+# 本地预览缓存
+.preview/
+
+# 系统文件
+.DS_Store
+Thumbs.db
+desktop.ini
