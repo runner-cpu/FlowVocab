@@ -21,11 +21,12 @@ export default function TopBar() {
   const zen = profile?.settings.zenMode
 
   return (
+    <>
     <header className="topbar">
       <div className="topbar-inner">
-        <div className="logo" onClick={() => go('home')}>
+        <button className="logo" onClick={() => go('home')} aria-label="返回首页">
           🚀 心流词境 <small>FlowVocab</small>
-        </div>
+        </button>
         <nav className="nav-links">
           {NAV.map((n) => (
             <button
@@ -59,5 +60,10 @@ export default function TopBar() {
         </div>
       </div>
     </header>
+    <nav className="mobile-nav" aria-label="移动端主导航">
+      {NAV.slice(0, 5).map((n) => <button key={n.key} className={page === n.key ? 'active' : ''} onClick={() => go(n.key)}><span>{n.label.split(' ')[0]}</span><small>{n.label.slice(3)}</small></button>)}
+      <button className={page === 'dashboard' ? 'active' : ''} onClick={() => go('dashboard')}><span>📊</span><small>数据</small></button>
+    </nav>
+    </>
   )
 }

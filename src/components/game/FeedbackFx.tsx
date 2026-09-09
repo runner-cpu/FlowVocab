@@ -55,7 +55,7 @@ export default function FeedbackFx() {
   return (
     <>
       <div className="fx-overlay">
-        <div className={`fx-text ${cls}`} key={show.combo + show.type}>
+        <div className={`fx-text ${cls}`} key={show.combo + show.type} role="status" aria-live="polite">
           {text}
         </div>
       </div>

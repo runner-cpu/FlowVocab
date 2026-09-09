@@ -217,6 +217,8 @@ export const useProgress = create<ProgressStore>((set, get) => ({
     if (profile) {
       profile.totalXp += comboRes.xp
       profile.bestCombo = Math.max(profile.bestCombo, comboRes.state.maxCombo)
+      // 每天第一次有效作答记为连续学习一天，避免同日重复累计。
+      if (daily && daily.xp === 0) profile.streakDays += 1
     }
     if (planet) {
       planet.energy = Math.round((planet.energy + comboRes.energy) * 10) / 10

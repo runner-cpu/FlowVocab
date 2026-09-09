@@ -9,6 +9,7 @@ export default function Heatmap() {
   useEffect(() => {
     let chart: echarts.ECharts | null = null
     let disposed = false
+    const onResize = () => chart?.resize()
     db.dailyStats.toArray().then((stats) => {
       if (disposed || !ref.current) return
       const map = new Map(stats.map((s) => [s.date, s.xp]))
@@ -52,10 +53,11 @@ export default function Heatmap() {
           emphasis: { itemStyle: { shadowBlur: 6, shadowColor: 'rgba(0,0,0,0.2)' } }
         }]
       })
-      window.addEventListener('resize', () => chart?.resize())
+      window.addEventListener('resize', onResize)
     })
     return () => {
       disposed = true
+      window.removeEventListener('resize', onResize)
       chart?.dispose()
     }
   }, [])
