@@ -1,95 +1,51 @@
+import { ArrowRight, BookOpen, Check, Flame, Headphones, PenLine, Play, Sparkles, Star, Target, Trophy } from 'lucide-react'
 import { useUI } from '../store/gameStore'
 import { useProgress } from '../store/progressStore'
 import { MODULE_META, type ModuleKey } from '../types'
-import PlanetView from '../components/dashboard/PlanetView'
-import Heatmap from '../components/dashboard/Heatmap'
 
 const MODULES: ModuleKey[] = ['vocab', 'grammar', 'sentence', 'listening', 'writing', 'reading']
+const JOURNEY: { module: ModuleKey; title: string; note: string; icon: typeof BookOpen }[] = [
+  { module: 'vocab', title: '唤醒 5 个词', note: '词汇热身', icon: BookOpen },
+  { module: 'listening', title: '完成听力挑战', note: '听见真实语境', icon: Headphones },
+  { module: 'sentence', title: '拼好 3 个句子', note: '完成今日输出', icon: PenLine }
+]
+const MODULE_LABELS: Record<ModuleKey, string> = { vocab: '语境词卡', grammar: '技能树', sentence: '句子拼图', listening: '声音探险', writing: '表达工坊', reading: '剧情副本' }
 
 export default function Home() {
   const go = useUI((s) => s.go)
   const profile = useProgress((s) => s.profile)
   const planet = useProgress((s) => s.planet)
   const daily = useProgress((s) => s.daily)
-  const radar = useProgress((s) => s.progress?.radar)
-
+  const progress = useProgress((s) => s.progress)
+  const userWords = useProgress((s) => s.userWords)
   const xpToday = daily?.xp ?? 0
   const goal = planet?.dailyGoal ?? 100
-  const pct = Math.min(100, Math.round((xpToday / goal) * 100))
+  const pct = Math.min(100, Math.round((xpToday / Math.max(goal, 1)) * 100))
   const completedModules = Object.values(daily?.modules ?? {}).filter((n) => n > 0).length
-  const totalMinutes = Math.max(8, Math.round((daily?.xp ?? 0) * 0.7))
-  const todayFocus = pct < 35 ? '先完成一组词汇热身，再挑战一个语法节点' : pct < 80 ? '节奏不错，继续用听力或句子模块巩固' : '最后冲刺：完成一项输出任务，锁定今日记忆'
+  const dueWords = userWords.filter((word) => word.status !== 'mastered' && word.nextReview <= Date.now()).length
+  const radar = progress?.radar
+  const weakest = MODULES.reduce((low, key) => (radar?.[key] ?? 0) < (radar?.[low] ?? 0) ? key : low, 'vocab')
 
-  return (
-    <div>
-      <section className="home-hero">
-        <div className="hero-copy">
-          <h1>今天也让英语<br /><em>自然发生</em></h1>
-          <p>用一小段专注时间，换一次真实的能力升级。你的星球正在等你点亮。</p>
-          <div className="hero-actions">
-            <button className="btn btn-primary" onClick={() => go('vocab')}>开始今日训练 <span>→</span></button>
-            <button className="btn btn-ghost" onClick={() => go('dashboard')}>查看成长轨迹</button>
-          </div>
-        </div>
-        <div className="hero-orbit"><PlanetView compact /></div>
-      </section>
+  return <div className="adventure-home">
+    <header className="mission-heading">
+      <div><p><Target size={16} /> 今日任务</p><h1>探索、练习、<span>持续成长。</span></h1><small>不必学很久，只要完成下一站。</small></div>
+      <button className="focus-link" onClick={() => go(weakest)}>今日补强：{MODULE_META[weakest].name.split('·')[0]} <ArrowRight size={16} /></button>
+    </header>
 
-      <section className="card daily-card">
-        <div className="mt14">
-          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13 }}>
-            <span style={{ fontWeight: 800 }}>🎯 今日任务 <span className="muted" style={{ fontWeight: 500 }}>· {todayFocus}</span></span>
-            <span className="muted">{xpToday} / {goal} XP</span>
-          </div>
-          <div style={{ height: 8, borderRadius: 6, background: 'rgba(0,0,0,0.06)', marginTop: 6, overflow: 'hidden' }}>
-            <div style={{ width: `${pct}%`, height: '100%', background: 'linear-gradient(90deg,#9BBBF4,#5B7FD4)', borderRadius: 6, transition: 'width 0.5s' }} />
-          </div>
-          <p className="muted mt8" style={{ fontSize: 12 }}>
-            {pct >= 100 ? '🎉 今日目标达成，星球焕发生机！' : `再学 ${goal - xpToday} XP 点亮今日格子（累计已学 ${profile?.totalXp ?? 0} XP）`}
-          </p>
-        </div>
-        <div className="daily-meta">
-          <span>⏱ 预计 {totalMinutes} 分钟</span><span>✦ 已完成 {completedModules}/6 模块</span><span>🔥 连续 {profile?.streakDays ?? 0} 天</span>
-        </div>
-      </section>
+    <section className="mission-layout" aria-label="今日核心任务">
+      <article className="quest-card"><img src="./assets/neon-harbor-quest.png" alt="戴耳机的小狐狸站在夜色港湾，准备展开英语词汇探险" /><div className="quest-copy"><span className="quest-type">词汇探险</span><h2>微光港 · 记忆航线</h2><p>在真实语境里认出新词，让每一次选择都推动故事向前。</p><button className="btn quest-start" onClick={() => go('vocab')}><Play size={17} fill="currentColor" /> 开始任务</button></div></article>
+      <aside className="mission-stats" aria-label="学习状态">
+        <div className="progress-stat"><div className="progress-ring" style={{ '--progress': `${pct * 3.6}deg` } as React.CSSProperties}><strong>{pct}%</strong><span>今日进度</span></div><div><b>学习进度</b><p>{pct >= 100 ? '今日目标已完成' : `再获得 ${Math.max(0, goal - xpToday)} XP`}</p></div></div>
+        <div className="compact-stat"><Flame size={21} /><div><span>连续学习</span><strong>{profile?.streakDays ?? 0}<small> 天</small></strong></div></div>
+        <div className="compact-stat"><Star size={21} /><div><span>累计经验</span><strong>{profile?.totalXp ?? 0}<small> XP</small></strong></div></div>
+      </aside>
+    </section>
 
-      <div className="section-heading-row"><div className="section-title">⚔️ 选择战场</div><span className="muted">六维能力，按需补强</span></div>
+    <section className="journey-panel" aria-labelledby="journey-title"><div className="panel-heading"><div><Sparkles size={18} /><h2 id="journey-title">今日旅程</h2></div><p>完成三个短任务，留下比“三分钟热度”更可靠的轨迹。</p></div><div className="journey-track">{JOURNEY.map((item, index) => { const complete = (daily?.modules?.[item.module] ?? 0) > 0; const Icon = item.icon; return <button key={item.module} className={`journey-step ${complete ? 'complete' : ''}`} onClick={() => go(item.module)}><span className="step-icon">{complete ? <Check size={20} /> : <Icon size={20} />}</span><span><strong>{item.title}</strong><small>{complete ? '已完成' : item.note}</small></span>{index < JOURNEY.length - 1 ? <i aria-hidden="true" /> : null}</button> })}</div></section>
 
-      <div className="grid">
-        {MODULES.map((k) => {
-          const meta = MODULE_META[k]
-          const val = radar?.[k] ?? 0
-          return (
-            <div key={k} className="module-card" role="button" tabIndex={0} onClick={() => go(k)} onKeyDown={(e) => { if (e.key === 'Enter' || e.key === ' ') go(k) }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span className="m-icon">{meta.icon}</span>
-                <div>
-                  <div className="m-name">{meta.name.split('·')[0]}</div>
-                  <div className="m-desc">{meta.desc}</div>
-                </div>
-              </div>
-              <div className="m-bar"><i style={{ width: `${val}%`, background: meta.color }} /></div>
-              <div className="m-desc muted mt8" style={{ fontSize: 11 }}>掌握度 {val}%</div>
-            </div>
-          )
-        })}
-      </div>
+    <div className="learning-section-heading"><div><h2>选择你的学习场景</h2><p>六种玩法练习不同能力，难度会随表现自动调整。</p></div><span>{completedModules}/6 今日已探索</span></div>
+    <section className="learning-scenes" aria-label="英语学习模块">{MODULES.map((key, index) => { const meta = MODULE_META[key]; const mastery = radar?.[key] ?? 0; return <button key={key} className={`scene-card scene-${index + 1}`} onClick={() => go(key)}><span className="scene-index">0{index + 1}</span><span className="scene-emoji" aria-hidden="true">{meta.icon}</span><span className="scene-copy"><small>{MODULE_LABELS[key]}</small><strong>{meta.name.split('·')[0]}</strong><em>{meta.desc}</em></span><span className="scene-progress"><i style={{ width: `${mastery}%` }} /><small>{mastery}%</small></span><ArrowRight className="scene-arrow" size={18} /></button> })}</section>
 
-      <section className="home-lower grid">
-        <div className="card next-card">
-          <div className="card-title">✨ 为你推荐</div>
-          <div className="recommend-item"><span className="recommend-icon">🧠</span><div><b>间隔复习 · 高频词</b><p className="muted">根据遗忘曲线，今天有 12 个词值得再见。</p></div><button className="mini-arrow" onClick={() => go('vocab')}>→</button></div>
-          <div className="recommend-item"><span className="recommend-icon">🎧</span><div><b>一分钟听力热身</b><p className="muted">听见、跟读、点亮每一个词。</p></div><button className="mini-arrow" onClick={() => go('listening')}>→</button></div>
-        </div>
-        <div className="card streak-card">
-          <div className="card-title">🔥 连续学习</div>
-          <div className="streak-number">{profile?.streakDays ?? 0}<small> 天</small></div>
-          <p className="muted">保持今天的节奏，明天解锁新的星球光环。</p>
-          <div className="streak-dots">{['一','二','三','四','五','六','日'].map((d, i) => <span key={d} className={i < Math.min(7, profile?.streakDays ?? 0) ? 'on' : ''}><i>•</i>{d}</span>)}</div>
-        </div>
-      </section>
-
-      <div className="section-heading-row"><div className="section-title">📊 近期热度</div><span className="muted">近 90 天</span></div>
-      <div className="card heatmap-card"><Heatmap /></div>
-    </div>
-  )
+    <section className="return-strip"><div className="return-mark"><Trophy size={22} /></div><div><h2>{dueWords > 0 ? `${dueWords} 张记忆卡正在等你` : '今天的复习卡已经清空'}</h2><p>{dueWords > 0 ? '先复习即将遗忘的内容，新知识才会真正留下。' : '可以探索新场景，明天我们会按记忆节奏再次相遇。'}</p></div><button className="btn btn-ghost" onClick={() => go('vocab')}>{dueWords > 0 ? '开始复习' : '继续探索'} <ArrowRight size={16} /></button></section>
+  </div>
 }
