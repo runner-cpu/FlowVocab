@@ -3,7 +3,7 @@ import * as echarts from 'echarts'
 import { db } from '../../store/db'
 import { dayKey } from '../../engine/forget'
 
-export default function Heatmap() {
+export default function Heatmap({ days = 90 }: { days?: number }) {
   const ref = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -13,10 +13,10 @@ export default function Heatmap() {
     db.dailyStats.toArray().then((stats) => {
       if (disposed || !ref.current) return
       const map = new Map(stats.map((s) => [s.date, s.xp]))
-      // 生成最近 91 天（13 周）
+      // 生成最近一段时间，支持 7 / 30 / 90 天切换
       const today = new Date()
       const start = new Date(today)
-      start.setDate(today.getDate() - 90)
+      start.setDate(today.getDate() - days)
       // 对齐到周一
       const dow = (start.getDay() + 6) % 7
       start.setDate(start.getDate() - dow)
@@ -60,7 +60,7 @@ export default function Heatmap() {
       window.removeEventListener('resize', onResize)
       chart?.dispose()
     }
-  }, [])
+  }, [days])
 
   return <div ref={ref} style={{ width: '100%', height: 220 }} />
 }

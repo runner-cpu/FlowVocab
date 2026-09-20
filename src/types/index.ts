@@ -135,6 +135,23 @@ export interface Chapter {
 // ---------- 六维 ----------
 export type ModuleKey = 'vocab' | 'grammar' | 'sentence' | 'listening' | 'writing' | 'reading'
 
+export type LearningTrack = 'primary' | 'middle-high' | 'advanced' | 'cet'
+
+export interface LearningTrackMeta {
+  label: string
+  shortLabel: string
+  description: string
+  goal: string
+  accent: string
+}
+
+export const LEARNING_TRACKS: Record<LearningTrack, LearningTrackMeta> = {
+  primary: { label: '小学启蒙', shortLabel: '小学', description: '图片、故事和基础表达', goal: '用图像和故事建立英语自信', accent: '#f2a65a' },
+  'middle-high': { label: '初高中进阶', shortLabel: '初高中', description: '语法、听力和主题阅读', goal: '把知识点放进真实语境里', accent: '#3b82f6' },
+  advanced: { label: '高中冲刺', shortLabel: '高中', description: '长难句、写作和综合理解', goal: '让复杂内容变成可拆解的路径', accent: '#8b5cf6' },
+  cet: { label: '四六级备考', shortLabel: '四六级', description: '高频词、真题语境和冲刺训练', goal: '围绕考试目标稳定提分', accent: '#ef745f' }
+}
+
 export const MODULE_META: Record<ModuleKey, { name: string; icon: string; color: string; desc: string }> = {
   vocab: { name: '词汇·词魂战场', icon: '⚔️', color: '#5B8DEF', desc: '节奏打击背词' },
   grammar: { name: '语法·技能树', icon: '🌳', color: '#34A853', desc: '点亮语法技能' },

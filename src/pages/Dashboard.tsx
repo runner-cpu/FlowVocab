@@ -1,3 +1,4 @@
+import { useMemo, useState } from 'react'
 import { useProgress } from '../store/progressStore'
 import PlanetView from '../components/dashboard/PlanetView'
 import Heatmap from '../components/dashboard/Heatmap'
@@ -5,7 +6,9 @@ import RadarChart from '../components/dashboard/RadarChart'
 import DifficultyFlow from '../components/dashboard/DifficultyFlow'
 import { useUI } from '../store/gameStore'
 import { MODULE_META, type ModuleKey } from '../types'
-import { Activity, ArrowUpRight, BarChart3, Flame, Sparkles, Target } from 'lucide-react'
+import { Activity, ArrowUpRight, BarChart3, Flame, Sparkles, Target, TimerReset } from 'lucide-react'
+import AnimatedNumber from '../components/ui/AnimatedNumber'
+import SpotlightCard from '../components/ui/SpotlightCard'
 
 export default function Dashboard() {
   const profile = useProgress((s) => s.profile)
@@ -13,18 +16,29 @@ export default function Dashboard() {
   const daily = useProgress((s) => s.daily)
   const go = useUI((s) => s.go)
   const radar = useProgress((s) => s.progress?.radar)
+  const userWords = useProgress((s) => s.userWords)
+  const [range, setRange] = useState<7 | 30 | 90>(90)
+  const [selected, setSelected] = useState<ModuleKey | null>(null)
   const radarEntries = (Object.entries(radar ?? {}) as [ModuleKey, number][]).sort((a, b) => b[1] - a[1])
   const strongest = radarEntries[0]
   const weakest = radarEntries[radarEntries.length - 1]
+  const reviewLoad = useMemo(() => {
+    const now = Date.now(); const day = 86400000
+    return [
+      { label: '今日到期', value: userWords.filter((word) => word.status !== 'mastered' && word.nextReview <= now).length, tone: 'coral' },
+      { label: '未来 3 天', value: userWords.filter((word) => word.status !== 'mastered' && word.nextReview > now && word.nextReview <= now + 3 * day).length, tone: 'blue' },
+      { label: '已掌握', value: userWords.filter((word) => word.status === 'mastered').length, tone: 'mint' }
+    ]
+  }, [userWords])
 
   return (
     <div className="growth-page">
-      <div className="growth-heading"><div><div className="growth-kicker"><Activity size={15} /> 学习数据</div><h1>成长图谱</h1><p>看见自己的进步，找到下一步的方向。</p></div><button className="date-filter"><Flame size={16} /> 最近 90 天 <ArrowUpRight size={14} /></button></div>
+      <div className="growth-heading"><div><div className="growth-kicker"><Activity size={15} /> 学习数据</div><h1>成长图谱</h1><p>看见自己的进步，找到下一步的方向。</p></div><div className="range-switcher" role="group" aria-label="学习时间范围">{([7, 30, 90] as const).map((item) => <button key={item} className={range === item ? 'active' : ''} onClick={() => setRange(item)}>{item}天</button>)}</div></div>
       <div className="stat-row">
-        <div className="stat"><div className="v">{profile?.totalXp ?? 0}</div><div className="k">累计 XP</div></div>
-        <div className="stat"><div className="v">{profile?.bestCombo ?? 0}</div><div className="k">最佳连击</div></div>
-        <div className="stat"><div className="v">{daily?.comboMax ?? 0}</div><div className="k">今日最佳连击</div></div>
-        <div className="stat"><div className="v">{Math.floor(planet?.energy ?? 0)}</div><div className="k">星球能量</div></div>
+        <div className="stat"><div className="v"><AnimatedNumber value={profile?.totalXp ?? 0} /></div><div className="k">累计 XP</div></div>
+        <div className="stat"><div className="v"><AnimatedNumber value={profile?.bestCombo ?? 0} /></div><div className="k">最佳连击</div></div>
+        <div className="stat"><div className="v"><AnimatedNumber value={daily?.comboMax ?? 0} /></div><div className="k">今日最佳连击</div></div>
+        <div className="stat"><div className="v"><AnimatedNumber value={Math.floor(planet?.energy ?? 0)} /></div><div className="k">星球能量</div></div>
         <div className="stat"><div className="v">{planet?.level ?? 0}/5</div><div className="k">星球等级</div></div>
       </div>
 
@@ -35,18 +49,21 @@ export default function Dashboard() {
       </div>
 
       <div className="grid mt20" style={{ alignItems: 'stretch' }}>
-        <div className="card">
-          <div className="card-title">🎯 六维能力雷达</div>
-          <RadarChart />
+        <div className="card chart-interactive">
+          <div className="card-title"><Target size={16} /> 六维能力雷达 <span className="chart-hint">点击维度进入训练</span></div>
+          <RadarChart onModuleSelect={(module) => { setSelected(module); go(module) }} />
+          <div className="radar-links">{radarEntries.map(([module, value]) => <button key={module} className={selected === module ? 'active' : ''} onClick={() => { setSelected(module); go(module) }}><span style={{ background: MODULE_META[module].color }} />{MODULE_META[module].name.split('·')[0]}<strong>{value}%</strong></button>)}</div>
         </div>
         <div className="card">
-          <div className="card-title">🌍 词汇星球</div>
+          <div className="card-title"><span className="title-orb" />词汇星球</div>
           <PlanetView />
         </div>
       </div>
 
+      <div className="card review-load-card"><div className="card-title"><TimerReset size={16} /> 复习负担 <span className="chart-hint">根据记忆节奏自动安排</span></div><div className="review-load-grid">{reviewLoad.map((item) => <SpotlightCard key={item.label} className={`review-load-item ${item.tone}`}><span>{item.label}</span><strong>{item.value}</strong><small>{item.label === '今日到期' ? '优先处理' : item.label === '未来 3 天' ? '提前预览' : '稳固记忆'}</small></SpotlightCard>)}</div></div>
+
       <div className="card">
-        <div className="card-title">🌊 难度流 · 心流质量</div>
+        <div className="card-title"><Activity size={16} /> 难度流 · 心流质量</div>
         <p className="muted" style={{ fontSize: 12, marginBottom: 8 }}>
           曲线反映你每轮答题时难度随表现的变化。理想心流：难度在挑战中温和爬升、偶有回落。
         </p>
@@ -54,8 +71,8 @@ export default function Dashboard() {
       </div>
 
       <div className="card">
-        <div className="card-title">🔥 学习热力图（近 90 天）</div>
-        <Heatmap />
+        <div className="card-title"><Flame size={16} /> 学习热力图（近 {range} 天）</div>
+        <Heatmap days={range} />
       </div>
     </div>
   )

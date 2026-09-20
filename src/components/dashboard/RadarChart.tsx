@@ -1,8 +1,9 @@
 import { useEffect, useRef } from 'react'
 import * as echarts from 'echarts'
 import { useProgress } from '../../store/progressStore'
+import type { ModuleKey } from '../../types'
 
-export default function RadarChart() {
+export default function RadarChart({ onModuleSelect }: { onModuleSelect?: (module: ModuleKey) => void }) {
   const ref = useRef<HTMLDivElement>(null)
   const radar = useProgress((s) => s.progress?.radar)
 
@@ -21,10 +22,15 @@ export default function RadarChart() {
         splitLine: { lineStyle: { color: 'rgba(0,0,0,0.08)' } },
         axisLine: { lineStyle: { color: 'rgba(0,0,0,0.08)' } }
       },
-      series: [{
+        series: [{
         type: 'radar',
         data: [{ value: values, name: '六维掌握度', areaStyle: { color: 'rgba(91,127,212,0.25)' }, lineStyle: { color: '#5B7FD4', width: 2 }, itemStyle: { color: '#5B7FD4' } }]
       }]
+    })
+    chart.on('click', (params: any) => {
+      const index = labels.indexOf(params?.name)
+      const modules: ModuleKey[] = ['vocab', 'grammar', 'sentence', 'listening', 'writing', 'reading']
+      if (typeof index === 'number' && index >= 0 && modules[index]) onModuleSelect?.(modules[index])
     })
     const onResize = () => chart.resize()
     window.addEventListener('resize', onResize)
@@ -32,7 +38,7 @@ export default function RadarChart() {
       window.removeEventListener('resize', onResize)
       chart.dispose()
     }
-  }, [radar])
+  }, [radar, onModuleSelect])
 
   return <div ref={ref} style={{ width: '100%', height: 280 }} />
 }
