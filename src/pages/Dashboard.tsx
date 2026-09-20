@@ -5,6 +5,7 @@ import RadarChart from '../components/dashboard/RadarChart'
 import DifficultyFlow from '../components/dashboard/DifficultyFlow'
 import { useUI } from '../store/gameStore'
 import { MODULE_META, type ModuleKey } from '../types'
+import { Activity, ArrowUpRight, BarChart3, Flame, Sparkles, Target } from 'lucide-react'
 
 export default function Dashboard() {
   const profile = useProgress((s) => s.profile)
@@ -17,8 +18,8 @@ export default function Dashboard() {
   const weakest = radarEntries[radarEntries.length - 1]
 
   return (
-    <div>
-      <div className="section-title">📊 数据仪表盘</div>
+    <div className="growth-page">
+      <div className="growth-heading"><div><div className="growth-kicker"><Activity size={15} /> 学习数据</div><h1>成长图谱</h1><p>看见自己的进步，找到下一步的方向。</p></div><button className="date-filter"><Flame size={16} /> 最近 90 天 <ArrowUpRight size={14} /></button></div>
       <div className="stat-row">
         <div className="stat"><div className="v">{profile?.totalXp ?? 0}</div><div className="k">累计 XP</div></div>
         <div className="stat"><div className="v">{profile?.bestCombo ?? 0}</div><div className="k">最佳连击</div></div>
@@ -28,7 +29,7 @@ export default function Dashboard() {
       </div>
 
       <div className="insight-banner">
-        <div className="insight-mark">✦</div>
+        <div className="insight-mark"><Sparkles size={20} /></div>
         <div className="insight-copy"><strong>成长提示</strong><p>你在 {strongest ? MODULE_META[strongest[0]].name.split('·')[0] : '词汇'} 上表现亮眼（{strongest?.[1] ?? 0}%），下一步建议补强 {weakest ? MODULE_META[weakest[0]].name.split('·')[0] : '听力'}，让能力更均衡。</p></div>
         <button className="btn btn-ghost" onClick={() => weakest && go(weakest[0])}>去补强 →</button>
       </div>

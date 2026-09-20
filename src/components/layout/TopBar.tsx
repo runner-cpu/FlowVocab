@@ -4,7 +4,7 @@ import { useProgress } from '../../store/progressStore'
 
 const NAV: { key: PageKey; label: string; icon: typeof Home }[] = [
   { key: 'home', label: '学习舱', icon: Home }, { key: 'vocab', label: '任务地图', icon: Map },
-  { key: 'grammar', label: '技能训练', icon: Compass }, { key: 'dashboard', label: '成长记录', icon: BarChart3 }
+  { key: 'grammar', label: '训练场', icon: Compass }, { key: 'dashboard', label: '成长图谱', icon: BarChart3 }
 ]
 
 export default function TopBar() {
