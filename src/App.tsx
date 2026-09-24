@@ -6,6 +6,7 @@ import FeedbackFx from './components/game/FeedbackFx'
 import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
 import ModulePage from './pages/ModulePage'
+import { SaveStatus } from './components/dashboard/ProgressionPanel'
 
 const MODULE_KEYS = ['vocab', 'grammar', 'sentence', 'listening', 'writing', 'reading'] as const
 
@@ -28,6 +29,7 @@ export default function App() {
     <div className="app">
       <TopBar />
       <main className="main">
+        <SaveStatus />
         {page === 'home' && <Home />}
         {page === 'dashboard' && <Dashboard />}
         {isModule && <ModulePage module={page as any} />}

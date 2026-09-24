@@ -7,6 +7,7 @@ import { LEARNING_SCENES } from '../data/learningScenes'
 import SpotlightCard from '../components/ui/SpotlightCard'
 import RevealOnScroll from '../components/ui/RevealOnScroll'
 import AnimatedNumber from '../components/ui/AnimatedNumber'
+import ProgressionPanel from '../components/dashboard/ProgressionPanel'
 
 const MODULES: ModuleKey[] = ['vocab', 'grammar', 'sentence', 'listening', 'writing', 'reading']
 const JOURNEY: { module: ModuleKey; title: string; note: string; icon: typeof BookOpen }[] = [
@@ -47,6 +48,7 @@ export default function Home() {
       <div className="track-options">{TRACK_ORDER.map((key) => <button key={key} className={`track-option ${track === key ? 'active' : ''}`} style={{ '--track-accent': LEARNING_TRACKS[key].accent } as CSSProperties} onClick={() => setTrack(key)}>{LEARNING_TRACKS[key].shortLabel}<small>{key === 'primary' ? '图像启蒙' : key === 'cet' ? '目标冲刺' : '能力进阶'}</small></button>)}</div>
     </section>
 
+    <ProgressionPanel />
     <section className="mission-layout" aria-label="今日核心任务">
       <article className="quest-card"><img src="./assets/neon-harbor-quest.png" alt="戴耳机的小狐狸站在夜色港湾，准备展开英语词汇探险" /><div className="quest-copy"><span className="quest-type">词汇探险</span><h2>微光港 · 记忆航线</h2><p>在真实语境里认出新词，让每一次选择都推动故事向前。</p><button className="btn quest-start" onClick={() => go('vocab')}><Play size={17} fill="currentColor" /> 开始任务</button></div></article>
       <aside className="mission-stats" aria-label="学习状态">

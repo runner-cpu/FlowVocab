@@ -9,6 +9,8 @@ import { MODULE_META, type ModuleKey } from '../types'
 import { Activity, ArrowUpRight, BarChart3, Flame, Sparkles, Target, TimerReset } from 'lucide-react'
 import AnimatedNumber from '../components/ui/AnimatedNumber'
 import SpotlightCard from '../components/ui/SpotlightCard'
+import ProgressionPanel from '../components/dashboard/ProgressionPanel'
+import { planetLevelFromEnergy } from '../engine/progression'
 
 export default function Dashboard() {
   const profile = useProgress((s) => s.profile)
@@ -39,9 +41,10 @@ export default function Dashboard() {
         <div className="stat"><div className="v"><AnimatedNumber value={profile?.bestCombo ?? 0} /></div><div className="k">最佳连击</div></div>
         <div className="stat"><div className="v"><AnimatedNumber value={daily?.comboMax ?? 0} /></div><div className="k">今日最佳连击</div></div>
         <div className="stat"><div className="v"><AnimatedNumber value={Math.floor(planet?.energy ?? 0)} /></div><div className="k">星球能量</div></div>
-        <div className="stat"><div className="v">{planet?.level ?? 0}/5</div><div className="k">星球等级</div></div>
+        <div className="stat"><div className="v">{planetLevelFromEnergy(planet?.energy ?? 0)}/10</div><div className="k">星球等级</div></div>
       </div>
 
+      <ProgressionPanel achievements />
       <div className="insight-banner">
         <div className="insight-mark"><Sparkles size={20} /></div>
         <div className="insight-copy"><strong>成长提示</strong><p>你在 {strongest ? MODULE_META[strongest[0]].name.split('·')[0] : '词汇'} 上表现亮眼（{strongest?.[1] ?? 0}%），下一步建议补强 {weakest ? MODULE_META[weakest[0]].name.split('·')[0] : '听力'}，让能力更均衡。</p></div>

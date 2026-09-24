@@ -231,6 +231,10 @@ export interface UserProfile {
   totalXp: number
   bestCombo: number
   streakDays: number
+  lastStudyDate: string | null
+  /** Local date for chests; date:quest-id for automatically awarded quest XP. */
+  claimedQuestDates: string[]
+  unlockedAchievements: string[]
   createdAt: number
   settings: { zenMode: boolean; volume: number; voiceRate: number }
 }

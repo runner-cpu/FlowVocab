@@ -46,10 +46,9 @@ export function evaluateAnswer(input: AnswerInput, prev: ComboState): ComboResul
     next.combo += 1
     next.maxCombo = Math.max(next.maxCombo, next.combo)
     const isCritical = input.timeMs < input.medianMs * 0.7
-    // 怒气触发（攒满 5 连击）：触发后连击归零，重新开始攒下一次怒气
-    if (!rageActive && next.combo >= RAGE_COMBO) {
+    // 连击持续累积；每到 5 的倍数且不在怒气中时，为接下来三次作答蓄能。
+    if (!rageActive && next.combo % RAGE_COMBO === 0) {
       const triggerCombo = next.combo
-      next.combo = 0
       next.rageActive = true
       next.rageRemaining = RAGE_CHARGES
       feedback = { type: 'rage', combo: triggerCombo, isCritical, rageActive: true, message: `🔥 怒气爆发 · 接下来 ${RAGE_CHARGES} 次作答双倍经验！` }
@@ -66,7 +65,7 @@ export function evaluateAnswer(input: AnswerInput, prev: ComboState): ComboResul
       }
     }
     const base = 10
-    xp = Math.round(base * (next.rageActive ? 2 : 1) * (isCritical ? 2 : 1))
+    xp = Math.round(base * (rageActive ? 2 : 1) * (isCritical ? 2 : 1))
     energy = Math.round((1 + next.combo * 0.2) * 10) / 10
   } else {
     next.combo = 0
