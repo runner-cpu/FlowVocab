@@ -15,11 +15,13 @@ export function nextInterval(prevInterval: number, quality: 0 | 1 | 2): number {
   return Math.min(prevInterval * 2, 30)
 }
 
-export function nextStatus(status: string, quality: 0 | 1 | 2): 'new' | 'learning' | 'mastered' {
+export function nextStatus(
+  status: string,
+  quality: 0 | 1 | 2,
+  successfulReviews = 0
+): 'new' | 'learning' | 'mastered' {
   if (quality >= 1) {
-    if (status === 'new') return 'learning'
-    if (status === 'learning') return 'mastered'
-    return 'mastered'
+    return successfulReviews >= 3 ? 'mastered' : 'learning'
   }
   return status === 'new' ? 'new' : 'learning'
 }

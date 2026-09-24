@@ -8,13 +8,12 @@ export const DIFFICULTY_NAMES = ['四级核心', '四级高频', '六级', '六�
 
 export interface DifficultyState {
   level: DifficultyLevel
-  window: boolean[] // 最近10次对错
-  slowCount: number // 最近10次中"超慢"次数
+  window: Array<{ correct: boolean; slow: boolean }>
   step: number // 累计题数
 }
 
 export function createDifficultyState(): DifficultyState {
-  return { level: 0, window: [], slowCount: 0, step: 0 }
+  return { level: 0, window: [], step: 0 }
 }
 
 /**
@@ -27,16 +26,15 @@ export function updateDifficulty(
   medianMs: number
 ): { state: DifficultyState; feedback: FeedbackEvent | null } {
   const slow = timeMs > medianMs * 1.4
-  const window = [...prev.window, correct].slice(-WINDOW_SIZE)
-  const slowCount = Math.min(prev.slowCount + (slow ? 1 : 0), WINDOW_SIZE)
+  const window = [...prev.window, { correct, slow }].slice(-WINDOW_SIZE)
   const step = prev.step + 1
 
   let level: DifficultyLevel = prev.level
   let feedback: FeedbackEvent | null = null
 
   if (window.length >= WINDOW_SIZE) {
-    const acc = window.filter(Boolean).length / WINDOW_SIZE
-    const slowRatio = slowCount / WINDOW_SIZE
+    const acc = window.filter((sample) => sample.correct).length / WINDOW_SIZE
+    const slowRatio = window.filter((sample) => sample.slow).length / WINDOW_SIZE
     if (acc > 0.85 && slowRatio < 0.4 && level < MAX_LEVEL) {
       level = (level + 1) as DifficultyLevel
       feedback = { type: 'levelup', combo: 0, isCritical: false, rageActive: false, message: '🚀 挑战升级！' }
@@ -46,5 +44,5 @@ export function updateDifficulty(
     }
   }
 
-  return { state: { level, window, slowCount, step }, feedback }
+  return { state: { level, window, step }, feedback }
 }
