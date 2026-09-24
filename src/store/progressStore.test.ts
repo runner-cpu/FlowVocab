@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
 import Dexie from 'dexie'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db } from './db'
 import { useProgress } from './progressStore'
 import { dayKey } from '../engine/forget'
@@ -16,16 +16,69 @@ beforeEach(async () => {
   useProgress.setState({ profile })
   await useProgress.getState().startSession('vocab')
 })
-afterEach(async () => { await db.delete() })
+afterEach(async () => { vi.restoreAllMocks(); await db.delete() })
 
 describe('atomic answer persistence', () => {
+  it('blocks later answers behind a failed miss and retries in the original reward order', async () => {
+    for (let i = 0; i < 4; i++) await useProgress.getState().answer(answer)
+    const fail = () => { throw new Error('disk full') }
+    db.progress.hook('updating', fail)
+    try { await useProgress.getState().answer({ ...answer, correct: false }) } finally { db.progress.hook('updating').unsubscribe(fail) }
+    await useProgress.getState().answer(answer)
+    expect(useProgress.getState().profile?.totalXp).toBe(40)
+    expect((await db.userWords.get('atomic-word'))?.total).toBe(4)
+    await useProgress.getState().retrySave()
+    expect(useProgress.getState().profile?.totalXp).toBe(52)
+    expect(useProgress.getState().daily).toMatchObject({ xp: 52, comboMax: 4 })
+    expect(useProgress.getState().combo.combo).toBe(1)
+    expect((await db.userWords.get('atomic-word'))?.total).toBe(6)
+    await useProgress.getState().retrySave()
+    expect(useProgress.getState().profile?.totalXp).toBe(52)
+  })
+  it('keeps failed vocab in its original session before queued grammar begins', async () => {
+    const fail = () => { throw new Error('disk full') }
+    db.progress.hook('updating', fail)
+    try { await useProgress.getState().answer(answer) } finally { db.progress.hook('updating').unsubscribe(fail) }
+    await useProgress.getState().finishSession()
+    await useProgress.getState().startSession('grammar')
+    await useProgress.getState().answer({ ...answer, module: 'grammar', wordId: undefined })
+    expect(await db.sessions.count()).toBe(0)
+    await useProgress.getState().retrySave()
+    expect((await db.sessions.toArray())[0]).toMatchObject({ module: 'vocab', total: 1, correct: 1 })
+    expect(useProgress.getState().session).toMatchObject({ module: 'grammar', total: 1, correct: 1 })
+    expect(useProgress.getState().daily?.modules).toMatchObject({ vocab: 1, grammar: 1 })
+  })
+  it('keeps the original answer date when retry happens after midnight', async () => {
+    const yesterday = new Date(2026, 8, 24, 23, 59).getTime()
+    const tomorrow = new Date(2026, 8, 25, 0, 1).getTime()
+    const now = vi.spyOn(Date, 'now').mockReturnValue(yesterday)
+    const fail = () => { throw new Error('disk full') }
+    db.progress.hook('updating', fail)
+    try { await useProgress.getState().answer(answer) } finally { db.progress.hook('updating').unsubscribe(fail) }
+    now.mockReturnValue(tomorrow)
+    await useProgress.getState().answer(answer)
+    await useProgress.getState().retrySave()
+    expect(await db.dailyStats.get('2026-09-24')).toMatchObject({ xp: 10, modules: { vocab: 1 } })
+    expect(await db.dailyStats.get('2026-09-25')).toMatchObject({ xp: 10, modules: { vocab: 1 } })
+  })
+  it.each([false, true])('does not carry yesterday’s maximum or rage into today (correct=%s)', async (correct) => {
+    const now = vi.spyOn(Date, 'now').mockReturnValue(new Date(2026, 8, 24, 23, 59).getTime())
+    for (let i = 0; i < 5; i++) await useProgress.getState().answer(answer)
+    now.mockReturnValue(new Date(2026, 8, 25, 0, 1).getTime())
+    await useProgress.getState().answer({ ...answer, correct })
+    expect(useProgress.getState().daily).toMatchObject({ date: '2026-09-25', xp: correct ? 10 : 2, comboMax: correct ? 1 : 0 })
+    expect(useProgress.getState().profile?.claimedQuestDates).not.toContain('2026-09-25:combo')
+    await useProgress.getState().finishSession()
+    expect(await db.dailyStats.get('2026-09-25')).toMatchObject({ xp: correct ? 10 : 2, comboMax: correct ? 1 : 0 })
+    expect((await db.sessions.toArray())[0].comboMax).toBe(5)
+  })
   it('finishes the old session before starting a new module while an answer is saving', async () => {
     const s = useProgress.getState()
     await Promise.all([s.answer(answer), s.finishSession(), s.startSession('grammar')])
     expect((await db.sessions.toArray())[0]).toMatchObject({ module: 'vocab', total: 1, correct: 1 })
     expect(useProgress.getState().session).toMatchObject({ module: 'grammar', total: 0 })
   })
-  it('retains a failed answer for retry even after a later answer succeeds', async () => {
+  it('retains failed and later queued answers until retry succeeds', async () => {
     const fail = () => { throw new Error('temporary write failure') }
     db.progress.hook('updating', fail)
     try { await useProgress.getState().answer(answer) } finally { db.progress.hook('updating').unsubscribe(fail) }

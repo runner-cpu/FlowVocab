@@ -38,13 +38,31 @@ import type {
 // 会话内滚动用时（用于动态中位数）
 let rollingTimes: number[] = []
 let pendingWrites: Promise<void> = Promise.resolve()
-let retryOperations: { run: () => Promise<void>; message: string }[] = []
+let writeQueue: (() => Promise<void>)[] = []
+let writesBlocked = false
 let retryInFlight: Promise<void> | null = null
 
-function serializeWrite(operation: () => Promise<void>): Promise<void> {
-  const result = pendingWrites.then(operation)
-  pendingWrites = result.catch(() => {})
-  return result
+async function drainWrites(): Promise<void> {
+  while (!writesBlocked && writeQueue.length) {
+    try {
+      await writeQueue[0]()
+      writeQueue.shift()
+    } catch {
+      // Keep the failed operation at the head. Session transitions and subsequent
+      // answers must not advance state until explicit retry has committed it.
+      writesBlocked = true
+      useProgress.setState({ saveError: '保存失败，后续操作已暂停。请重试保存。' })
+    }
+  }
+  if (!writesBlocked) useProgress.setState({ saveError: null })
+}
+
+function serializeWrite(operation: (submittedAt: number) => Promise<void>): Promise<void> {
+  const submittedAt = Date.now()
+  writeQueue.push(() => operation(submittedAt))
+  pendingWrites = pendingWrites.then(drainWrites)
+  // While blocked this acknowledges enqueueing, not persistence; saveError stays visible.
+  return pendingWrites
 }
 
 export function emptyDaily(date: string): DailyStat {
@@ -133,12 +151,12 @@ export const useProgress = create<ProgressStore>((set, get) => ({
   saveError: null,
   retrySave: () => {
     if (retryInFlight) return retryInFlight
-    const operation = retryOperations.shift()
-    if (!operation) return Promise.resolve()
-    retryInFlight = operation.run().finally(() => {
-      retryInFlight = null
-      set({ saveError: retryOperations[0]?.message ?? null })
+    if (!writesBlocked) return pendingWrites
+    pendingWrites = pendingWrites.then(async () => {
+      writesBlocked = false
+      await drainWrites()
     })
+    retryInFlight = pendingWrites.finally(() => { retryInFlight = null })
     return retryInFlight
   },
 
@@ -170,7 +188,8 @@ export const useProgress = create<ProgressStore>((set, get) => ({
     progress.radar = computeRadar(progress, userWords)
     await db.progress.put(progress)
     rollingTimes = []
-    retryOperations = []
+    writeQueue = []
+    writesBlocked = false
 
     set({ ready: true, profile, planet, progress, daily, userWords, saveError: null })
   },
@@ -180,13 +199,13 @@ export const useProgress = create<ProgressStore>((set, get) => ({
     set({ session: { ...emptySession, module }, combo: createComboState(), difficulty: createDifficultyState() })
   }),
 
-  finishSession: () => serializeWrite(async () => {
-    const { session, profile, planet } = get()
+  finishSession: () => serializeWrite(async (submittedAt) => {
+    const { session } = get()
     if (!session.module) return
     if (session.total > 0) {
       const rec: Session = {
-        id: Date.now(),
-        time: Date.now(),
+        id: submittedAt,
+        time: submittedAt,
         module: session.module,
         comboMax: session.comboMax,
         correct: session.correct,
@@ -196,27 +215,20 @@ export const useProgress = create<ProgressStore>((set, get) => ({
       }
       await db.sessions.add(rec)
     }
-    const today = dayKey(Date.now())
-    const daily = await db.dailyStats.get(today)
-    if (daily) {
-      daily.comboMax = Math.max(daily.comboMax, session.comboMax)
-      await db.dailyStats.put(daily)
-      set({ daily })
-    }
-    void planet
-    void profile
+    // Answers already persist date-scoped combo maxima. A session can span days.
     set({ session: { ...emptySession } })
   }),
 
-  answer: (opts) => serializeWrite(async () => {
-    const { module, wordId, correct, timeMs, medianMs } = opts
+  answer: ({ module, wordId, correct, timeMs, medianMs }) => serializeWrite(async (now) => {
     const s = get()
     if (!s.profile || !s.planet || !s.progress) return
     const med = medianMs ?? median(rollingTimes)
     const nextRollingTimes = [...rollingTimes, timeMs].slice(-20)
     const st = get().session
 
-    const comboRes = evaluateAnswer({ correct, timeMs, medianMs: med }, get().combo)
+    const today = dayKey(now)
+    const combo = s.daily?.date === today ? s.combo : createComboState()
+    const comboRes = evaluateAnswer({ correct, timeMs, medianMs: med }, combo)
     const diffRes = updateDifficulty(get().difficulty, correct, timeMs, med)
 
     // 会话更新
@@ -230,8 +242,6 @@ export const useProgress = create<ProgressStore>((set, get) => ({
     }
 
     // 用户资料 & 星球 & 每日
-    const now = Date.now()
-    const today = dayKey(now)
     const profile = { ...s.profile, claimedQuestDates: [...s.profile.claimedQuestDates] }
     const planet = { ...s.planet }
     const daily = s.daily?.date === today ? { ...s.daily, modules: { ...s.daily.modules } } : emptyDaily(today)
@@ -249,7 +259,7 @@ export const useProgress = create<ProgressStore>((set, get) => ({
       daily.xp += comboRes.xp
       daily.energy = Math.round((daily.energy + comboRes.energy) * 10) / 10
       daily.modules[module] += 1
-      daily.comboMax = Math.max(daily.comboMax, comboRes.state.maxCombo)
+      daily.comboMax = Math.max(daily.comboMax, comboRes.state.combo)
     }
 
     // 词汇进度
@@ -292,20 +302,14 @@ export const useProgress = create<ProgressStore>((set, get) => ({
       }
     }
     profile.unlockedAchievements = deriveProfileProgress(profile, daily, planet, userWords).unlockedAchievementIds
-    try {
-      await db.transaction('rw', [db.userProfile, db.planet, db.dailyStats, db.userWords, db.progress], async () => {
-        await db.userProfile.put(profile)
-        await db.planet.put(planet)
-        await db.dailyStats.put(daily)
-        const word = userWords.find(w => w.wordId === wordId)
-        if (module === 'vocab' && word) await db.userWords.put(word)
-        await db.progress.put(progress)
-      })
-    } catch {
-      retryOperations.push({ run: () => get().answer(opts), message: '本次作答尚未保存，请重试。' })
-      set({ saveError: retryOperations[0].message })
-      return
-    }
+    await db.transaction('rw', [db.userProfile, db.planet, db.dailyStats, db.userWords, db.progress], async () => {
+      await db.userProfile.put(profile)
+      await db.planet.put(planet)
+      await db.dailyStats.put(daily)
+      const word = userWords.find(w => w.wordId === wordId)
+      if (module === 'vocab' && word) await db.userWords.put(word)
+      await db.progress.put(progress)
+    })
     rollingTimes = nextRollingTimes
     set({
       combo: comboRes.state,
@@ -316,40 +320,37 @@ export const useProgress = create<ProgressStore>((set, get) => ({
       planet,
       daily,
       userWords,
-      progress,
-      saveError: retryOperations[0]?.message ?? null
+      progress
     })
-    if (!profile.settings.zenMode) {
-      const t = comboRes.feedback.type
-      if (t === 'critical') SoundBank.critical()
-      else if (t === 'rage') SoundBank.rage()
-      else if (t === 'combo') SoundBank.combo(comboRes.state.combo)
-      else if (t === 'hit') SoundBank.hit()
-      else if (t === 'miss') SoundBank.miss()
-      if (diffRes.feedback) SoundBank.levelup()
+    try {
+      if (!profile.settings.zenMode) {
+        const t = comboRes.feedback.type
+        if (t === 'critical') SoundBank.critical()
+        else if (t === 'rage') SoundBank.rage()
+        else if (t === 'combo') SoundBank.combo(comboRes.state.combo)
+        else if (t === 'hit') SoundBank.hit()
+        else if (t === 'miss') SoundBank.miss()
+        if (diffRes.feedback) SoundBank.levelup()
+      }
+    } catch {
+      // Audio availability must never cause an already committed answer to replay.
     }
   }),
 
-  claimDailyChest: () => serializeWrite(async () => {
+  claimDailyChest: () => serializeWrite(async (submittedAt) => {
     const s = get()
-    const today = dayKey(Date.now())
+    const today = dayKey(submittedAt)
     if (!s.profile || !s.planet || !s.daily || s.daily.date !== today) return
     if (deriveProfileProgress(s.profile, s.daily, s.planet, s.userWords).chest !== 'available') return
     const profile = { ...s.profile, claimedQuestDates: [...s.profile.claimedQuestDates, today] }
     const planet = { ...s.planet, energy: s.planet.energy + 50, level: planetLevelFromEnergy(s.planet.energy + 50) }
     const daily = { ...s.daily, energy: s.daily.energy + 50 }
-    try {
-      await db.transaction('rw', [db.userProfile, db.planet, db.dailyStats], async () => {
-        await db.userProfile.put(profile)
-        await db.planet.put(planet)
-        await db.dailyStats.put(daily)
-      })
-    } catch {
-      retryOperations.push({ run: () => get().claimDailyChest(), message: '宝箱尚未领取成功，请重试。' })
-      set({ saveError: retryOperations[0].message })
-      return
-    }
-    set({ profile, planet, daily, saveError: retryOperations[0]?.message ?? null })
+    await db.transaction('rw', [db.userProfile, db.planet, db.dailyStats], async () => {
+      await db.userProfile.put(profile)
+      await db.planet.put(planet)
+      await db.dailyStats.put(daily)
+    })
+    set({ profile, planet, daily })
   }),
 
   completeGrammarNode: (nodeId) => serializeWrite(async () => {
