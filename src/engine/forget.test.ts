@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest'
-import { updateReviewProgress } from './forget'
+import { normalizeSuccessfulReviews, updateReviewProgress } from './forget'
 
 describe('updateReviewProgress', () => {
   test('keeps a new word learning after its first successful review', () => {
@@ -34,5 +34,19 @@ describe('updateReviewProgress', () => {
     expect(firstRetry).toEqual({ status: 'learning', successfulReviews: 1 })
     expect(secondRetry).toEqual({ status: 'learning', successfulReviews: 2 })
     expect(thirdRetry).toEqual({ status: 'mastered', successfulReviews: 3 })
+  })
+})
+
+describe('normalizeSuccessfulReviews', () => {
+  test('preserves a legacy mastered word when its success count is missing', () => {
+    const successfulReviews = normalizeSuccessfulReviews('mastered', undefined)
+    const afterCorrectReview = updateReviewProgress('mastered', 1, successfulReviews)
+
+    expect(successfulReviews).toBeGreaterThanOrEqual(3)
+    expect(afterCorrectReview).toEqual({ status: 'mastered', successfulReviews: 4 })
+  })
+
+  test('starts a legacy learning word with a missing count from zero', () => {
+    expect(normalizeSuccessfulReviews('learning', undefined)).toBe(0)
   })
 })

@@ -38,6 +38,11 @@ export function updateReviewProgress(
   }
 }
 
+export function normalizeSuccessfulReviews(status: string, value: number | undefined): number {
+  const successfulReviews = value ?? 0
+  return status === 'mastered' ? Math.max(successfulReviews, 3) : successfulReviews
+}
+
 export function dayKey(ts: number): string {
   const d = new Date(ts)
   const m = String(d.getMonth() + 1).padStart(2, '0')
