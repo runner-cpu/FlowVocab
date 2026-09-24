@@ -2,10 +2,14 @@ import { describe, expect, test } from 'vitest'
 import { heatmapScale, levelFromXp, planetLevelFromEnergy, vocabMasteryScore } from './progression'
 
 describe('progression display helpers', () => {
-  test('maps XP into 100-point levels', () => {
+  test('maps XP through the approved cumulative threshold table', () => {
     expect(levelFromXp(0)).toBe(0)
-    expect(levelFromXp(99)).toBe(0)
-    expect(levelFromXp(100)).toBe(1)
+    expect(levelFromXp(499)).toBe(0)
+    expect(levelFromXp(500)).toBe(1)
+    expect(levelFromXp(1499)).toBe(1)
+    expect(levelFromXp(1500)).toBe(2)
+    expect(levelFromXp(26400)).toBe(9)
+    expect(levelFromXp(999999)).toBe(9)
   })
 
   test('maps energy into ten 250-energy planet levels', () => {

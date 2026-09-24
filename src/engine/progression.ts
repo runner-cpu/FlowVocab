@@ -1,10 +1,15 @@
-const XP_PER_LEVEL = 100
+const XP_LEVEL_THRESHOLDS = [0, 500, 1500, 3200, 5600, 8500, 12000, 16200, 21000, 26400]
 const ENERGY_PER_PLANET_LEVEL = 250
 const MAX_PLANET_LEVEL = 10
 const REVIEWED_WORD_CREDIT = 0.25
 
 export function levelFromXp(totalXp: number): number {
-  return Math.max(0, Math.floor(totalXp / XP_PER_LEVEL))
+  let level = 0
+  for (let index = 1; index < XP_LEVEL_THRESHOLDS.length; index += 1) {
+    if (totalXp < XP_LEVEL_THRESHOLDS[index]) break
+    level = index
+  }
+  return level
 }
 
 export function planetLevelFromEnergy(energy: number): number {

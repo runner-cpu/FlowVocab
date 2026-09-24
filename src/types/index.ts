@@ -38,8 +38,7 @@ export interface UserWord {
   nextReview: number
   interval: number
   quality: number
-  /** Optional while records created before three-review mastery are migrated. */
-  successfulReviews?: number
+  successfulReviews: number
 }
 
 // ---------- 语法 ----------

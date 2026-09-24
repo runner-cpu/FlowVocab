@@ -10,7 +10,7 @@ import {
   createDifficultyState,
   type DifficultyState
 } from '../engine/difficulty'
-import { qualityOf, nextInterval, nextStatus, dayKey } from '../engine/forget'
+import { qualityOf, nextInterval, updateReviewProgress, dayKey } from '../engine/forget'
 import { SoundBank } from '../engine/audio'
 import {
   WORDS,
@@ -238,11 +238,13 @@ export const useProgress = create<ProgressStore>((set, get) => ({
       const q = qualityOf(correct, timeMs, med)
       let uw = userWords.find((w) => w.wordId === wordId)
       if (!uw) {
-        uw = { id: wordId, wordId, status: 'new', correct: 0, total: 0, lastReview: null, nextReview: now, interval: 0, quality: 0 }
+        uw = { id: wordId, wordId, status: 'new', correct: 0, total: 0, lastReview: null, nextReview: now, interval: 0, quality: 0, successfulReviews: 0 }
       }
+      const reviewProgress = updateReviewProgress(uw.status, q, uw.successfulReviews ?? 0)
       uw = {
         ...uw,
-        status: nextStatus(uw.status, q) as UserWord['status'],
+        status: reviewProgress.status,
+        successfulReviews: reviewProgress.successfulReviews,
         correct: uw.correct + (correct ? 1 : 0),
         total: uw.total + 1,
         lastReview: now,

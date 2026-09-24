@@ -18,12 +18,24 @@ export function nextInterval(prevInterval: number, quality: 0 | 1 | 2): number {
 export function nextStatus(
   status: string,
   quality: 0 | 1 | 2,
-  successfulReviews = 0
+  successfulReviews: number
 ): 'new' | 'learning' | 'mastered' {
   if (quality >= 1) {
     return successfulReviews >= 3 ? 'mastered' : 'learning'
   }
   return status === 'new' ? 'new' : 'learning'
+}
+
+export function updateReviewProgress(
+  status: string,
+  quality: 0 | 1 | 2,
+  successfulReviews: number
+): { status: 'new' | 'learning' | 'mastered'; successfulReviews: number } {
+  const nextSuccessfulReviews = quality >= 1 ? successfulReviews + 1 : 0
+  return {
+    status: nextStatus(status, quality, nextSuccessfulReviews),
+    successfulReviews: nextSuccessfulReviews
+  }
 }
 
 export function dayKey(ts: number): string {
