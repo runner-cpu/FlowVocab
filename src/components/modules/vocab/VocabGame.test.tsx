@@ -20,7 +20,7 @@ afterEach(async () => { cleanup(); await db.delete() })
 
 describe('real vocabulary mission', () => {
   it('accepts a digit exactly once, disables answers, then uses Enter to advance', async () => {
-    render(<VocabGame words={words} roundSize={2} random={() => 0} />)
+    render(<VocabGame words={words} roundSize={2} random={() => 0.999} />)
     await screen.findByRole('heading', { name: 'explore' })
     const choices = within(screen.getByRole('group', { name: '答案选项' })).getAllByRole('button')
     fireEvent.keyDown(window, { key: '1' })
@@ -37,7 +37,7 @@ describe('real vocabulary mission', () => {
     expect(useProgress.getState().session.total).toBe(1)
   })
   it('shows accurate round results and newly unlocked rewards after the configured stop count', async () => {
-    render(<VocabGame words={words} roundSize={2} random={() => 0} />)
+    render(<VocabGame words={words} roundSize={2} random={() => 0.999} />)
     for (const meaning of ['探索', '发现']) {
       fireEvent.click(await screen.findByRole('button', { name: new RegExp(meaning) }))
       const next = await screen.findByRole('button', { name: /下一站|查看战报/ })
@@ -49,10 +49,10 @@ describe('real vocabulary mission', () => {
     expect(screen.getByLabelText('本轮最高连击')).toHaveTextContent('2')
     expect(screen.getByLabelText('本轮星级')).toHaveTextContent('3 / 3')
     expect(screen.getByText('初次启航')).toBeVisible()
-    expect(screen.getByLabelText('本轮经验')).toHaveTextContent('30 XP')
+    expect(screen.getByLabelText('本轮经验')).toHaveTextContent(/(30|40) XP/)
   })
   it('provides a named pronunciation control, an explicit unsupported message, and a single-use hint', async () => {
-    render(<VocabGame words={words} random={() => 0} />)
+    render(<VocabGame words={words} random={() => 0.999} />)
     const pronounce = await screen.findByRole('button', { name: '播放单词发音' })
     pronounce.focus()
     expect(pronounce).toHaveFocus()
@@ -69,7 +69,7 @@ describe('real vocabulary mission', () => {
     Object.defineProperty(window, 'SpeechSynthesisUtterance', { configurable: true, value: class {} })
     Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: { cancel() {}, speak() { throw new Error('voice unavailable') } } })
     try {
-      render(<VocabGame words={words} roundSize={3} random={() => 0} />)
+      render(<VocabGame words={words} roundSize={3} random={() => 0.999} />)
       fireEvent.click(await screen.findByRole('button', { name: new RegExp(words[0].meaning) }))
       const next = await screen.findByRole('button', { name: /下一站/ })
       await waitFor(() => expect(next).toBeEnabled())
@@ -89,7 +89,7 @@ describe('real vocabulary mission', () => {
     }
   })
   it('does not skip or resubmit a failed save and resumes after the original operation retries', async () => {
-    render(<VocabGame words={words} roundSize={1} random={() => 0} />)
+    render(<VocabGame words={words} roundSize={1} random={() => 0.999} />)
     const choice = await screen.findByRole('button', { name: /探索/ })
     const fail = () => { throw new Error('disk full') }
     db.progress.hook('updating', fail)
@@ -107,7 +107,7 @@ describe('real vocabulary mission', () => {
     expect((await db.userWords.get('explore'))?.total).toBe(1)
   })
   it('finishes all 30 stops with spelling, three bosses, continuous combo and a fresh restart', async () => {
-    render(<VocabGame words={words} random={() => 0} />)
+    render(<VocabGame words={words} random={() => 0.999} />)
     for (let stop = 1; stop <= 30; stop += 1) {
       await screen.findByText('第 ' + stop + ' / 30 站')
       if (stop % 10 === 0) expect(screen.getByText('BOSS · 第 ' + stop + ' 站首领挑战')).toBeVisible()

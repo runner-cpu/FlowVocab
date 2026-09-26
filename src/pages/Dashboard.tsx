@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react'
+import { useCallback, useMemo, useState } from 'react'
 import { useProgress } from '../store/progressStore'
 import PlanetView from '../components/dashboard/PlanetView'
 import Heatmap from '../components/dashboard/Heatmap'
@@ -25,6 +25,8 @@ export default function Dashboard() {
   const radarEntries = (Object.entries(radar ?? {}) as [ModuleKey, number][]).sort((a, b) => b[1] - a[1])
   const strongest = radarEntries[0]
   const weakest = radarEntries[radarEntries.length - 1]
+  const isFirstStudy = radarEntries.length === 0 || radarEntries.every(([, value]) => value === 0)
+  const selectModule = useCallback((module: ModuleKey) => { setSelected(module); go(module) }, [go])
   const reviewLoad = useMemo(() => {
     const now = Date.now(); const day = 86400000
     return [
@@ -33,6 +35,8 @@ export default function Dashboard() {
       { label: '已掌握', value: userWords.filter((word) => word.status === 'mastered').length, tone: 'mint' }
     ]
   }, [userWords])
+
+  if (isFirstStudy) return <div className="growth-page"><div className="insight-banner"><div className="insight-mark"><Sparkles size={20} /></div><div className="insight-copy"><strong>成长提示</strong><p>完成第一轮练习后，这里会显示你的能力变化</p></div></div><div className="card"><RadarChart onModuleSelect={selectModule} /></div></div>
 
   return (
     <div className="growth-page">
