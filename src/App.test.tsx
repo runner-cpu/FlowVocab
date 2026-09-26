@@ -15,6 +15,6 @@ test('shows retry after initialization fails and recovers on the next attempt', 
   expect(await screen.findByRole('alert')).toHaveTextContent('无法读取本地学习数据')
   fireEvent.click(screen.getByRole('button', { name: '重试' }))
   await waitFor(() => expect(useProgress.getState().ready).toBe(true))
-  expect(document.querySelector('main')).not.toBeNull()
+  await waitFor(() => expect(document.querySelector('.mission-heading h1')).toHaveTextContent('探索、练习、持续成长。'))
   expect(get).toHaveBeenCalledTimes(2)
 })

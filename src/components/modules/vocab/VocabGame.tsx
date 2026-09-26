@@ -6,6 +6,7 @@ import { createVocabQuestion, hasPronunciation, isVocabAnswerCorrect, speakWord,
 import { levelFromXp } from '../../../engine/progression'
 import { elapsedSince } from '../../../engine/sessionTiming'
 import { orderReviewCandidates } from '../../../engine/reviewQueue'
+import { consumeRetry, reserveRetry } from '../../../engine/retrySlots'
 import { ACHIEVEMENTS } from '../../../store/progressModel'
 import { useUI } from '../../../store/gameStore'
 import type { VocabQuestion, Word, WordBankProgress } from '../../../types'
@@ -55,14 +56,15 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random 
     const levelPool = words ?? getWordPool(state.difficulty.level)
     const pool = levelPool.length ? levelPool : ([0, 1, 2, 3, 4] as const).flatMap(getWordPool)
     if (!pool.length) { setEmpty(true); return }
-    const fresh = pool.filter(word => !used.current.has(word.id))
+    const reservedWordIds = new Set([...requeueAt.current.values()].flat())
+    const available = pool.filter(word => !reservedWordIds.has(word.id))
+    const fresh = available.filter(word => !used.current.has(word.id))
     const requestedWordId = nextIndex === 0 ? useUI.getState().reviewWordId : null
-    const candidates = orderReviewCandidates(fresh.length ? fresh : pool, state.userWords, Date.now(), randomSource.current, requestedWordId)
-    const requeuedWords = requeueAt.current.get(nextIndex) ?? []
-    const requeuedWord = requeuedWords.shift()
+    const candidates = orderReviewCandidates(fresh.length ? fresh : available, state.userWords, Date.now(), randomSource.current, requestedWordId)
+    const consumed = consumeRetry(requeueAt.current, nextIndex)
+    const requeuedWord = consumed.wordId
     const word = requeuedWord ? pool.find((candidate) => candidate.id === requeuedWord) ?? candidates[0] : candidates[0]
-    if (requeuedWords.length) requeueAt.current.set(nextIndex, requeuedWords)
-    requeueAt.current.delete(nextIndex)
+    requeueAt.current = consumed.slots
     if (requestedWordId && word && (word.id === requestedWordId || word.word === requestedWordId)) useUI.getState().consumeReviewWord()
     used.current.add(word.id)
     setQuestion(createVocabQuestion(word, pool, vocabModeAt(nextIndex, word, hasPronunciation()), { random: randomSource.current, number: nextIndex + 1 }))
@@ -116,12 +118,7 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random 
     setPicked(value)
     if (!correct && !requeued.current.has(question.word.id)) {
       requeued.current.add(question.word.id)
-      const remaining = target - index - 1
-      if (remaining >= 2) {
-        const offset = 2 + Math.floor(randomSource.current() * Math.min(4, remaining - 1))
-        const insertAt = index + offset
-        requeueAt.current.set(insertAt, [...(requeueAt.current.get(insertAt) ?? []), question.word.id])
-      }
+      requeueAt.current = reserveRetry(requeueAt.current, index, target, question.word.id, randomSource.current)
     }
     void state.answer({ module: 'vocab', wordId: question.word.id, correct, timeMs: elapsedSince(timer.current, performance.now()) })
   }

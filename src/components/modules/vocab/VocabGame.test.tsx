@@ -106,6 +106,25 @@ describe('real vocabulary mission', () => {
     expect(await screen.findByRole('heading', { name: '航程完成' })).toBeVisible()
     expect((await db.userWords.get('explore'))?.total).toBe(1)
   })
+  it('keeps a missed word out of normal selection until its reserved retry stop', async () => {
+    render(<VocabGame words={words.slice(0, 3)} roundSize={5} random={() => 0.999} />)
+    await screen.findByRole('heading', { name: 'explore' })
+    const wrong = within(screen.getByRole('group', { name: '答案选项' })).getAllByRole('button').find(button => !button.textContent?.includes('探索'))!
+    fireEvent.click(wrong)
+    await waitFor(() => expect(useProgress.getState().session.total).toBe(1))
+    fireEvent.click(await screen.findByRole('button', { name: /下一站/ }))
+    await screen.findByRole('heading', { name: 'discover' })
+    fireEvent.click(screen.getByRole('button', { name: '发现' }))
+    await waitFor(() => expect(useProgress.getState().session.total).toBe(2))
+    fireEvent.click(screen.getByRole('button', { name: /下一站/ }))
+    await screen.findByRole('heading', { name: '航行' })
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'sail' } })
+    fireEvent.click(screen.getByRole('button', { name: '提交拼写' }))
+    await waitFor(() => expect(useProgress.getState().session.total).toBe(3))
+    fireEvent.click(screen.getByRole('button', { name: /下一站/ }))
+    expect(await screen.findByRole('heading', { name: /discover|sail/ })).toBeVisible()
+    expect(screen.queryByRole('heading', { name: 'explore' })).toBeNull()
+  })
   it('finishes all 30 stops with spelling, three bosses, continuous combo and a fresh restart', async () => {
     render(<VocabGame words={words} random={() => 0.999} />)
     for (let stop = 1; stop <= 30; stop += 1) {

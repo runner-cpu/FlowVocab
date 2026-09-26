@@ -243,7 +243,8 @@ export default function ListeningGame() {
 
   const pick = (blankIdx: number, optIdx: number) => {
     if (answered || picked[blankIdx] !== undefined) return
-    const blank = item.blanks[blankIdx]
+    const blank = item.blanks.find((candidate) => candidate.index === blankIdx)
+    if (!blank) return
     const correct = blank.options[optIdx] === blank.answer
     const next = { ...picked, [blankIdx]: optIdx }
     setPicked(next)
