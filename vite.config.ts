@@ -5,7 +5,20 @@ export default defineConfig({
   plugins: [react()],
   base: './',
   server: { port: 5173, host: true },
-  build: { outDir: 'dist', chunkSizeWarningLimit: 1500 },
+  build: {
+    outDir: 'dist',
+    manifest: true,
+    chunkSizeWarningLimit: 500,
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          react: ['react', 'react-dom'],
+          data: ['dexie', 'zustand'],
+          charts: ['echarts']
+        }
+      }
+    }
+  },
   test: {
     environment: 'jsdom',
     setupFiles: './src/test/setup.ts'

@@ -36,7 +36,7 @@ async function resolveWordLabels(wordIds: string[]) {
 }
 
 export default function WordForest({ words, onReview }: { words: UserWord[]; onReview: (wordId: string) => void }) {
-  const now = Date.now()
+  const now = useMemo(() => Date.now(), [words])
   const trees = useMemo(() => [...words].sort((left, right) => {
     const rank: Record<TreeHealth, number> = { fragile: 0, due: 1, learning: 2, mastered: 3 }
     return rank[classifyWordTree(left, now)] - rank[classifyWordTree(right, now)] || left.nextReview - right.nextReview

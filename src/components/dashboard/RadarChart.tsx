@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import * as echarts from 'echarts'
+import echarts from '../../charts/echarts'
 import { useProgress } from '../../store/progressStore'
 import type { ModuleKey } from '../../types'
 

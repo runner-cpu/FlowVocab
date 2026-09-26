@@ -10,7 +10,7 @@ import type { Word, DifficultyLevel, WordBankProgress } from '../types'
  * 许可证提示：KyleBing 仓库未明确标注许可证，数据仅用于学习/开发验证，
  * 正式上线前请替换为 ECDICT(MIT) 或自建词库。
  */
-const IMPORT_VERSION = 1
+const IMPORT_VERSION = 2
 const BATCH = 2000
 
 let cache: Record<DifficultyLevel, Word[]> | null = null

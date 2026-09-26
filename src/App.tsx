@@ -1,11 +1,11 @@
-import { useEffect } from 'react'
+import { lazy, Suspense, useEffect } from 'react'
 import { useProgress } from './store/progressStore'
 import { useUI } from './store/gameStore'
 import TopBar from './components/layout/TopBar'
 import FeedbackFx from './components/game/FeedbackFx'
 import Home from './pages/Home'
-import Dashboard from './pages/Dashboard'
-import ModulePage from './pages/ModulePage'
+const Dashboard = lazy(() => import('./pages/Dashboard'))
+const ModulePage = lazy(() => import('./pages/ModulePage'))
 import { SaveStatus } from './components/dashboard/ProgressionPanel'
 import FirstRunGuide from './components/onboarding/FirstRunGuide'
 
@@ -28,12 +28,15 @@ export default function App() {
 
   return (
     <div className="app">
+      <a className="skip-link" href="#main-content">跳到主要内容</a>
       <TopBar />
-      <main className="main">
+      <main className="main" id="main-content" tabIndex={-1}>
         <SaveStatus />
-        {page === 'home' && <Home />}
-        {page === 'dashboard' && <Dashboard />}
-        {isModule && <ModulePage module={page as any} />}
+        <Suspense fallback={<div className="loading route-loading" role="status">正在加载航线…</div>}>
+          {page === 'home' && <Home />}
+          {page === 'dashboard' && <Dashboard />}
+          {isModule && <ModulePage module={page as any} />}
+        </Suspense>
         {page === 'not-found' && <section className="not-found card"><span className="guide-kicker">FLOWVOCAB LOST SIGNAL</span><h1>这条航线不存在</h1><p className="muted">链接可能已经改变，返回学习舱可以继续你的离线进度。</p><button className="btn btn-primary" onClick={() => useUI.getState().go('home')}>返回学习舱</button></section>}
       </main>
       <FeedbackFx />

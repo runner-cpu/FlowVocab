@@ -29,6 +29,14 @@ jobs:
         run: npm ci
       - name: Build application
         run: npm run build
+      - name: Run tests
+        run: npm test -- --run
+      - name: Typecheck
+        run: npx tsc --noEmit
+      - name: Check initial bundle
+        run: npm run check:bundle
+      - name: Check diff whitespace
+        run: git diff --check
       - name: Upload Pages artifact
         uses: actions/upload-pages-artifact@v3
         with:

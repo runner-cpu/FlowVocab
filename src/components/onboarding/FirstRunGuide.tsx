@@ -1,4 +1,4 @@
-import { BarChart3, Keyboard, Map, Route, X } from 'lucide-react'
+﻿import { BarChart3, Keyboard, Map, Route, X } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { useUI } from '../../store/gameStore'
 
@@ -10,17 +10,18 @@ export default function FirstRunGuide() {
   const go = useUI((state) => state.go)
   const closeButton = useRef<HTMLButtonElement>(null)
   const opener = useRef<HTMLElement | null>(null)
-  const inertNodes = useRef<HTMLElement[]>([])
+  const inertNodes = useRef<Array<{ node: HTMLElement; inert: string | null; ariaHidden: string | null }>>([])
 
   useEffect(() => {
     if (!open) return
     const backdrop = document.querySelector<HTMLElement>('.guide-backdrop')
     const app = backdrop?.closest<HTMLElement>('.app')
-    inertNodes.current = app ? Array.from(app.children).filter((node): node is HTMLElement => node instanceof HTMLElement && node !== backdrop) : []
+    const nodes = app ? Array.from(app.children).filter((node): node is HTMLElement => node instanceof HTMLElement && node !== backdrop) : []
+    inertNodes.current = nodes.map((node) => ({ node, inert: node.getAttribute('inert'), ariaHidden: node.getAttribute('aria-hidden') }))
     opener.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body
       ? document.activeElement
-      : inertNodes.current[0]?.querySelector<HTMLElement>(FOCUSABLE) ?? null
-    inertNodes.current.forEach((node) => { node.setAttribute('inert', ''); node.setAttribute('aria-hidden', 'true') })
+      : nodes[0]?.querySelector<HTMLElement>(FOCUSABLE) ?? null
+    nodes.forEach((node) => { node.setAttribute('inert', ''); node.setAttribute('aria-hidden', 'true') })
     closeButton.current?.focus()
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') { event.preventDefault(); close(); return }
@@ -36,7 +37,12 @@ export default function FirstRunGuide() {
     window.addEventListener('keydown', onKeyDown)
     return () => {
       window.removeEventListener('keydown', onKeyDown)
-      inertNodes.current.forEach((node) => { node.removeAttribute('inert'); node.removeAttribute('aria-hidden') })
+      inertNodes.current.forEach(({ node, inert, ariaHidden }) => {
+        if (inert === null) node.removeAttribute('inert')
+        else node.setAttribute('inert', inert)
+        if (ariaHidden === null) node.removeAttribute('aria-hidden')
+        else node.setAttribute('aria-hidden', ariaHidden)
+      })
       inertNodes.current = []
       opener.current?.focus()
     }
@@ -53,3 +59,4 @@ export default function FirstRunGuide() {
     </section>
   </div>
 }
+

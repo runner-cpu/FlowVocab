@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import * as echarts from 'echarts'
+import echarts from '../../charts/echarts'
 import { db } from '../../store/db'
 import { dayKey } from '../../engine/forget'
 

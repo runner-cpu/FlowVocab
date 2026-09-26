@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import * as echarts from 'echarts'
+import echarts from '../../charts/echarts'
 import { db } from '../../store/db'
 import { DIFFICULTY_COLORS, DIFFICULTY_NAMES } from '../../engine/difficulty'
 

@@ -213,6 +213,17 @@ FlowVocab/
 
 本项目代码部分未指定许可证（保留所有权利）。**注意**：词库数据来自 KyleBing/english-vocabulary，该仓库未明确标注许可证，当前仅用于学习与开发验证；正式商业使用前请替换数据源。
 
+### ECDICT replacement procedure
+
+The checked-in lexical payload retains the original 13,159 IDs and CEFR/CET
+levels for IndexedDB compatibility, but its phonetics and meanings are
+regenerated from the cached ECDICT snapshot at commit
+bc015ed2e24a7abef49fc6dbbb7fe32c1dadaf8b. Run
+python scripts/import_words.py to reproduce it. The importer matches all
+13,159 words, uses 13,111 available phonetics, and leaves 48 phonetics empty;
+it never invents missing pronunciation data and does not copy the unlicensed
+legacy phrases. See THIRD_PARTY_NOTICES.md for the exact ECDICT MIT notice.
+
 ---
 
 ## 🙏 致谢
