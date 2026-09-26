@@ -5,6 +5,7 @@ import { ensureWordBank, getWordPool, wordBankFallbackMessage } from '../../../s
 import { createVocabQuestion, hasPronunciation, isVocabAnswerCorrect, speakWord, vocabModeAt } from '../../../engine/vocabRound'
 import { levelFromXp } from '../../../engine/progression'
 import { ACHIEVEMENTS } from '../../../store/progressModel'
+import { useUI } from '../../../store/gameStore'
 import type { VocabQuestion, Word, WordBankProgress } from '../../../types'
 import GameHud from '../../game/GameHud'
 import FlowGuide, { type GuideState } from '../../game/FlowGuide'
@@ -57,7 +58,11 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random 
     })
     // A small offline pool can still complete the whole route.
     const candidates = due.length ? due : fresh.length ? fresh : pool
-    const word = candidates[Math.min(candidates.length - 1, Math.max(0, Math.floor(randomSource.current() * candidates.length)))]
+    const requestedWordId = nextIndex === 0 ? useUI.getState().reviewWordId : null
+    const reviewPool = words ?? ([0, 1, 2, 3, 4] as const).flatMap(getWordPool)
+    const requestedWord = requestedWordId ? reviewPool.find(word => word.id === requestedWordId || word.word === requestedWordId) : undefined
+    const word = requestedWord ?? candidates[Math.min(candidates.length - 1, Math.max(0, Math.floor(randomSource.current() * candidates.length)))]
+    if (requestedWord) useUI.getState().consumeReviewWord()
     used.current.add(word.id)
     setQuestion(createVocabQuestion(word, pool, vocabModeAt(nextIndex, word, hasPronunciation()), { random: randomSource.current, number: nextIndex + 1 }))
     setIndex(nextIndex)

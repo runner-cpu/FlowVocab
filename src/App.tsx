@@ -7,6 +7,7 @@ import Home from './pages/Home'
 import Dashboard from './pages/Dashboard'
 import ModulePage from './pages/ModulePage'
 import { SaveStatus } from './components/dashboard/ProgressionPanel'
+import FirstRunGuide from './components/onboarding/FirstRunGuide'
 
 const MODULE_KEYS = ['vocab', 'grammar', 'sentence', 'listening', 'writing', 'reading'] as const
 
@@ -33,8 +34,10 @@ export default function App() {
         {page === 'home' && <Home />}
         {page === 'dashboard' && <Dashboard />}
         {isModule && <ModulePage module={page as any} />}
+        {page === 'not-found' && <section className="not-found card"><span className="guide-kicker">FLOWVOCAB LOST SIGNAL</span><h1>这条航线不存在</h1><p className="muted">链接可能已经改变，返回学习舱可以继续你的离线进度。</p><button className="btn btn-primary" onClick={() => useUI.getState().go('home')}>返回学习舱</button></section>}
       </main>
       <FeedbackFx />
+      <FirstRunGuide />
     </div>
   )
 }
