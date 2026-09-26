@@ -1,5 +1,20 @@
 import { describe, expect, test } from 'vitest'
-import { normalizeSuccessfulReviews, updateReviewProgress } from './forget'
+import { nextInterval, normalizeSuccessfulReviews, updateReviewProgress } from './forget'
+
+describe('nextInterval', () => {
+  test('schedules either first successful quality for one day', () => {
+    expect(nextInterval(0, 1, 0)).toBe(1)
+    expect(nextInterval(0, 2, 0)).toBe(1)
+  })
+
+  test('graduates a second successful review beyond one day', () => {
+    expect(nextInterval(1, 2, 1)).toBeGreaterThan(1)
+  })
+
+  test('returns any miss to one day', () => {
+    expect(nextInterval(30, 0, 8)).toBe(1)
+  })
+})
 
 describe('updateReviewProgress', () => {
   test('keeps a new word learning after its first successful review', () => {

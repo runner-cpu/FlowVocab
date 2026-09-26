@@ -3,6 +3,7 @@ import { useProgress } from '../../../store/progressStore'
 import { LISTENING_ITEMS } from '../../../data/listening'
 import type { ListeningItem } from '../../../types'
 import GameHud from '../../game/GameHud'
+import { elapsedSince } from '../../../engine/sessionTiming'
 
 // ---------- 词级 Levenshtein ----------
 function levenshtein(a: string, b: string): number {
@@ -57,11 +58,12 @@ export default function ListeningGame() {
   // 降级模式（挖空选择）状态：无条件声明，遵守 Rules of Hooks
   const [picked, setPicked] = useState<Record<number, number>>({})
   const [answered, setAnswered] = useState(false)
-  const t0 = useRef(0)
+  const t0 = useRef(performance.now())
   const ttsSupport = useRef(typeof window !== 'undefined' && 'speechSynthesis' in window)
   const recRef = useRef<{ start: () => void; stop: () => void } | null>(null)
 
   const item: ListeningItem = LISTENING_ITEMS[qIndex]
+  useEffect(() => { t0.current = performance.now() }, [qIndex])
   const targetWords = item.text.split(' ')
 
   // 探测语音识别可用性
@@ -147,9 +149,9 @@ export default function ListeningGame() {
     const hits = alignWords(targetWords.map(clean), spoken)
     const ratio = hits.filter(Boolean).length / Math.max(hits.length, 1)
     setResult({ hits, ratio })
-    const timeMs = performance.now() - t0.current
+    const timeMs = elapsedSince(t0.current, performance.now())
     const passed = ratio >= 0.6
-    answer({ module: 'listening', correct: passed, timeMs, medianMs: 12000 })
+    answer({ module: 'listening', correct: passed, timeMs })
     if (passed) passListening()
   }
 
@@ -245,7 +247,7 @@ export default function ListeningGame() {
     const correct = blank.options[optIdx] === blank.answer
     const next = { ...picked, [blankIdx]: optIdx }
     setPicked(next)
-    answer({ module: 'listening', correct, timeMs: 6000, medianMs: 8000 })
+    answer({ module: 'listening', correct, timeMs: elapsedSince(t0.current, performance.now()) })
     const allAnswered = item.blanks.every((b, i) => next[i] !== undefined)
     const allCorrect = item.blanks.every((b, i) => blank.options[next[i]] === b.answer) && allAnswered
     if (allCorrect) {

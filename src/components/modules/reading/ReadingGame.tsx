@@ -1,4 +1,5 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { elapsedSince } from '../../../engine/sessionTiming'
 import { useProgress } from '../../../store/progressStore'
 import { CHAPTERS } from '../../../data/reading'
 import type { Chapter, NarrativeChoice } from '../../../types'
@@ -15,7 +16,9 @@ export default function ReadingGame() {
   const [quizPicked, setQuizPicked] = useState<number | null>(null)
   const [quizAnswered, setQuizAnswered] = useState(false)
   const [finished, setFinished] = useState(false)
+  const startedAt = useRef(performance.now())
   const narrative = progress?.narrative ?? {}
+  useEffect(() => { startedAt.current = performance.now() }, [chapter?.id, nodeId, quizChoice?.next])
 
   function startChapter(nextChapter: Chapter) { setChapter(nextChapter); setNodeId(nextChapter.start); setTrail([nextChapter.start]); setQuizChoice(null); setQuizPicked(null); setQuizAnswered(false); setFinished(false) }
   function goTo(next: string) {
@@ -27,7 +30,7 @@ export default function ReadingGame() {
   function answerQuiz(index: number) {
     if (!quizChoice?.quiz || quizAnswered) return
     const correct = index === quizChoice.quiz.answer
-    setQuizPicked(index); setQuizAnswered(true); void answer({ module: 'reading', correct, timeMs: 10000, medianMs: 12000 })
+    setQuizPicked(index); setQuizAnswered(true); void answer({ module: 'reading', correct, timeMs: elapsedSince(startedAt.current, performance.now()) })
     if (correct) window.setTimeout(() => { goTo(quizChoice.next); setQuizChoice(null) }, 1200)
   }
 

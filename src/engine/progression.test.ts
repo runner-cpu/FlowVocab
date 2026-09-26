@@ -1,5 +1,6 @@
 import { describe, expect, test } from 'vitest'
 import { heatmapScale, levelFromXp, planetLevelFromEnergy, vocabMasteryScore } from './progression'
+import { ACTIVE_VOCAB_TARGET } from './progression'
 
 describe('progression display helpers', () => {
   test('maps XP through the approved cumulative threshold table', () => {
@@ -30,5 +31,9 @@ describe('progression display helpers', () => {
     expect(heatmapScale([0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10], 5)).toBe(8)
     expect(heatmapScale([0, 1, 2], 10)).toBe(10)
     expect(heatmapScale([0, 0], 10)).toBe(10)
+  })
+
+  test('keeps the active vocabulary target independent of a physical bank size', () => {
+    expect(vocabMasteryScore(12, 24, ACTIVE_VOCAB_TARGET)).toBe(3)
   })
 })

@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { elapsedSince } from '../../../engine/sessionTiming'
 import { useProgress } from '../../../store/progressStore'
 import { GRAMMAR_BRANCHES, GRAMMAR_NODES } from '../../../data/grammar'
 import type { SkillNode } from '../../../types'
@@ -13,7 +14,9 @@ export default function GrammarGame() {
   const [picked, setPicked] = useState<number | null>(null)
   const [answered, setAnswered] = useState(false)
   const [finished, setFinished] = useState(false)
+  const startedAt = useRef(performance.now())
   const skillTree = progress?.skillTree ?? {}
+  useEffect(() => { startedAt.current = performance.now() }, [activeNode?.id, qIndex])
   const nodeById = useMemo(() => Object.fromEntries(GRAMMAR_NODES.map((node) => [node.id, node])), [])
   const isLocked = (node: SkillNode) => !!node.parent && !skillTree[node.parent]
   const belongsToBranch = (node: SkillNode, rootId: string) => {
@@ -26,7 +29,7 @@ export default function GrammarGame() {
   function onPick(index: number) {
     if (answered || !activeNode) return
     const correct = index === activeNode.quizzes[qIndex].answer
-    setPicked(index); setAnswered(true); void answer({ module: 'grammar', correct, timeMs: 6000, medianMs: 7000 })
+    setPicked(index); setAnswered(true); void answer({ module: 'grammar', correct, timeMs: elapsedSince(startedAt.current, performance.now()) })
     if (correct) window.setTimeout(() => {
       if (qIndex + 1 >= activeNode.quizzes.length) { setFinished(true); void completeGrammarNode(activeNode.id) }
       else { setQIndex((value) => value + 1); setPicked(null); setAnswered(false) }

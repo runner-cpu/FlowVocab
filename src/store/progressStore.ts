@@ -13,7 +13,7 @@ import {
 import { qualityOf, nextInterval, normalizeSuccessfulReviews, updateReviewProgress, dayKey } from '../engine/forget'
 import { SoundBank } from '../engine/audio'
 import { updateStreak } from '../engine/streak'
-import { planetLevelFromEnergy, vocabMasteryScore } from '../engine/progression'
+import { ACTIVE_VOCAB_TARGET, planetLevelFromEnergy, vocabMasteryScore } from '../engine/progression'
 import { deriveProfileProgress } from './progressModel'
 import {
   WORDS,
@@ -22,7 +22,6 @@ import {
   LISTENING_ITEMS,
   CHAPTERS
 } from '../data'
-import { wordBankTotal } from './wordBank'
 import type {
   FeedbackEvent,
   ModuleKey,
@@ -80,13 +79,12 @@ function defaultRadar(): Radar {
   return { vocab: 0, grammar: 0, sentence: 0, listening: 0, writing: 0, reading: 0 }
 }
 
-function computeRadar(progress: Progress, userWords: UserWord[]): Radar {
+export function computeRadar(progress: Progress, userWords: UserWord[]): Radar {
   const mastered = userWords.filter((w) => w.status === 'mastered').length
   const skillLit = Object.keys(progress.skillTree).filter((k) => progress.skillTree[k]).length
   // 词库总量：真实大纲词库优先（wordBank），未加载时用内置示例
-  const vocabTotal = wordBankTotal() || WORDS.length
   const radar: Radar = {
-    vocab: vocabMasteryScore(mastered, userWords.filter(w => w.status !== 'mastered' && w.total > 0).length, vocabTotal),
+    vocab: vocabMasteryScore(mastered, userWords.filter(w => w.status !== 'mastered' && w.total > 0).length, ACTIVE_VOCAB_TARGET),
     grammar: Math.min(100, Math.round((skillLit / Math.max(GRAMMAR_NODES.length, 1)) * 100)),
     sentence: Math.min(100, Math.round((progress.sentencePassed / Math.max(SENTENCE_QUESTS.length, 1)) * 100)),
     listening: Math.min(100, Math.round((progress.listeningPassed / Math.max(LISTENING_ITEMS.length, 1)) * 100)),
@@ -109,6 +107,7 @@ interface SessionState {
 
 interface ProgressStore {
   ready: boolean
+  initError: string | null
   profile: UserProfile | null
   planet: Planet | null
   progress: Progress | null
@@ -123,6 +122,7 @@ interface ProgressStore {
   claimDailyChest: () => Promise<void>
 
   init: () => Promise<void>
+  retryInit: () => Promise<void>
   startSession: (module: ModuleKey) => Promise<void>
   finishSession: () => Promise<void>
   answer: (opts: { module: ModuleKey; wordId?: string; correct: boolean; timeMs: number; medianMs?: number }) => Promise<void>
@@ -139,6 +139,7 @@ const emptySession: SessionState = { module: null, comboMax: 0, correct: 0, tota
 
 export const useProgress = create<ProgressStore>((set, get) => ({
   ready: false,
+  initError: null,
   profile: null,
   planet: null,
   progress: null,
@@ -161,6 +162,8 @@ export const useProgress = create<ProgressStore>((set, get) => ({
   },
 
   init: async () => {
+    set({ ready: false, initError: null })
+    try {
     const now = Date.now()
     const today = dayKey(now)
 
@@ -191,8 +194,12 @@ export const useProgress = create<ProgressStore>((set, get) => ({
     writeQueue = []
     writesBlocked = false
 
-    set({ ready: true, profile, planet, progress, daily, userWords, saveError: null })
+    set({ ready: true, profile, planet, progress, daily, userWords, saveError: null, initError: null })
+    } catch {
+      set({ ready: false, initError: '无法读取本地学习数据' })
+    }
   },
+  retryInit: async () => get().init(),
 
   startSession: (module) => serializeWrite(async () => {
     rollingTimes = []
@@ -279,8 +286,8 @@ export const useProgress = create<ProgressStore>((set, get) => ({
         correct: uw.correct + (correct ? 1 : 0),
         total: uw.total + 1,
         lastReview: now,
-        interval: nextInterval(uw.interval, q),
-        nextReview: now + nextInterval(uw.interval, q) * 86400000,
+        interval: nextInterval(uw.interval, q, successfulReviews),
+        nextReview: now + nextInterval(uw.interval, q, successfulReviews) * 86400000,
         quality: q
       }
       userWords = [...userWords.filter((w) => w.wordId !== wordId), uw]

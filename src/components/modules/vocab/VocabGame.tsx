@@ -4,6 +4,7 @@ import { useProgress } from '../../../store/progressStore'
 import { ensureWordBank, getWordPool, wordBankFallbackMessage } from '../../../store/wordBank'
 import { createVocabQuestion, hasPronunciation, isVocabAnswerCorrect, speakWord, vocabModeAt } from '../../../engine/vocabRound'
 import { levelFromXp } from '../../../engine/progression'
+import { elapsedSince } from '../../../engine/sessionTiming'
 import { ACHIEVEMENTS } from '../../../store/progressModel'
 import { useUI } from '../../../store/gameStore'
 import type { VocabQuestion, Word, WordBankProgress } from '../../../types'
@@ -56,7 +57,6 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random 
       const review = state.userWords.find(entry => entry.wordId === word.id)
       return !review || review.status !== 'mastered' || review.nextReview <= Date.now()
     })
-    // A small offline pool can still complete the whole route.
     const candidates = due.length ? due : fresh.length ? fresh : pool
     const requestedWordId = nextIndex === 0 ? useUI.getState().reviewWordId : null
     const reviewPool = words ?? ([0, 1, 2, 3, 4] as const).flatMap(getWordPool)
@@ -113,7 +113,7 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random 
     const correct = isVocabAnswerCorrect(question, value)
     pending.current = { wordId: question.word.id, total: (state.userWords.find(word => word.wordId === question.word.id)?.total ?? 0) + 1, correct, level: levelFromXp(state.profile?.totalXp ?? 0) }
     setPicked(value)
-    void state.answer({ module: 'vocab', wordId: question.word.id, correct, timeMs: performance.now() - timer.current, medianMs: 4500 })
+    void state.answer({ module: 'vocab', wordId: question.word.id, correct, timeMs: elapsedSince(timer.current, performance.now()) })
   }
 
   function advance() {

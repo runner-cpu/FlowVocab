@@ -49,7 +49,7 @@ describe('real vocabulary mission', () => {
     expect(screen.getByLabelText('本轮最高连击')).toHaveTextContent('2')
     expect(screen.getByLabelText('本轮星级')).toHaveTextContent('3 / 3')
     expect(screen.getByText('初次启航')).toBeVisible()
-    expect(screen.getByLabelText('本轮经验')).toHaveTextContent('40 XP')
+    expect(screen.getByLabelText('本轮经验')).toHaveTextContent('30 XP')
   })
   it('provides a named pronunciation control, an explicit unsupported message, and a single-use hint', async () => {
     render(<VocabGame words={words} random={() => 0} />)

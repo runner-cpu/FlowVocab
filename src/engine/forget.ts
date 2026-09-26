@@ -7,11 +7,10 @@ export function qualityOf(correct: boolean, timeMs: number, medianMs: number): 0
   return 1
 }
 
-export function nextInterval(prevInterval: number, quality: 0 | 1 | 2): number {
+export function nextInterval(prevInterval: number, quality: 0 | 1 | 2, successfulReviews = 0): number {
   if (quality === 0) return INTERVALS_DAYS[0]
-  const idx = Math.min(Math.max(quality, 1), 2)
   // 从 1/3/7 起步，之后按 2 倍增长
-  if (prevInterval <= 0) return INTERVALS_DAYS[idx]
+  if (successfulReviews <= 0 || prevInterval <= 0) return INTERVALS_DAYS[0]
   return Math.min(prevInterval * 2, 30)
 }
 

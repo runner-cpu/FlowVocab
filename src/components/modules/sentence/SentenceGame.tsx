@@ -1,4 +1,5 @@
-import { useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { elapsedSince } from '../../../engine/sessionTiming'
 import { useProgress } from '../../../store/progressStore'
 import { SENTENCE_QUESTS } from '../../../data/sentences'
 import type { SentenceQuest } from '../../../types'
@@ -26,7 +27,10 @@ export default function SentenceGame() {
   const [answerPicked, setAnswerPicked] = useState<number | null>(null)
   const [answered, setAnswered] = useState(false)
   const [done, setDone] = useState(false)
+  const startedAt = useRef(performance.now())
+  const puzzleMistake = useRef(false)
   const quest: SentenceQuest = SENTENCE_QUESTS[qIndex]
+  useEffect(() => { startedAt.current = performance.now(); puzzleMistake.current = false }, [qIndex])
 
   const segments = useMemo(() => {
     if (quest.type !== 'puzzle' || !quest.segments) return []
@@ -49,17 +53,17 @@ export default function SentenceGame() {
     setPicked(null); setDragged(null)
     if (!result.correct) {
       setFlashWrong(index); setAnnouncement(`位置不对，${quest.segments[index].text} 仍在待选区`)
-      void answer({ module: 'sentence', correct: false, timeMs: 5000, medianMs: 8000 })
+      puzzleMistake.current = true
       window.setTimeout(() => setFlashWrong(null), 500); return
     }
     setPlaced(result.placed); setAnnouncement(`${quest.segments[index].text} 已放入${bucketNames[bucket]}`)
-    if (result.complete) { void answer({ module: 'sentence', correct: true, timeMs: 5000, medianMs: 8000 }); void passSentence(); window.setTimeout(nextQuestion, 900) }
+    if (result.complete) { void answer({ module: 'sentence', correct: !puzzleMistake.current, timeMs: elapsedSince(startedAt.current, performance.now()) }); void passSentence(); window.setTimeout(nextQuestion, 900) }
   }
   function onTranslate(index: number) {
     if (answered) return
     const correct = index === quest.answer
     setAnswerPicked(index); setAnswered(true)
-    void answer({ module: 'sentence', correct, timeMs: 8000, medianMs: 10000 })
+    void answer({ module: 'sentence', correct, timeMs: elapsedSince(startedAt.current, performance.now()) })
     window.setTimeout(() => { if (correct) { void passSentence(); nextQuestion() } else { setAnswered(false); setAnswerPicked(null) } }, correct ? 1300 : 1000)
   }
   const bucketCorrect = (bucket: Bucket) => quest.type === 'puzzle' && quest.segments!.filter((segment) => segment.bucket === bucket).every((segment) => placed[quest.segments!.findIndex((candidate) => candidate === segment)] === bucket)

@@ -14,11 +14,17 @@ const MODULE_KEYS = ['vocab', 'grammar', 'sentence', 'listening', 'writing', 're
 export default function App() {
   const ready = useProgress((s) => s.ready)
   const init = useProgress((s) => s.init)
+  const initError = useProgress((s) => s.initError)
+  const retryInit = useProgress((s) => s.retryInit)
   const page = useUI((s) => s.page)
 
   useEffect(() => {
     init()
   }, [init])
+
+  if (!ready && initError) {
+    return <div className="loading" role="alert"><p>{initError}</p><button className="btn btn-primary" onClick={() => void retryInit()}>重试</button></div>
+  }
 
   if (!ready) {
     return <div className="loading">🌱 正在唤醒心流词境……</div>

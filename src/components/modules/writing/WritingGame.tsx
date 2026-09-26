@@ -1,4 +1,5 @@
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
+import { elapsedSince } from '../../../engine/sessionTiming'
 import { useProgress } from '../../../store/progressStore'
 import { WRITING_TASKS } from '../../../data/writing'
 import type { WritingTask } from '../../../types'
@@ -29,8 +30,9 @@ export default function WritingGame() {
   const [announcement, setAnnouncement] = useState('')
   const [pickErr, setPickErr] = useState<number | null>(null)
   const [result, setResult] = useState<{ pass: boolean } | null>(null)
+  const startedAt = useRef(performance.now())
 
-  useEffect(() => { setOrder(initialOrder); setPickErr(null); setResult(null); setAnnouncement('') }, [initialOrder])
+  useEffect(() => { setOrder(initialOrder); setPickErr(null); setResult(null); setAnnouncement(''); startedAt.current = performance.now() }, [initialOrder])
   const sortDone = task.type === 'sort' && order.length === (task.segments?.length ?? 0)
   const errDone = task.type === 'error' && pickErr !== null
 
@@ -48,7 +50,7 @@ export default function WritingGame() {
   function submit() {
     if (result) return
     const pass = task.type === 'sort' ? order.every((segment, index) => segment === task.segments?.[index]) : pickErr === task.answer
-    setResult({ pass }); void answer({ module: 'writing', correct: pass, timeMs: 15000, medianMs: 25000 }); void submitWriting(task.id, pass ? 5 : 1)
+    setResult({ pass }); void answer({ module: 'writing', correct: pass, timeMs: elapsedSince(startedAt.current, performance.now()) }); void submitWriting(task.id, pass ? 5 : 1)
   }
 
   return <div className="quiz-panel"><GameHud module="writing" /><div className="card">
