@@ -226,6 +226,8 @@ Commit: `feat: improve module interaction and navigation`.
 
 ### Task 5: Performance, PWA and Vocabulary Attribution
 
+**Execution clarification (2026-09-26):** The original user request includes real ECDICT phonetics and data-source cleanup. The cached upstream CSV at `data-src/ecdict-source` (commit `bc015ed2e24a7abef49fc6dbbb7fe32c1dadaf8b`) matches all 13,159 existing words, including 13,111 with phonetics. Use it to regenerate lexical content while preserving IDs/levels and user reviews; remove unlicensed legacy definition/phrase content, retain the exact upstream MIT notice, and report missing source phonetics honestly. Include a reproducible import command and cache-version migration. Also synchronize obsolete generated Pages assets and pre-cache the lazy application routes for offline use.
+
 **Files:**
 - Modify: `src/App.tsx`
 - Modify: `src/components/dashboard/RadarChart.tsx`
