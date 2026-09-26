@@ -63,6 +63,31 @@ describe('real vocabulary mission', () => {
     expect(screen.getByRole('button', { name: /提示已使用/ })).toBeDisabled()
     expect(screen.getByRole('list', { name: '30 站航线' }).children).toHaveLength(30)
   })
+  it('converts an inaudible listening stop into an answerable meaning question', async () => {
+    const originalSynthesis = Object.getOwnPropertyDescriptor(window, 'speechSynthesis')
+    const originalUtterance = Object.getOwnPropertyDescriptor(window, 'SpeechSynthesisUtterance')
+    Object.defineProperty(window, 'SpeechSynthesisUtterance', { configurable: true, value: class {} })
+    Object.defineProperty(window, 'speechSynthesis', { configurable: true, value: { cancel() {}, speak() { throw new Error('voice unavailable') } } })
+    try {
+      render(<VocabGame words={words} roundSize={3} random={() => 0} />)
+      fireEvent.click(await screen.findByRole('button', { name: new RegExp(words[0].meaning) }))
+      const next = await screen.findByRole('button', { name: /下一站/ })
+      await waitFor(() => expect(next).toBeEnabled())
+      fireEvent.click(next)
+
+      expect(screen.queryByRole('heading', { name: 'discover' })).toBeNull()
+      fireEvent.click(screen.getByRole('button', { name: '播放单词发音' }))
+
+      expect(await screen.findByRole('heading', { name: 'discover' })).toBeVisible()
+      expect(screen.getByRole('button', { name: new RegExp(words[1].meaning) })).toBeEnabled()
+      expect(useProgress.getState().session.total).toBe(1)
+    } finally {
+      if (originalSynthesis) Object.defineProperty(window, 'speechSynthesis', originalSynthesis)
+      else delete (window as unknown as { speechSynthesis?: SpeechSynthesis }).speechSynthesis
+      if (originalUtterance) Object.defineProperty(window, 'SpeechSynthesisUtterance', originalUtterance)
+      else delete (window as unknown as { SpeechSynthesisUtterance?: typeof SpeechSynthesisUtterance }).SpeechSynthesisUtterance
+    }
+  })
   it('does not skip or resubmit a failed save and resumes after the original operation retries', async () => {
     render(<VocabGame words={words} roundSize={1} random={() => 0} />)
     const choice = await screen.findByRole('button', { name: /探索/ })

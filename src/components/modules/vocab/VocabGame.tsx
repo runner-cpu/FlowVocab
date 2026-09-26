@@ -159,6 +159,16 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random 
     setRestarting(false)
   }
 
+  function pronounce() {
+    if (!question || speakWord(question.word.word, profile?.settings.voiceRate)) return
+    setSpeechMessage('浏览器暂不支持发音，听音题已自动改为释义题。')
+    if (question.mode === 'listening') {
+      const levelPool = words ?? getWordPool(useProgress.getState().difficulty.level)
+      const pool = levelPool.length ? levelPool : ([0, 1, 2, 3, 4] as const).flatMap(getWordPool)
+      setQuestion(createVocabQuestion(question.word, pool, 'meaning', { random: randomSource.current, number: index + 1 }))
+    }
+  }
+
   const percent = bank.total ? Math.min(100, Math.floor(bank.loaded / bank.total * 100)) : 0
   const answered = picked !== null
   return <div className="quiz-panel vocab-mission">
@@ -177,7 +187,7 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random 
         <div className="word-display">
           <h2 ref={heading} tabIndex={-1}>{question.prompt}</h2>
           {question.mode === 'meaning' && <><div className="w-phonetic">{question.word.phonetic}</div><div className="w-pos">{question.word.pos}</div></>}
-          <button className="btn btn-ghost mission-pronounce" aria-label="播放单词发音" onClick={() => { if (!speakWord(question.word.word, profile?.settings.voiceRate)) setSpeechMessage('浏览器暂不支持发音，听音题已自动改为释义题。') }}><Volume2 size={17} aria-hidden="true" />{question.mode === 'listening' ? '听发音' : '单词发音'}</button>
+          <button className="btn btn-ghost mission-pronounce" aria-label="播放单词发音" onClick={pronounce}><Volume2 size={17} aria-hidden="true" />{question.mode === 'listening' ? '听发音' : '单词发音'}</button>
           {speechMessage && <p className="muted" role="status">{speechMessage}</p>}
         </div>
         {question.mode === 'spelling' ? <form className="spelling-form" onSubmit={event => { event.preventDefault(); submit(spelling) }}>

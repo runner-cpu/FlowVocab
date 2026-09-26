@@ -54,3 +54,23 @@ Base: `cd1cf7253643b7366fa18a9903aae3bcf82a43b7`
 - Speech playback depends on the browser's installed SpeechSynthesis voices. Unsupported browsers receive the specified silent engine result and an explicit UI message; listening questions fall back to meaning mode.
 - The production JavaScript bundle is approximately 1.40 MB before gzip (approximately 475 KB gzip). This task does not introduce a new bundle-splitting strategy.
 - The build updates generated root publishing artifacts. They remain uncommitted by design, per the task instruction to commit source/tests only.
+
+## Fix round 1: failed listening playback
+
+Review finding: a browser could pass the initial SpeechSynthesis capability check but still throw when playback starts. The UI displayed “听音题已自动改为释义题” without changing the hidden-target listening question.
+
+### TDD evidence
+
+- The first test draft exposed an invalid fixture rather than the review bug: plain jsdom reports speech unsupported during question creation, so stop 2 was already a meaning question. Command: `npm.cmd test -- --run src/components/modules/vocab/VocabGame.test.tsx -t "converts an inaudible listening stop"`. Output: 1 failed / 5 skipped with `expected <h2 tabindex="-1"></h2> to be null`; the fixture was corrected before production code changed.
+- Valid RED used a browser boundary where `hasPronunciation()` succeeds but `speechSynthesis.speak()` throws. Command: `npm.cmd test -- --run src/components/modules/vocab/VocabGame.test.tsx -t "converts an inaudible listening stop"`. Output: 1 failed / 5 skipped with `Unable to find role="heading" and name "discover"`; the screen remained in “听音寻踪” after the failed playback.
+- GREEN after the minimal fix used the same command. Output: 1 passed / 5 skipped.
+
+### Fix and verification
+
+- Added a single pronunciation handler. Successful playback changes nothing. Failed playback keeps the same word and stop, shows the fallback message, and regenerates only a listening question as meaning mode with `number: index + 1`, preserving boss calculation and route position without submitting an answer.
+- Covering engine/component command: `npm.cmd test -- --run src/engine/vocabRound.test.ts src/components/modules/vocab/VocabGame.test.tsx`
+  - Output: 2 files passed, 18 tests passed.
+- Full regression command: `npm.cmd test -- --run`
+  - Output: 11 files passed, 68 tests passed.
+- TypeScript command: `npx.cmd tsc -b --pretty false`
+  - Output: exit code 0, no diagnostics.
