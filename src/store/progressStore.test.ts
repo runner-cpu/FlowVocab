@@ -3,7 +3,9 @@ import Dexie from 'dexie'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db } from './db'
 import { useProgress } from './progressStore'
+import { computeRadar } from './progressStore'
 import { dayKey } from '../engine/forget'
+import type { UserWord } from '../types'
 
 const answer = { module: 'vocab' as const, wordId: 'atomic-word', correct: true, timeMs: 4000, medianMs: 4000 }
 beforeEach(async () => {
@@ -17,6 +19,12 @@ beforeEach(async () => {
   await useProgress.getState().startSession('vocab')
 })
 afterEach(async () => { vi.restoreAllMocks(); await db.delete() })
+
+it('calculates vocabulary radar against the 600-word active target rather than a bank total', () => {
+  const progress = useProgress.getState().progress ?? { id: 1, radar: { vocab: 0, grammar: 0, sentence: 0, listening: 0, writing: 0, reading: 0 }, skillTree: {}, cards: [], narrative: {}, writingLog: [], sentencePassed: 0, listeningPassed: 0, writingDone: 0, writingScoreSum: 0, readingDone: 0 }
+  const words = Array.from({ length: 36 }, (_, index) => ({ id: String(index), wordId: String(index), status: index < 12 ? 'mastered' : 'learning', successfulReviews: 1, correct: 1, total: 1, lastReview: 1, nextReview: 1, interval: 1, quality: 1 } as UserWord))
+  expect(computeRadar(progress, words).vocab).toBe(3)
+})
 
 describe('atomic answer persistence', () => {
   it('blocks later answers behind a failed miss and retries in the original reward order', async () => {

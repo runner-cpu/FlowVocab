@@ -46,7 +46,7 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random 
   const pending = useRef<{ wordId: string; total: number; correct: boolean; level: number } | null>(null)
   const timer = useRef(performance.now())
   const requeued = useRef(new Set<string>())
-  const requeueAt = useRef(new Map<number, string>())
+  const requeueAt = useRef(new Map<number, string[]>())
   const randomSource = useRef(random)
   const baseline = useRef({ xp: profile?.totalXp ?? 0, achievements: profile?.unlockedAchievements ?? [], claims: profile?.claimedQuestDates ?? [] })
 
@@ -58,8 +58,10 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random 
     const fresh = pool.filter(word => !used.current.has(word.id))
     const requestedWordId = nextIndex === 0 ? useUI.getState().reviewWordId : null
     const candidates = orderReviewCandidates(fresh.length ? fresh : pool, state.userWords, Date.now(), randomSource.current, requestedWordId)
-    const requeuedWord = requeueAt.current.get(nextIndex)
+    const requeuedWords = requeueAt.current.get(nextIndex) ?? []
+    const requeuedWord = requeuedWords.shift()
     const word = requeuedWord ? pool.find((candidate) => candidate.id === requeuedWord) ?? candidates[0] : candidates[0]
+    if (requeuedWords.length) requeueAt.current.set(nextIndex, requeuedWords)
     requeueAt.current.delete(nextIndex)
     if (requestedWordId && word && (word.id === requestedWordId || word.word === requestedWordId)) useUI.getState().consumeReviewWord()
     used.current.add(word.id)
@@ -114,10 +116,12 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random 
     setPicked(value)
     if (!correct && !requeued.current.has(question.word.id)) {
       requeued.current.add(question.word.id)
-      const offset = 2 + Math.floor(randomSource.current() * 4)
-      const insertAt = Math.min(target - 1, index + offset)
-      used.current.delete(question.word.id)
-      requeueAt.current.set(insertAt, question.word.id)
+      const remaining = target - index - 1
+      if (remaining >= 2) {
+        const offset = 2 + Math.floor(randomSource.current() * Math.min(4, remaining - 1))
+        const insertAt = index + offset
+        requeueAt.current.set(insertAt, [...(requeueAt.current.get(insertAt) ?? []), question.word.id])
+      }
     }
     void state.answer({ module: 'vocab', wordId: question.word.id, correct, timeMs: elapsedSince(timer.current, performance.now()) })
   }
