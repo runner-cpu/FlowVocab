@@ -1,0 +1,12 @@
+{
+  "name": "FlowVocab",
+  "short_name": "FlowVocab",
+  "description": "离线英语学习航线",
+  "start_url": "./",
+  "display": "standalone",
+  "background_color": "#f6fbff",
+  "theme_color": "#082949",
+  "icons": [
+    { "src": "./icons/flowvocab-icon.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any maskable" }
+  ]
+}
