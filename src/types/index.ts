@@ -2,6 +2,20 @@
 
 export type DifficultyLevel = 0 | 1 | 2 | 3 | 4
 
+export type VocabMode = 'meaning' | 'listening' | 'spelling'
+export interface VocabQuestion {
+  word: Word
+  mode: VocabMode
+  prompt: string
+  options: { text: string; correct: boolean }[]
+  boss: boolean
+}
+export interface WordBankProgress {
+  phase: 'download' | 'import' | 'ready'
+  loaded: number
+  total: number
+}
+
 export interface FeedbackEvent {
   type: 'hit' | 'critical' | 'combo' | 'rage' | 'miss' | 'levelup' | 'leveldown'
   combo: number
