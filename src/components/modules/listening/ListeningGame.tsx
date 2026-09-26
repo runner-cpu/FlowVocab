@@ -45,7 +45,7 @@ function alignWords(target: string[], spoken: string[]): boolean[] {
 
 const clean = (s: string) => s.toLowerCase().replace(/[^a-z0-9']/g, '')
 
-export default function ListeningGame() {
+export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: ListeningItem[] }) {
   const answer = useProgress((s) => s.answer)
   const passListening = useProgress((s) => s.passListening)
 
@@ -62,7 +62,7 @@ export default function ListeningGame() {
   const ttsSupport = useRef(typeof window !== 'undefined' && 'speechSynthesis' in window)
   const recRef = useRef<{ start: () => void; stop: () => void } | null>(null)
 
-  const item: ListeningItem = LISTENING_ITEMS[qIndex]
+  const item: ListeningItem = items[qIndex]
   useEffect(() => { t0.current = performance.now() }, [qIndex])
   const targetWords = item.text.split(' ')
 
@@ -158,7 +158,7 @@ export default function ListeningGame() {
   const next = () => {
     setResult(null)
     setRecognized('')
-    if (qIndex + 1 >= LISTENING_ITEMS.length) setDone(true)
+    if (qIndex + 1 >= items.length) setDone(true)
     else setQIndex(qIndex + 1)
   }
 
@@ -227,12 +227,12 @@ export default function ListeningGame() {
               )}
               <div className="ex-eg mt8">💡 原句：{item.text}</div>
               <button className="btn btn-primary mt8" onClick={next}>
-                {qIndex + 1 >= LISTENING_ITEMS.length ? '完成本轮' : '下一句 →'}
+                {qIndex + 1 >= items.length ? '完成本轮' : '下一句 →'}
               </button>
             </div>
           )}
 
-          <p className="muted mt14" style={{ fontSize: 12 }}>第 {qIndex + 1} / {LISTENING_ITEMS.length} 句</p>
+          <p className="muted mt14" style={{ fontSize: 12 }}>第 {qIndex + 1} / {items.length} 句</p>
         </div>
       </div>
     )
@@ -249,13 +249,13 @@ export default function ListeningGame() {
     const next = { ...picked, [blankIdx]: optIdx }
     setPicked(next)
     answer({ module: 'listening', correct, timeMs: elapsedSince(t0.current, performance.now()) })
-    const allAnswered = item.blanks.every((b, i) => next[i] !== undefined)
-    const allCorrect = item.blanks.every((b, i) => blank.options[next[i]] === b.answer) && allAnswered
+    const allAnswered = item.blanks.every((b) => next[b.index] !== undefined)
+    const allCorrect = item.blanks.every((b) => b.options[next[b.index]] === b.answer) && allAnswered
     if (allCorrect) {
       setAnswered(true)
       passListening()
       setTimeout(() => {
-        if (qIndex + 1 >= LISTENING_ITEMS.length) setDone(true)
+        if (qIndex + 1 >= items.length) setDone(true)
         else {
           setQIndex(qIndex + 1)
           setPicked({})
@@ -318,7 +318,7 @@ export default function ListeningGame() {
           )
         })}
 
-        <p className="muted mt14" style={{ fontSize: 12 }}>第 {qIndex + 1} / {LISTENING_ITEMS.length} 句</p>
+        <p className="muted mt14" style={{ fontSize: 12 }}>第 {qIndex + 1} / {items.length} 句</p>
       </div>
     </div>
   )

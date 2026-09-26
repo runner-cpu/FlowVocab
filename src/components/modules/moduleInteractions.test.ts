@@ -68,6 +68,16 @@ describe('module submission timing', () => {
     render(createElement(ListeningGame)); now = 460
     fireEvent.click(screen.getByRole('button', { name: LISTENING_ITEMS[0].blanks[0].options[0] })); expectTimed('listening', 360)
   })
+  it('completes fallback listening only after non-contiguous blanks use their own options', () => {
+    const passListening = vi.fn()
+    useProgress.setState({ passListening })
+    render(createElement(ListeningGame, { items: [{ id: 'two-blanks', level: 0, text: 'Alpha beta gamma delta.', blanks: [{ index: 1, answer: 'beta', options: ['beta', 'wrong-beta'] }, { index: 3, answer: 'delta.', options: ['wrong-delta', 'delta.'] }] }] }))
+    fireEvent.click(screen.getByRole('button', { name: 'beta' }))
+    expect(passListening).not.toHaveBeenCalled()
+    fireEvent.click(screen.getByRole('button', { name: 'delta.' }))
+    expect(passListening).toHaveBeenCalledOnce()
+    expect(answer.mock.calls.map(([call]) => call.correct)).toEqual([true, true])
+  })
   it('sends one incorrect sentence result after a wrong bucket then completion', () => {
     render(createElement(SentenceGame)); const first = screen.getByRole('button', { name: 'Students' }); fireEvent.click(first)
     fireEvent.click(screen.getByRole('button', { name: /放入从句/ }));

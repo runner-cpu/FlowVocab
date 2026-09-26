@@ -124,6 +124,14 @@ describe('real vocabulary mission', () => {
     fireEvent.click(screen.getByRole('button', { name: /下一站/ }))
     expect(await screen.findByRole('heading', { name: /discover|sail/ })).toBeVisible()
     expect(screen.queryByRole('heading', { name: 'explore' })).toBeNull()
+    const duplicate = screen.getByRole('heading').textContent === 'discover' ? '发现' : '航行'
+    fireEvent.click(screen.getByRole('button', { name: duplicate }))
+    await waitFor(() => expect(useProgress.getState().session.total).toBe(4))
+    fireEvent.click(screen.getByRole('button', { name: /下一站/ }))
+    await screen.findByRole('heading', { name: 'explore' })
+    fireEvent.click(screen.getByRole('button', { name: '探索' }))
+    await waitFor(() => expect(useProgress.getState().session.total).toBe(5))
+    expect((await db.userWords.get('explore'))?.total).toBe(2)
   })
   it('finishes all 30 stops with spelling, three bosses, continuous combo and a fresh restart', async () => {
     render(<VocabGame words={words} random={() => 0.999} />)

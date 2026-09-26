@@ -47,7 +47,7 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random 
   const pending = useRef<{ wordId: string; total: number; correct: boolean; level: number } | null>(null)
   const timer = useRef(performance.now())
   const requeued = useRef(new Set<string>())
-  const requeueAt = useRef(new Map<number, string[]>())
+  const requeueAt = useRef(new Map<number, string>())
   const randomSource = useRef(random)
   const baseline = useRef({ xp: profile?.totalXp ?? 0, achievements: profile?.unlockedAchievements ?? [], claims: profile?.claimedQuestDates ?? [] })
 
@@ -56,7 +56,7 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random 
     const levelPool = words ?? getWordPool(state.difficulty.level)
     const pool = levelPool.length ? levelPool : ([0, 1, 2, 3, 4] as const).flatMap(getWordPool)
     if (!pool.length) { setEmpty(true); return }
-    const reservedWordIds = new Set([...requeueAt.current.values()].flat())
+    const reservedWordIds = new Set(requeueAt.current.values())
     const available = pool.filter(word => !reservedWordIds.has(word.id))
     const fresh = available.filter(word => !used.current.has(word.id))
     const requestedWordId = nextIndex === 0 ? useUI.getState().reviewWordId : null
