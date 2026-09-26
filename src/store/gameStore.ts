@@ -62,19 +62,24 @@ function hashForPage(page: NavigablePageKey) {
   return page === 'home' || page === 'dashboard' ? `#/${page}` : `#/module/${page}`
 }
 
+function writePageHash(page: NavigablePageKey) {
+  if (typeof window !== 'undefined') window.location.hash = hashForPage(page)
+}
+
 const initialTheme = readTheme()
 applyTheme(initialTheme)
 
 export const useUI = create<GameUI>((set) => ({
   page: typeof window === 'undefined' ? 'home' : pageFromHash(window.location.hash),
   go: (page) => {
-    if (typeof window !== 'undefined') window.location.hash = hashForPage(page)
+    writePageHash(page)
     set({ page })
   },
   reviewWordId: null,
   reviewWord: (wordId) => {
-    if (typeof window !== 'undefined') window.location.hash = hashForPage('vocab')
-    set({ page: 'vocab', reviewWordId: wordId })
+    set({ reviewWordId: wordId })
+    writePageHash('vocab')
+    set({ page: 'vocab' })
   },
   consumeReviewWord: () => set({ reviewWordId: null }),
   guideOpen: typeof window !== 'undefined' && window.localStorage.getItem('flowvocab-first-run-complete') !== '1',

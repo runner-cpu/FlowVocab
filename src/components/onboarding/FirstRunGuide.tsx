@@ -2,18 +2,46 @@ import { BarChart3, Keyboard, Map, Route, X } from 'lucide-react'
 import { useEffect, useRef } from 'react'
 import { useUI } from '../../store/gameStore'
 
+const FOCUSABLE = 'button:not([disabled]), [href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
+
 export default function FirstRunGuide() {
   const open = useUI((state) => state.guideOpen)
   const close = useUI((state) => state.closeGuide)
   const go = useUI((state) => state.go)
   const closeButton = useRef<HTMLButtonElement>(null)
+  const opener = useRef<HTMLElement | null>(null)
+  const inertNodes = useRef<HTMLElement[]>([])
+
   useEffect(() => {
     if (!open) return
+    const backdrop = document.querySelector<HTMLElement>('.guide-backdrop')
+    const app = backdrop?.closest<HTMLElement>('.app')
+    inertNodes.current = app ? Array.from(app.children).filter((node): node is HTMLElement => node instanceof HTMLElement && node !== backdrop) : []
+    opener.current = document.activeElement instanceof HTMLElement && document.activeElement !== document.body
+      ? document.activeElement
+      : inertNodes.current[0]?.querySelector<HTMLElement>(FOCUSABLE) ?? null
+    inertNodes.current.forEach((node) => { node.setAttribute('inert', ''); node.setAttribute('aria-hidden', 'true') })
     closeButton.current?.focus()
-    const onKeyDown = (event: KeyboardEvent) => { if (event.key === 'Escape') close() }
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === 'Escape') { event.preventDefault(); close(); return }
+      if (event.key !== 'Tab') return
+      const dialog = document.querySelector<HTMLElement>('.first-run-guide')
+      const focusables = dialog ? Array.from(dialog.querySelectorAll<HTMLElement>(FOCUSABLE)) : []
+      if (!focusables.length) return
+      const first = focusables[0]
+      const last = focusables[focusables.length - 1]
+      if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last.focus() }
+      else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first.focus() }
+    }
     window.addEventListener('keydown', onKeyDown)
-    return () => window.removeEventListener('keydown', onKeyDown)
+    return () => {
+      window.removeEventListener('keydown', onKeyDown)
+      inertNodes.current.forEach((node) => { node.removeAttribute('inert'); node.removeAttribute('aria-hidden') })
+      inertNodes.current = []
+      opener.current?.focus()
+    }
   }, [open, close])
+
   if (!open) return null
 
   return <div className="guide-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) close() }}>
