@@ -17,10 +17,10 @@ import AnswerHint from '../../game/AnswerHint'
 import RoundSummary, { type RoundResult } from '../../game/RoundSummary'
 import '../../game/VocabMission.css'
 
-interface VocabGameProps { words?: Word[]; roundSize?: number; random?: () => number }
+interface VocabGameProps { words?: Word[]; roundSize?: number; random?: () => number; loadLevels?: typeof ensureWordLevels }
 const MODE_NAMES = { meaning: '释义导航', listening: '听音寻踪', spelling: '拼写补给' }
 
-export default function VocabGame({ words, roundSize = 30, random = Math.random }: VocabGameProps = {}) {
+export default function VocabGame({ words, roundSize = 30, random = Math.random, loadLevels = ensureWordLevels }: VocabGameProps = {}) {
   const userWords = useProgress(s => s.userWords)
   const combo = useProgress(s => s.combo)
   const profile = useProgress(s => s.profile)
@@ -87,7 +87,7 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random 
     const reviewId = useUI.getState().reviewWordId
     const reviewLevel = useUI.getState().reviewWordLevel ?? (reviewId ? ([0, 1, 2, 3, 4] as const).flatMap(getWordPool).find(word => word.id === reviewId || word.word === reviewId)?.level : undefined)
     const levels = [...new Set([...TRACK_CURRICULUM[useUI.getState().track].levels, adaptiveLevel, ...(reviewLevel === undefined ? [] : [reviewLevel])])]
-    const ready = words ? Promise.resolve() : ensureWordLevels(levels, progress => { if (active) setBank(progress) })
+    const ready = words ? Promise.resolve() : loadLevels(levels, progress => { if (active) setBank(progress) })
     ready.then(() => {
       if (!active) return
       setFallback(words ? '' : wordBankFallbackMessage())

@@ -5,6 +5,7 @@ import { db } from '../../../store/db'
 import { useProgress } from '../../../store/progressStore'
 import type { Word } from '../../../types'
 import VocabGame from './VocabGame'
+import { useUI } from '../../../store/gameStore'
 
 const words: Word[] = ['explore', 'discover', 'sail', 'return'].map((word, i) => ({ id: word, word, meaning: ['探索', '发现', '航行', '返回'][i], phonetic: '', example: `${word} the island`, exampleCn: '岛屿之旅', level: 0, pos: 'v.', phrases: [{ phrase: `${word} together`, translation: '一起行动' }] }))
 beforeEach(async () => {
@@ -19,6 +20,12 @@ beforeEach(async () => {
 afterEach(async () => { cleanup(); await db.delete() })
 
 describe('real vocabulary mission', () => {
+  it('loads a forest review word level outside the current track before selecting a question', async () => {
+    useUI.setState({ track: 'primary', reviewWordId: 'forest-word', reviewWordLevel: 4 })
+    const requested: number[][] = []
+    render(<VocabGame loadLevels={async (levels) => { requested.push(levels); return { 0: [], 1: [], 2: [], 3: [], 4: [] } }} />)
+    await waitFor(() => expect(requested).toEqual([[0, 4]]))
+  })
   it('accepts a digit exactly once, disables answers, then uses Enter to advance', async () => {
     render(<VocabGame words={words} roundSize={2} random={() => 0.999} />)
     await screen.findByRole('heading', { name: 'explore' })
