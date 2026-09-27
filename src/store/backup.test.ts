@@ -2,6 +2,7 @@ import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
 import { exportProgressBackup, importProgressBackup } from './backup'
+import { useProgress } from './progressStore'
 
 const profile = { id: 1, totalXp: 12, bestCombo: 3, streakDays: 2, lastStudyDate: null, claimedQuestDates: [], unlockedAchievements: [], createdAt: 1, settings: { zenMode: false, volume: .8, voiceRate: .9 } }
 const progress = { id: 1, radar: { vocab: 0, grammar: 0, sentence: 0, listening: 0, writing: 0, reading: 0 }, skillTree: {}, cards: [], narrative: {}, writingLog: [], sentencePassed: 0, listeningPassed: 0, writingDone: 0, writingScoreSum: 0, readingDone: 0 }
@@ -16,6 +17,7 @@ beforeEach(async () => {
   await db.progress.put(progress); await db.planet.put(planet)
   await db.wordBank.put({ id: 'bank-1', word: 'retain', phonetic: '', meaning: 'keep', example: '', exampleCn: '', level: 0, pos: 'v' })
   await db.wordBankMeta.put({ id: 1, version: 1, total: 1, updatedAt: 1 })
+  await useProgress.getState().init()
 })
 afterEach(async () => { await db.delete() })
 
@@ -40,6 +42,8 @@ describe('local progress backup', () => {
     expect(await db.progress.get(1)).toMatchObject({ sentencePassed: 8 })
     expect(await db.planet.get(1)).toMatchObject({ energy: 88 })
     expect(await db.wordBank.get('bank-1')).toMatchObject({ word: 'retain' })
+    expect(useProgress.getState().profile?.totalXp).toBe(99)
+    expect(useProgress.getState().progress?.sentencePassed).toBe(8)
   })
 
   it('rejects malformed data without changing stored progress', async () => {

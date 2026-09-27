@@ -3,18 +3,17 @@ import { Download, RotateCcw, Upload, X } from 'lucide-react'
 import { useProgress } from '../../store/progressStore'
 import { exportProgressBackup, importProgressBackup, resetProgress } from '../../store/backup'
 
-export default function SettingsPanel({ onClose }: { onClose: () => void }) {
+export default function SettingsPanel({ onClose, opener }: { onClose: () => void; opener?: HTMLElement | null }) {
   const profile = useProgress((state) => state.profile)
   const updateSettings = useProgress((state) => state.updateSettings)
+  const durable = useProgress((state) => state.durableStorage)
   const [resetting, setResetting] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
-  const [durable, setDurable] = useState<boolean | null>(null)
   const file = useRef<HTMLInputElement>(null)
+  const dialog = useRef<HTMLElement>(null)
+  const close = () => { onClose(); opener?.focus() }
 
-  useEffect(() => {
-    const persist = navigator.storage?.persist
-    if (persist) void persist.call(navigator.storage).then(setDurable).catch(() => setDurable(false))
-  }, [])
+  useEffect(() => { dialog.current?.querySelector<HTMLElement>('button, input:not([hidden])')?.focus() }, [])
   if (!profile) return null
   const settings = profile.settings
   const download = async () => {
@@ -26,13 +25,21 @@ export default function SettingsPanel({ onClose }: { onClose: () => void }) {
   const restore = async (input: HTMLInputElement) => {
     const selected = input.files?.[0]
     if (!selected) return
-    try { await importProgressBackup(JSON.parse(await selected.text())); await useProgress.getState().init(); setMessage('学习数据已恢复') }
+    try { await importProgressBackup(JSON.parse(await selected.text())); setMessage('学习数据已恢复') }
     catch { setMessage('备份文件无效，未更改学习数据') }
     finally { input.value = '' }
   }
+  const trapFocus = (event: React.KeyboardEvent<HTMLElement>) => {
+    if (event.key === 'Escape') { event.preventDefault(); close(); return }
+    if (event.key !== 'Tab') return
+    const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]):not([hidden])'))
+    const first = focusable[0], last = focusable[focusable.length - 1]
+    if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
+    else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
+  }
   return <div className="settings-backdrop" role="presentation">
-    <section className="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title">
-      <header><div><p>本地优先</p><h2 id="settings-title">学习设置</h2></div><button className="settings-close" onClick={onClose} aria-label="关闭设置"><X size={18} /></button></header>
+    <section ref={dialog} className="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title" onKeyDown={trapFocus}>
+      <header><div><p>本地优先</p><h2 id="settings-title">学习设置</h2></div><button className="settings-close" onClick={close} aria-label="关闭设置"><X size={18} /></button></header>
       <div className="settings-range"><label htmlFor="settings-volume">音效音量</label> <output>{Math.round(settings.volume * 100)}%</output><input id="settings-volume" type="range" min="0" max="1" step=".05" value={settings.volume} onChange={(event) => void updateSettings({ volume: Number(event.target.value) })} /></div>
       <div className="settings-range"><label htmlFor="settings-rate">语音速度</label> <output>{settings.voiceRate.toFixed(1)}x</output><input id="settings-rate" type="range" min=".6" max="1.4" step=".1" value={settings.voiceRate} onChange={(event) => void updateSettings({ voiceRate: Number(event.target.value) })} /></div>
       <label className="settings-check"><input type="checkbox" checked={settings.zenMode} onChange={(event) => void updateSettings({ zenMode: event.target.checked })} /> 安静模式（关闭音效）</label>

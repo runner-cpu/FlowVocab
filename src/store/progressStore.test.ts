@@ -31,6 +31,9 @@ it('persists bounded learning settings and applies the requested values', async 
   expect(useProgress.getState().profile?.settings).toEqual({ volume: .35, voiceRate: 1.2, zenMode: false })
   await useProgress.getState().updateSettings({ volume: 9, voiceRate: 0 })
   expect((await db.userProfile.get(1))?.settings).toMatchObject({ volume: 1, voiceRate: .6 })
+  await useProgress.getState().updateSettings({ volume: Number.NaN, voiceRate: Number.POSITIVE_INFINITY })
+  await useProgress.getState().updateSettings({ volume: Number.NEGATIVE_INFINITY, voiceRate: Number.NaN })
+  expect((await db.userProfile.get(1))?.settings).toMatchObject({ volume: 1, voiceRate: .6 })
 })
 
 describe('atomic answer persistence', () => {

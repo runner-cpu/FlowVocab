@@ -40,6 +40,15 @@ let pendingWrites: Promise<void> = Promise.resolve()
 let writeQueue: (() => Promise<void>)[] = []
 let writesBlocked = false
 let retryInFlight: Promise<void> | null = null
+let durableStorageRequest: Promise<boolean> | null = null
+
+function requestDurableStorage(): Promise<boolean> | null {
+  if (durableStorageRequest) return durableStorageRequest
+  const persist = navigator.storage?.persist
+  if (!persist) return null
+  durableStorageRequest = persist.call(navigator.storage).then(Boolean).catch(() => false)
+  return durableStorageRequest
+}
 
 async function drainWrites(): Promise<void> {
   while (!writesBlocked && writeQueue.length) {
@@ -118,10 +127,11 @@ interface ProgressStore {
   feedback: FeedbackEvent | null
   session: SessionState
   saveError: string | null
+  durableStorage: boolean | null
   retrySave: () => Promise<void>
   claimDailyChest: () => Promise<void>
 
-  init: () => Promise<void>
+  init: (preserveEmptyTables?: boolean) => Promise<void>
   retryInit: () => Promise<void>
   startSession: (module: ModuleKey) => Promise<void>
   finishSession: () => Promise<void>
@@ -151,6 +161,7 @@ export const useProgress = create<ProgressStore>((set, get) => ({
   feedback: null,
   session: emptySession,
   saveError: null,
+  durableStorage: null,
   retrySave: () => {
     if (retryInFlight) return retryInFlight
     if (!writesBlocked) return pendingWrites
@@ -162,7 +173,7 @@ export const useProgress = create<ProgressStore>((set, get) => ({
     return retryInFlight
   },
 
-  init: async () => {
+  init: async (preserveEmptyTables = false) => {
     set({ ready: false, initError: null })
     try {
     const now = Date.now()
@@ -184,7 +195,7 @@ export const useProgress = create<ProgressStore>((set, get) => ({
       await db.progress.put(progress)
     }
     let daily = (await db.dailyStats.get(today)) as DailyStat | undefined
-    if (!daily) {
+    if (!daily && !preserveEmptyTables) {
       daily = { date: today, xp: 0, energy: 0, comboMax: 0, modules: { vocab: 0, grammar: 0, sentence: 0, listening: 0, writing: 0, reading: 0 } }
       await db.dailyStats.put(daily)
     }
@@ -195,7 +206,8 @@ export const useProgress = create<ProgressStore>((set, get) => ({
     writeQueue = []
     writesBlocked = false
 
-    set({ ready: true, profile, planet, progress, daily, userWords, saveError: null, initError: null })
+    const durableStorage = await requestDurableStorage()
+    set({ ready: true, profile, planet, progress, daily: daily ?? null, userWords, saveError: null, initError: null, durableStorage: durableStorage ?? get().durableStorage })
     SoundBank.setVolume(profile.settings.volume)
     SoundBank.setMuted(profile.settings.zenMode)
     } catch {
@@ -436,8 +448,8 @@ export const useProgress = create<ProgressStore>((set, get) => ({
       ...profile,
       settings: {
         zenMode: typeof patch.zenMode === 'boolean' ? patch.zenMode : profile.settings.zenMode,
-        volume: typeof patch.volume === 'number' ? Math.max(0, Math.min(1, patch.volume)) : profile.settings.volume,
-        voiceRate: typeof patch.voiceRate === 'number' ? Math.max(.6, Math.min(1.4, patch.voiceRate)) : profile.settings.voiceRate
+        volume: typeof patch.volume === 'number' && Number.isFinite(patch.volume) ? Math.max(0, Math.min(1, patch.volume)) : profile.settings.volume,
+        voiceRate: typeof patch.voiceRate === 'number' && Number.isFinite(patch.voiceRate) ? Math.max(.6, Math.min(1.4, patch.voiceRate)) : profile.settings.voiceRate
       }
     }
     await db.userProfile.put(next)

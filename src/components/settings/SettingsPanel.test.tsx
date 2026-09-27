@@ -6,8 +6,9 @@ import { useProgress } from '../../store/progressStore'
 import SettingsPanel from './SettingsPanel'
 
 beforeEach(async () => {
-  await db.delete(); await db.open(); await useProgress.getState().init()
+  await db.delete(); await db.open()
   Object.defineProperty(navigator, 'storage', { configurable: true, value: { persist: vi.fn().mockResolvedValue(true) } })
+  await useProgress.getState().init()
 })
 afterEach(async () => { cleanup(); vi.restoreAllMocks(); await db.delete() })
 
@@ -25,7 +26,25 @@ it('requires a visible second reset confirmation and reports invalid uploads inl
   expect(await db.userProfile.get(1)).toBeTruthy()
   fireEvent.click(screen.getByRole('button', { name: '确认重置' }))
   await waitFor(() => expect(useProgress.getState().profile?.totalXp).toBe(0))
-  const input = screen.getByLabelText('恢复学习数据')
-  fireEvent.change(input, { target: { files: [new File(['nope'], 'backup.json', { type: 'application/json' })] } })
+  fireEvent.change(screen.getByLabelText('恢复学习数据'), { target: { files: [new File(['nope'], 'backup.json', { type: 'application/json' })] } })
   expect(await screen.findByRole('alert')).toHaveTextContent('备份文件无效')
+})
+
+it('does not request storage again when the panel remounts or the store re-initializes', async () => {
+  const persist = navigator.storage.persist as ReturnType<typeof vi.fn>
+  render(<SettingsPanel onClose={() => undefined} />).unmount(); render(<SettingsPanel onClose={() => undefined} />)
+  await useProgress.getState().init()
+  expect(persist).toHaveBeenCalledTimes(0)
+})
+
+it('traps focus, closes on Escape, and restores the settings opener', () => {
+  const opener = document.createElement('button'); document.body.append(opener); opener.focus()
+  const close = vi.fn(); render(<SettingsPanel onClose={close} opener={opener} />)
+  const dialog = screen.getByRole('dialog')
+  expect(dialog.contains(document.activeElement)).toBe(true)
+  fireEvent.keyDown(dialog, { key: 'Tab', shiftKey: true })
+  expect(document.activeElement).toBe(screen.getByRole('button', { name: '重置学习数据' }))
+  fireEvent.keyDown(dialog, { key: 'Escape' })
+  expect(close).toHaveBeenCalledTimes(1); expect(document.activeElement).toBe(opener)
+  opener.remove()
 })

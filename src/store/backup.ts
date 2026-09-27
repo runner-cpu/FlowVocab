@@ -74,6 +74,7 @@ export async function importProgressBackup(value: unknown): Promise<void> {
     await Promise.all([db.userProfile.clear(), db.userWords.clear(), db.dailyStats.clear(), db.sessions.clear(), db.progress.clear(), db.planet.clear()])
     await db.userProfile.put(backup.profile); await db.userWords.bulkPut(backup.userWords); await db.dailyStats.bulkPut(backup.dailyStats); await db.sessions.bulkPut(backup.sessions); await db.progress.put(backup.progress); await db.planet.put(backup.planet)
   })
+  await useProgress.getState().init(true)
 }
 
 export async function resetProgress(): Promise<void> {
