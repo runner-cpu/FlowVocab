@@ -23,6 +23,7 @@ export default function SentenceGame() {
   const passSentence = useProgress((state) => state.passSentence)
   const [qIndex, setQIndex] = useState(0)
   const [placed, setPlaced] = useState<Record<number, Bucket>>({})
+  const [previousPlaced, setPreviousPlaced] = useState<Record<number, Bucket> | null>(null)
   const [picked, setPicked] = useState<number | null>(null)
   const [dragged, setDragged] = useState<number | null>(null)
   const [flashWrong, setFlashWrong] = useState<number | null>(null)
@@ -45,7 +46,7 @@ export default function SentenceGame() {
     return result
   }, [quest])
 
-  function resetPuzzle(message = '已重置本题') { setPlaced({}); setPicked(null); setDragged(null); setAnnouncement(message) }
+  function resetPuzzle(message = '已重置本题') { setPlaced({}); setPreviousPlaced(null); setPicked(null); setDragged(null); setAnnouncement(message) }
   function nextQuestion() {
     if (qIndex + 1 >= quests.length) setDone(true)
     else { setQIndex((index) => index + 1); resetPuzzle(''); setAnswerPicked(null); setAnswered(false) }
@@ -59,7 +60,7 @@ export default function SentenceGame() {
       puzzleMistake.current = true
       window.setTimeout(() => setFlashWrong(null), 500); return
     }
-    setPlaced(result.placed); setAnnouncement(`${quest.segments[index].text} 已放入${bucketNames[bucket]}`)
+    setPreviousPlaced(placed); setPlaced(result.placed); setAnnouncement(`${quest.segments[index].text} 已放入${bucketNames[bucket]}`)
     if (result.complete) { void answer({ module: 'sentence', correct: !puzzleMistake.current, timeMs: elapsedSince(startedAt.current, performance.now()) }); void passSentence(); window.setTimeout(nextQuestion, 900) }
   }
   function onTranslate(index: number) {
@@ -80,7 +81,7 @@ export default function SentenceGame() {
       <div className="chips segment-pool">{segments.map((segment) => <button type="button" key={segment.idx} draggable={placed[segment.idx] === undefined} disabled={placed[segment.idx] !== undefined} aria-pressed={picked === segment.idx} onDragStart={() => setDragged(segment.idx)} onDragEnd={() => setDragged(null)} onClick={() => setPicked(picked === segment.idx ? null : segment.idx)} className={`chip segment-chip ${picked === segment.idx ? 'picked' : ''} ${placed[segment.idx] !== undefined ? 'placed' : ''} ${flashWrong === segment.idx ? 'wrong-flash' : ''}`}>{segment.text}</button>)}</div>
       <p className="muted interaction-hint">拖动片段，或先点选片段再选择目标区域。</p>
       <div className="buckets mt14">{(['main', 'clause', 'modifier'] as Bucket[]).map((bucket) => <div key={bucket} className={`bucket ${bucketCorrect(bucket) ? 'correct' : ''}`} role="button" tabIndex={0} aria-label={`将选中片段放入${bucketNames[bucket]}`} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (dragged !== null) placeSeg(dragged, bucket) }} onClick={() => { if (picked !== null) placeSeg(picked, bucket) }} onKeyDown={(event) => { if ((event.key === 'Enter' || event.key === ' ') && picked !== null) { event.preventDefault(); placeSeg(picked, bucket) } }}><h5>{bucketNames[bucket]}</h5><div className="bucket-content">{quest.segments!.filter((_, index) => placed[index] === bucket).map((segment, index) => <span key={index} className="chip">{segment.text}</span>)}</div></div>)}</div>
-      <div className="interaction-actions"><button className="btn btn-ghost" onClick={() => resetPuzzle()}>重置本题</button></div><p className="sr-only" aria-live="polite">{announcement}</p>
+      <div className="interaction-actions"><button className="btn btn-ghost" disabled={previousPlaced === null} onClick={() => { if (previousPlaced !== null) { setPlaced(previousPlaced); setPreviousPlaced(null); setAnnouncement('已撤回上一步') } }}>撤回上一步</button><button className="btn btn-ghost" onClick={() => resetPuzzle()}>重置本题</button></div><p className="sr-only" aria-live="polite">{announcement}</p>
     </>}
     {quest.type === 'translate' && <><div className="options mt14">{quest.options!.map((option, index) => { let className = 'option'; if (answered) { if (index === quest.answer) className += ' correct'; else if (answerPicked === index) className += ' wrong' } return <button key={index} className={className} disabled={answered} onClick={() => onTranslate(index)}>{option}</button> })}</div>{answered && <div className="explain-box">{quest.explain}</div>}</>}
   </div></div>

@@ -19,8 +19,8 @@ export interface WordBankProgress {
 export interface FeedbackEvent {
   type: 'hit' | 'critical' | 'combo' | 'rage' | 'miss' | 'levelup' | 'leveldown'
   combo: number
-  isCritical: boolean
-  rageActive: boolean
+  isCritical?: boolean
+  rageActive?: boolean
   message?: string
 }
 

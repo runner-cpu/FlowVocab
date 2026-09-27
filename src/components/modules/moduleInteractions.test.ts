@@ -46,6 +46,52 @@ describe('writing order movement', () => {
   })
 })
 
+describe('single-step undo', () => {
+  beforeEach(() => {
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    useUI.setState({ track: 'cet' })
+    useProgress.setState({
+      answer: vi.fn().mockResolvedValue(undefined),
+      passSentence: vi.fn().mockResolvedValue(undefined),
+      submitWriting: vi.fn().mockResolvedValue(undefined)
+    })
+  })
+
+  afterEach(() => { cleanup(); vi.restoreAllMocks() })
+
+  it('restores a sentence fragment to the pool after one placement', () => {
+    render(createElement(SentenceGame))
+    const undo = screen.getByRole('button', { name: '撤回上一步' })
+    expect(undo).toBeDisabled()
+
+    const segment = screen.getByRole('button', { name: 'Students' })
+    fireEvent.click(segment)
+    fireEvent.click(screen.getByRole('button', { name: /放入主干/ }))
+    expect(segment).toBeDisabled()
+
+    fireEvent.click(undo)
+    expect(segment).toBeEnabled()
+    expect(undo).toBeDisabled()
+  })
+
+  it('restores the previous writing fragment order after one move', () => {
+    const { container } = render(createElement(WritingGame))
+    const answer = container.querySelector('.sortable-answer')!
+    const readOrder = () => [...answer.querySelectorAll('.sort-chip > span:first-child')].map((node) => node.textContent)
+    const original = readOrder()
+    const move = screen.getAllByRole('button', { name: /向后移动/ }).find((button) => !button.hasAttribute('disabled'))!
+
+    fireEvent.click(move)
+    expect(readOrder()).not.toEqual(original)
+    const undo = screen.getByRole('button', { name: '撤回上一步' })
+    expect(undo).toBeEnabled()
+
+    fireEvent.click(undo)
+    expect(readOrder()).toEqual(original)
+    expect(undo).toBeDisabled()
+  })
+})
+
 describe('module submission timing', () => {
   let answer: ReturnType<typeof vi.fn>
   let now = 100

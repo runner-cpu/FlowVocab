@@ -29,13 +29,14 @@ export default function WritingGame() {
   const task: WritingTask = tasks[taskIdx]
   const initialOrder = useMemo(() => shuffle(task.segments ?? []), [task])
   const [order, setOrder] = useState<string[]>(initialOrder)
+  const [previousOrder, setPreviousOrder] = useState<string[] | null>(null)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
   const [announcement, setAnnouncement] = useState('')
   const [pickErr, setPickErr] = useState<number | null>(null)
   const [result, setResult] = useState<{ pass: boolean } | null>(null)
   const startedAt = useRef(performance.now())
 
-  useEffect(() => { setOrder(initialOrder); setPickErr(null); setResult(null); setAnnouncement(''); startedAt.current = performance.now() }, [initialOrder])
+  useEffect(() => { setOrder(initialOrder); setPreviousOrder(null); setPickErr(null); setResult(null); setAnnouncement(''); startedAt.current = performance.now() }, [initialOrder])
   const sortDone = task.type === 'sort' && order.length === (task.segments?.length ?? 0)
   const errDone = task.type === 'error' && pickErr !== null
 
@@ -43,12 +44,12 @@ export default function WritingGame() {
     if (result) return
     const next = moveWritingSegment(order, index, direction)
     if (next[index] === order[index]) return
-    setOrder(next); setAnnouncement(`已将 ${order[index]} ${direction < 0 ? '前移' : '后移'}一位`)
+    setPreviousOrder(order); setOrder(next); setAnnouncement(`已将 ${order[index]} ${direction < 0 ? '前移' : '后移'}一位`)
   }
   function dropSegment(destination: number) {
     if (draggedIndex === null || draggedIndex === destination || result) return
     const next = [...order]; const [item] = next.splice(draggedIndex, 1); next.splice(destination, 0, item)
-    setOrder(next); setDraggedIndex(null); setAnnouncement(`已移动 ${item} 到第 ${destination + 1} 位`)
+    setPreviousOrder(order); setOrder(next); setDraggedIndex(null); setAnnouncement(`已移动 ${item} 到第 ${destination + 1} 位`)
   }
   function submit() {
     if (result) return
@@ -63,7 +64,7 @@ export default function WritingGame() {
     {task.type === 'sort' && <>
       <div className="card-title mt14">你的答案（拖动或使用方向键调整）</div>
       <div className="sort-answer sortable-answer">{order.map((segment, index) => <div key={`${segment}-${index}`} className="sort-chip placed" draggable={!result} onDragStart={() => setDraggedIndex(index)} onDragEnd={() => setDraggedIndex(null)} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); dropSegment(index) }}><span>{segment}</span><span className="sort-controls"><button type="button" aria-label={`向前移动 ${segment}`} disabled={!!result || index === 0} onClick={() => moveSegment(index, -1)}>←</button><button type="button" aria-label={`向后移动 ${segment}`} disabled={!!result || index === order.length - 1} onClick={() => moveSegment(index, 1)}>→</button></span></div>)}</div>
-      <div className="interaction-actions"><button className="btn btn-ghost" disabled={!!result} onClick={() => { setOrder(initialOrder); setAnnouncement('已恢复初始排序') }}>重置排序</button></div><p className="sr-only" aria-live="polite">{announcement}</p>
+      <div className="interaction-actions"><button className="btn btn-ghost" disabled={!!result || previousOrder === null} onClick={() => { if (previousOrder !== null) { setOrder(previousOrder); setPreviousOrder(null); setAnnouncement('已撤回上一步') } }}>撤回上一步</button><button className="btn btn-ghost" disabled={!!result} onClick={() => { setOrder(initialOrder); setPreviousOrder(null); setAnnouncement('已恢复初始排序') }}>重置排序</button></div><p className="sr-only" aria-live="polite">{announcement}</p>
       {result && <div className={`score-report ${result.pass ? '' : 'miss'}`}><strong>{result.pass ? '✓ 排序正确！' : '× 顺序有误'}</strong><div className="ex-eg mt8">💡 {task.explain}</div></div>}
     </>}
     {task.type === 'error' && <><div className="explain-box mt8"><div className="ex-eg">“{task.sentence}”</div></div><div className="options mt14">{(task.options ?? []).map((option, index) => { let className = 'option'; if (result) { if (index === task.answer) className += ' correct'; else if (pickErr === index) className += ' wrong' } else if (pickErr === index) className += ' picked'; return <button key={index} className={className} disabled={!!result} onClick={() => setPickErr(index)}>{option}</button> })}</div>{result && <div className={`score-report ${result.pass ? '' : 'miss'}`}><strong>{result.pass ? '✓ 改对了！' : '× 再想想'}</strong><div className="ex-eg mt8">💡 {task.explain}</div></div>}</>}

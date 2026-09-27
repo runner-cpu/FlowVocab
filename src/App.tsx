@@ -17,6 +17,11 @@ export default function App() {
   const initError = useProgress((s) => s.initError)
   const retryInit = useProgress((s) => s.retryInit)
   const page = useUI((s) => s.page)
+  useEffect(() => {
+    if (document.activeElement !== document.body) {
+      window.requestAnimationFrame(() => document.getElementById('main-content')?.focus())
+    }
+  }, [page])
 
   useEffect(() => {
     init()
