@@ -36,5 +36,23 @@ class ImportWordsTest(unittest.TestCase):
             self.assertEqual(next(word for word in generated if word['word'] == 'alpha')['legacyIds'], ['old-alpha'])
             self.assertEqual({word['word']: word['pos'] for word in generated}, {'able': 'adj', 'absorb': 'verb', 'alpha': 'noun'})
 
+    def test_preserves_mapping_aliases_across_regeneration(self):
+        with tempfile.TemporaryDirectory() as temp:
+            root = Path(temp)
+            source = root / 'ecdict.csv'
+            with source.open('w', encoding='utf-8', newline='') as handle:
+                writer = csv.DictWriter(handle, fieldnames=['word', 'phonetic', 'definition', 'translation', 'pos', 'tag', 'frq'])
+                writer.writeheader()
+                writer.writerow({'word': 'Alpha', 'phonetic': '', 'translation': 'n. alpha', 'pos': '', 'tag': 'cet4', 'frq': '1'})
+            legacy = root / 'legacy-ids.json'
+            legacy.write_text(json.dumps({'alpha': ['cet4-old-alpha']}), encoding='utf-8')
+            output = root / 'words'
+
+            regenerate(source, legacy, output, minimum=0)
+            regenerate(source, output / 'legacy-ids.json', output, minimum=0)
+
+            generated = [word for level in range(5) for word in json.loads((output / f'level-{level}.json').read_text(encoding='utf-8'))]
+            self.assertEqual(generated[0]['legacyIds'], ['cet4-old-alpha'])
+
 if __name__ == '__main__':
     unittest.main()

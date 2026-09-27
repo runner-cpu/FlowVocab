@@ -11,6 +11,7 @@ const normalize = (word: Word): Word => ({ ...word, phonetic: word.phonetic || '
 export function wordBankFallbackMessage() { return fallbackMessage }
 export function wordBankTotal() { return total }
 export function getWordPool(level: DifficultyLevel) { return cache?.[level] || [] }
+export async function findStoredWordLevel(wordId: string): Promise<DifficultyLevel | null> { return (await db.wordBank.get(wordId))?.level ?? null }
 
 async function mergeWords(words: Word[]) {
   await db.transaction('rw', db.wordBank, db.userWords, db.wordBankMeta, async () => {
@@ -44,10 +45,16 @@ export async function importWordBankResponse(response: Response, onProgress: (pr
 
 type Manifest = { version: number; total: number; counts: number[]; urls: string[] }
 export async function ensureWordLevels(levels: DifficultyLevel[], onProgress?: (progress: WordBankProgress) => void) {
-  if (cache && await db.wordBank.count() === total && levels.every(level => cache![level].length > 0)) { onProgress?.({ phase: 'ready', loaded: total, total }); return cache }
   if (onProgress) listeners.add(onProgress)
   try {
-    const meta = await db.wordBankMeta.get(1); const loaded = new Set(meta?.version === IMPORT_VERSION ? meta.loadedLevels || [] : [])
+    const meta = await db.wordBankMeta.get(1)
+    const legacyInventory = await db.wordBank.filter(word => /^(cet4|cet6)-/.test(word.id)).toArray()
+    if (legacyInventory.length) {
+      await mergeWords(await db.wordBank.filter(word => word.source === 'ecdict').toArray())
+      cache = null
+    }
+    if (cache && await db.wordBank.count() === total && levels.every(level => cache![level].length > 0)) { onProgress?.({ phase: 'ready', loaded: total, total }); return cache }
+    const loaded = new Set(meta?.version === IMPORT_VERSION ? meta.loadedLevels || [] : [])
     const needed = levels.filter(level => !loaded.has(level))
     if (needed.length) {
       const manifestResponse = await fetch('/data/words/manifest.json'); if (!manifestResponse.ok) throw new Error('manifest unavailable')

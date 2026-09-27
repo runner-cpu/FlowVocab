@@ -12,6 +12,7 @@ import SpotlightCard from '../components/ui/SpotlightCard'
 import ProgressionPanel from '../components/dashboard/ProgressionPanel'
 import { planetLevelFromEnergy } from '../engine/progression'
 import WordForest from '../components/dashboard/WordForest'
+import { findStoredWordLevel } from '../store/wordBank'
 
 export default function Dashboard() {
   const profile = useProgress((s) => s.profile)
@@ -27,6 +28,10 @@ export default function Dashboard() {
   const weakest = radarEntries[radarEntries.length - 1]
   const isFirstStudy = radarEntries.length === 0 || radarEntries.every(([, value]) => value === 0)
   const selectModule = useCallback((module: ModuleKey) => { setSelected(module); go(module) }, [go])
+  const reviewWord = useCallback(async (wordId: string) => {
+    const level = await findStoredWordLevel(wordId)
+    useUI.getState().reviewWord(wordId, level ?? undefined)
+  }, [])
   const reviewLoad = useMemo(() => {
     const now = Date.now(); const day = 86400000
     return [
@@ -70,7 +75,7 @@ export default function Dashboard() {
 
       <div className="card review-load-card"><div className="card-title"><TimerReset size={16} /> 复习负担 <span className="chart-hint">根据记忆节奏自动安排</span></div><div className="review-load-grid">{reviewLoad.map((item) => <SpotlightCard key={item.label} className={`review-load-item ${item.tone}`}><span>{item.label}</span><strong>{item.value}</strong><small>{item.label === '今日到期' ? '优先处理' : item.label === '未来 3 天' ? '提前预览' : '稳固记忆'}</small></SpotlightCard>)}</div></div>
 
-      <WordForest words={userWords} onReview={(wordId) => useUI.getState().reviewWord(wordId)} />
+      <WordForest words={userWords} onReview={reviewWord} />
 
       <div className="card">
         <div className="card-title"><Activity size={16} /> 难度流 · 心流质量</div>

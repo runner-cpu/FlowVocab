@@ -23,9 +23,16 @@ def rank(row):
 def legacy_ids(path):
     if not path.exists(): return {}
     result = {}
-    for record in json.loads(path.read_text(encoding='utf-8')):
-        word = normalized(record.get('word'))
-        if word and record.get('id'): result.setdefault(word, []).append(record['id'])
+    payload = json.loads(path.read_text(encoding='utf-8'))
+    if isinstance(payload, dict):
+        for value, ids in payload.items():
+            word = normalized(value)
+            if isinstance(ids, str): ids = [ids]
+            if word and isinstance(ids, list): result[word] = [item for item in ids if isinstance(item, str) and item]
+    else:
+        for record in payload:
+            word = normalized(record.get('word'))
+            if word and record.get('id'): result.setdefault(word, []).append(record['id'])
     return result
 def regenerate(source, legacy, output, minimum=5800):
     selected = {}

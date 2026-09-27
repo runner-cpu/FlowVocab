@@ -29,6 +29,21 @@ it('removes legacy bank inventory while retaining its migrated user progress', a
   expect(await db.wordBank.get('cet4-old')).toBeUndefined()
   expect((await db.userWords.where('wordId').equals('ecdict-new').first())?.total).toBe(3)
 })
+it('cleans legacy inventory from an already fully loaded version-3 bank', async () => {
+  await db.wordBank.bulkPut([
+    { id: 'cet4-old', word: 'old', meaning: 'old', phonetic: '', example: '', exampleCn: '', level: 0, pos: 'noun' },
+    { id: 'cet6-old', word: 'older', meaning: 'older', phonetic: '', example: '', exampleCn: '', level: 4, pos: 'noun' },
+    { id: 'ecdict-old', word: 'old', meaning: 'old', phonetic: '', example: '', exampleCn: '', level: 4, pos: 'noun', source: 'ecdict', tags: [], legacyIds: ['cet4-old'] },
+  ])
+  await db.userWords.put({ id: 'progress', wordId: 'cet4-old', status: 'learning', correct: 2, total: 3, lastReview: 1, nextReview: 2, interval: 1, quality: 2, successfulReviews: 1 })
+  await db.wordBankMeta.put({ id: 1, version: 3, total: 3, updatedAt: Date.now(), loadedLevels: [0, 1, 2, 3, 4] })
+
+  await ensureWordLevels([0, 1, 2, 3, 4])
+
+  expect((await db.wordBank.toArray()).map(word => word.id)).not.toContain('cet4-old')
+  expect((await db.wordBank.toArray()).map(word => word.id)).not.toContain('cet6-old')
+  expect((await db.userWords.where('wordId').equals('ecdict-old').first())?.total).toBe(3)
+})
 const words: Word[] = Array.from({ length: 2001 }, (_, i) => ({ id: `word-${i}`, word: 'island', meaning: '岛屿', phonetic: '', example: '', exampleCn: '', level: 0, pos: 'n.' }))
 it('reports byte download and incremental import progress without removing existing words', async () => {
   await db.wordBank.put({ ...words[0], id: 'existing' })
