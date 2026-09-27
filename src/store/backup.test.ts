@@ -33,17 +33,19 @@ describe('local progress backup', () => {
   it('replaces every user table while retaining the lexical bank', async () => {
     const next = await exportProgressBackup()
     next.profile.totalXp = 99; next.userWords = []; next.dailyStats = []; next.sessions = []
-    next.progress.sentencePassed = 8; next.planet.energy = 88
+    next.progress.sentencePassed = 8; next.progress.radar = { vocab: 77, grammar: 66, sentence: 55, listening: 44, writing: 33, reading: 22 }; next.planet.energy = 88
     await importProgressBackup(next)
     expect(await db.userProfile.get(1)).toMatchObject({ totalXp: 99 })
     expect(await db.userWords.count()).toBe(0)
     expect(await db.dailyStats.count()).toBe(0)
     expect(await db.sessions.count()).toBe(0)
     expect(await db.progress.get(1)).toMatchObject({ sentencePassed: 8 })
+    expect((await db.progress.get(1))?.radar).toEqual(next.progress.radar)
     expect(await db.planet.get(1)).toMatchObject({ energy: 88 })
     expect(await db.wordBank.get('bank-1')).toMatchObject({ word: 'retain' })
     expect(useProgress.getState().profile?.totalXp).toBe(99)
     expect(useProgress.getState().progress?.sentencePassed).toBe(8)
+    expect(useProgress.getState().progress?.radar).toEqual(next.progress.radar)
   })
 
   it('rejects malformed data without changing stored progress', async () => {

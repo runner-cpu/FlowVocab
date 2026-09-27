@@ -200,8 +200,10 @@ export const useProgress = create<ProgressStore>((set, get) => ({
       await db.dailyStats.put(daily)
     }
     const userWords = await db.userWords.toArray()
-    progress.radar = computeRadar(progress, userWords)
-    await db.progress.put(progress)
+    if (!preserveEmptyTables) {
+      progress.radar = computeRadar(progress, userWords)
+      await db.progress.put(progress)
+    }
     rollingTimes = []
     writeQueue = []
     writesBlocked = false
