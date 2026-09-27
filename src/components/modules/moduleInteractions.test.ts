@@ -2,6 +2,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createElement } from 'react'
 import { cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { useProgress } from '../../store/progressStore'
+import { useUI } from '../../store/gameStore'
 import GrammarGame from './grammar/GrammarGame'
 import ListeningGame from './listening/ListeningGame'
 import SentenceGame from './sentence/SentenceGame'
@@ -87,6 +88,7 @@ describe('module submission timing', () => {
     expectTimed('sentence', 400); expect(answer).toHaveBeenCalledTimes(1); expect(answer.mock.calls[0][0]).toMatchObject({ correct: false })
   })
   it('sends measured writing timing', () => {
+    useUI.getState().setTrack('cet')
     render(createElement(WritingGame)); const task = WRITING_TASKS.find(item => item.type === 'error')!
     fireEvent.click(screen.getByRole('button', { name: new RegExp(task.title) })); now = 470; fireEvent.click(screen.getByRole('button', { name: task.options![0] })); fireEvent.click(screen.getByRole('button', { name: '提交判定' })); expectTimed('writing', 370)
   })
