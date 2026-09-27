@@ -132,6 +132,7 @@ interface ProgressStore {
   submitWriting: (taskId: string, score: number) => Promise<void>
   completeReading: (chapterId: string) => Promise<void>
   toggleZen: () => void
+  updateSettings: (patch: Partial<UserProfile['settings']>) => Promise<void>
   clearFeedback: () => void
 }
 
@@ -195,6 +196,8 @@ export const useProgress = create<ProgressStore>((set, get) => ({
     writesBlocked = false
 
     set({ ready: true, profile, planet, progress, daily, userWords, saveError: null, initError: null })
+    SoundBank.setVolume(profile.settings.volume)
+    SoundBank.setMuted(profile.settings.zenMode)
     } catch {
       set({ ready: false, initError: '无法读取本地学习数据' })
     }
@@ -422,7 +425,25 @@ export const useProgress = create<ProgressStore>((set, get) => ({
     if (!s.profile) return
     const profile = { ...s.profile, settings: { ...s.profile.settings, zenMode: !s.profile.settings.zenMode } }
     await db.userProfile.put(profile)
+    SoundBank.setMuted(profile.settings.zenMode)
     set({ profile })
+  }),
+
+  updateSettings: (patch) => serializeWrite(async () => {
+    const profile = get().profile
+    if (!profile) return
+    const next = {
+      ...profile,
+      settings: {
+        zenMode: typeof patch.zenMode === 'boolean' ? patch.zenMode : profile.settings.zenMode,
+        volume: typeof patch.volume === 'number' ? Math.max(0, Math.min(1, patch.volume)) : profile.settings.volume,
+        voiceRate: typeof patch.voiceRate === 'number' ? Math.max(.6, Math.min(1.4, patch.voiceRate)) : profile.settings.voiceRate
+      }
+    }
+    await db.userProfile.put(next)
+    SoundBank.setVolume(next.settings.volume)
+    SoundBank.setMuted(next.settings.zenMode)
+    set({ profile: next })
   }),
 
   clearFeedback: () => set({ feedback: null })

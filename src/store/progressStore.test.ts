@@ -26,6 +26,13 @@ it('calculates vocabulary radar against the 600-word active target rather than a
   expect(computeRadar(progress, words).vocab).toBe(3)
 })
 
+it('persists bounded learning settings and applies the requested values', async () => {
+  await useProgress.getState().updateSettings({ volume: .35, voiceRate: 1.2, zenMode: false })
+  expect(useProgress.getState().profile?.settings).toEqual({ volume: .35, voiceRate: 1.2, zenMode: false })
+  await useProgress.getState().updateSettings({ volume: 9, voiceRate: 0 })
+  expect((await db.userProfile.get(1))?.settings).toMatchObject({ volume: 1, voiceRate: .6 })
+})
+
 describe('atomic answer persistence', () => {
   it('blocks later answers behind a failed miss and retries in the original reward order', async () => {
     for (let i = 0; i < 4; i++) await useProgress.getState().answer(answer)

@@ -1,5 +1,7 @@
 // Web Audio API 合成音效（零资源、零版权）
 let ctx: AudioContext | null = null
+let volume = 1
+let muted = false
 
 function ac(): AudioContext | null {
   try {
@@ -16,6 +18,7 @@ function ac(): AudioContext | null {
 }
 
 function tone(freq: number, dur: number, type: OscillatorType = 'sine', vol = 0.16, when = 0) {
+  if (muted) return
   const c = ac()
   if (!c) return
   const t = c.currentTime + when
@@ -24,7 +27,7 @@ function tone(freq: number, dur: number, type: OscillatorType = 'sine', vol = 0.
   o.type = type
   o.frequency.value = freq
   g.gain.setValueAtTime(0.0001, t)
-  g.gain.exponentialRampToValueAtTime(vol, t + 0.01)
+  g.gain.exponentialRampToValueAtTime(vol * volume, t + 0.01)
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur)
   o.connect(g).connect(c.destination)
   o.start(t)
@@ -32,6 +35,8 @@ function tone(freq: number, dur: number, type: OscillatorType = 'sine', vol = 0.
 }
 
 export const SoundBank = {
+  setVolume(value: number) { volume = Math.max(0, Math.min(1, value)) },
+  setMuted(value: boolean) { muted = value },
   hit() {
     tone(660, 0.09, 'sine', 0.14)
   },
