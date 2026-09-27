@@ -1,5 +1,5 @@
 import { create } from 'zustand'
-import type { LearningTrack } from '../types'
+import type { DifficultyLevel, LearningTrack } from '../types'
 
 export type NavigablePageKey =
   | 'home'
@@ -19,7 +19,8 @@ interface GameUI {
   page: PageKey
   go: (p: NavigablePageKey) => void
   reviewWordId: string | null
-  reviewWord: (wordId: string) => void
+  reviewWordLevel: DifficultyLevel | null
+  reviewWord: (wordId: string, level?: DifficultyLevel) => void
   consumeReviewWord: () => void
   guideOpen: boolean
   openGuide: () => void
@@ -76,12 +77,13 @@ export const useUI = create<GameUI>((set) => ({
     set({ page })
   },
   reviewWordId: null,
-  reviewWord: (wordId) => {
-    set({ reviewWordId: wordId })
+  reviewWordLevel: null,
+  reviewWord: (wordId, level) => {
+    set({ reviewWordId: wordId, reviewWordLevel: level ?? null })
     writePageHash('vocab')
     set({ page: 'vocab' })
   },
-  consumeReviewWord: () => set({ reviewWordId: null }),
+  consumeReviewWord: () => set({ reviewWordId: null, reviewWordLevel: null }),
   guideOpen: typeof window !== 'undefined' && window.localStorage.getItem('flowvocab-first-run-complete') !== '1',
   openGuide: () => set({ guideOpen: true }),
   closeGuide: () => {

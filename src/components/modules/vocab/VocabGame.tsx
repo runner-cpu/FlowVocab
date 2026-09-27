@@ -85,7 +85,7 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random 
     let active = true
     const adaptiveLevel = useProgress.getState().difficulty.level
     const reviewId = useUI.getState().reviewWordId
-    const reviewLevel = reviewId ? ([0, 1, 2, 3, 4] as const).flatMap(getWordPool).find(word => word.id === reviewId || word.word === reviewId)?.level : undefined
+    const reviewLevel = useUI.getState().reviewWordLevel ?? (reviewId ? ([0, 1, 2, 3, 4] as const).flatMap(getWordPool).find(word => word.id === reviewId || word.word === reviewId)?.level : undefined)
     const levels = [...new Set([...TRACK_CURRICULUM[useUI.getState().track].levels, adaptiveLevel, ...(reviewLevel === undefined ? [] : [reviewLevel])])]
     const ready = words ? Promise.resolve() : ensureWordLevels(levels, progress => { if (active) setBank(progress) })
     ready.then(() => {
