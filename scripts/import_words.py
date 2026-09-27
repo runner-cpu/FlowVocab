@@ -4,7 +4,7 @@ import argparse, csv, hashlib, json
 from pathlib import Path
 
 DEFAULT_SOURCE = Path('data-src/ecdict-source/ecdict.csv')
-DEFAULT_LEGACY = Path('public/data/words.json')
+DEFAULT_LEGACY = Path('public/data/words/legacy-ids.json')
 DEFAULT_OUTPUT = Path('public/data/words')
 LEVELS = 5
 def normalized(value): return ' '.join((value or '').strip().lower().split())
@@ -34,7 +34,12 @@ def regenerate(source, legacy, output, minimum=5800):
             word = normalized(row.get('word'))
             if not word or not ({'cet4', 'cet6'} & set(tags(row))): continue
             if word not in selected or rank(row) < rank(selected[word]): selected[word] = row
-    aliases, records = legacy_ids(legacy), []
+    aliases = legacy_ids(legacy)
+    if not aliases:
+        for shard in sorted(output.glob('level-*.json')):
+            for record in json.loads(shard.read_text(encoding='utf-8')):
+                if record.get('legacyIds'): aliases[record['word']] = record['legacyIds']
+    records = []
     for word, row in sorted(selected.items(), key=lambda item: rank(item[1])):
         meaning = (row.get('translation') or row.get('definition') or '').strip()
         if not meaning: continue
@@ -52,6 +57,7 @@ def regenerate(source, legacy, output, minimum=5800):
         (output / name).write_text(json.dumps(shard, ensure_ascii=False, separators=(',', ':')) + '\n', encoding='utf-8')
         counts.append(len(shard)); urls.append(name)
     (output / 'manifest.json').write_text(json.dumps({'version': 3, 'total': len(records), 'counts': counts, 'urls': urls}, ensure_ascii=False, separators=(',', ':')) + '\n', encoding='utf-8')
+    (output / 'legacy-ids.json').write_text(json.dumps(aliases, ensure_ascii=False, separators=(',', ':')) + '\n', encoding='utf-8')
     return len(records), coverage
 def main():
     parser = argparse.ArgumentParser(description=__doc__); parser.add_argument('--source', type=Path, default=DEFAULT_SOURCE); parser.add_argument('--legacy', type=Path, default=DEFAULT_LEGACY); parser.add_argument('--output', type=Path, default=DEFAULT_OUTPUT)

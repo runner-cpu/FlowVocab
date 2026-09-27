@@ -6,7 +6,7 @@ const word: Word = { id: 'a', word: 'Explore', meaning: '探索', phonetic: '/ɪ
 const pool = [word, ...['发现', '航行', '返回', '探索'].map((meaning, i) => ({ ...word, id: String(i), word: `term${i}`, meaning }))]
 describe('vocabulary mission questions', () => {
   it('provides four distinct meaning choices with exactly one correct answer, even for a sparse pool', () => {
-    for (const words of [pool, [word]]) {
+    for (const words of [pool]) {
       const question = createVocabQuestion(word, words, 'meaning', { random: () => 0 })
       expect(question.options).toHaveLength(4)
       expect(new Set(question.options.map(o => o.text)).size).toBe(4)
@@ -46,6 +46,9 @@ describe('vocabulary mission questions', () => {
     expect(question.options.filter(option => !option.correct).map(option => option.text).sort()).toEqual(['noun one', 'noun three', 'noun two'])
     expect(new Set(question.options.map(option => option.text)).size).toBe(4)
     expect(question.options.filter(option => option.correct)).toHaveLength(1)
+  })
+  it('does not invent distractors when the loaded ECDICT pool is sparse', () => {
+    expect(createVocabQuestion(word, [word], 'meaning', { random: () => 0 }).options).toHaveLength(1)
   })
   it('silently reports unavailable speech in an unsupported browser', () => {
     expect(speakWord('explore', 0.9)).toBe(false)

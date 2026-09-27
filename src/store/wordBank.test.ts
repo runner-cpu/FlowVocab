@@ -20,6 +20,15 @@ it('fetches only requested word shards and caches only their levels', async () =
   expect(requested).toContain('/data/words/level-2.json')
   expect(requested.some(path => /level-[134]\.json$/.test(path))).toBe(false)
 })
+it('removes legacy bank inventory while retaining its migrated user progress', async () => {
+  await db.wordBank.put({ id: 'cet4-old', word: 'old', meaning: 'old', phonetic: '', example: '', exampleCn: '', level: 0, pos: 'noun' })
+  await db.userWords.put({ id: 'progress', wordId: 'cet4-old', status: 'learning', correct: 2, total: 3, lastReview: 1, nextReview: 2, interval: 1, quality: 2, successfulReviews: 1 })
+  const original = globalThis.fetch
+  globalThis.fetch = async (input) => String(input).endsWith('manifest.json') ? new Response(JSON.stringify({ version: 3, total: 1, counts: [1, 0, 0, 0, 0], urls: ['level-0.json', 'level-1.json', 'level-2.json', 'level-3.json', 'level-4.json'] })) : new Response(JSON.stringify([{ id: 'ecdict-new', word: 'new', meaning: 'new', phonetic: '', example: '', exampleCn: '', level: 0, pos: 'noun', source: 'ecdict', tags: [], legacyIds: ['cet4-old'] }]))
+  try { await ensureWordLevels([0]) } finally { globalThis.fetch = original }
+  expect(await db.wordBank.get('cet4-old')).toBeUndefined()
+  expect((await db.userWords.where('wordId').equals('ecdict-new').first())?.total).toBe(3)
+})
 const words: Word[] = Array.from({ length: 2001 }, (_, i) => ({ id: `word-${i}`, word: 'island', meaning: '岛屿', phonetic: '', example: '', exampleCn: '', level: 0, pos: 'n.' }))
 it('reports byte download and incremental import progress without removing existing words', async () => {
   await db.wordBank.put({ ...words[0], id: 'existing' })

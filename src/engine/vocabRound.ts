@@ -1,4 +1,3 @@
-import { WORDS } from '../data/words'
 import { primaryPos } from '../data/contentValidation'
 import type { VocabMode, VocabQuestion, Word } from '../types'
 
@@ -37,7 +36,7 @@ function shuffle<T>(values: T[], random: () => number): T[] {
 }
 function takeDistractors(word: Word, pool: Word[], random: () => number): string[] {
   const seen = new Set([word.meaning.trim()]); const picked: string[] = []
-  const all = [...pool, ...WORDS].filter(entry => entry.id !== word.id && entry.meaning.trim() && !seen.has(entry.meaning.trim()))
+  const all = pool.filter(entry => entry.id !== word.id && entry.meaning.trim() && !seen.has(entry.meaning.trim()))
   const groups = [all.filter(entry => primaryPos(entry) === primaryPos(word)), all.filter(entry => entry.level === word.level), all]
   for (const group of groups) {
     const available = group.filter(entry => !seen.has(entry.meaning.trim()))

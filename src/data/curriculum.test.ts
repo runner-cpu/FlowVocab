@@ -22,4 +22,9 @@ describe('track curriculum', () => {
       itemsForTrack('cet', 'listening', LISTENING_ITEMS).map(item => item.id)
     )
   })
+  it('defines a non-listening content subset for each available module', () => {
+    for (const track of Object.values(TRACK_CURRICULUM)) for (const module of ['grammar', 'sentence', 'writing', 'reading'] as const) {
+      if (track.modules[module]) expect(track.content[module]?.length).toBeGreaterThan(0)
+    }
+  })
 })

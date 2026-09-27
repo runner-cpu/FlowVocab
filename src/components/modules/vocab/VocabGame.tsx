@@ -83,7 +83,9 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random 
 
   useEffect(() => {
     let active = true
-    const ready = words ? Promise.resolve() : ensureWordLevels(TRACK_CURRICULUM[useUI.getState().track].levels, progress => { if (active) setBank(progress) })
+    const adaptiveLevel = useProgress.getState().difficulty.level
+    const levels = [...new Set([...TRACK_CURRICULUM[useUI.getState().track].levels, adaptiveLevel])]
+    const ready = words ? Promise.resolve() : ensureWordLevels(levels, progress => { if (active) setBank(progress) })
     ready.then(() => {
       if (!active) return
       setFallback(words ? '' : wordBankFallbackMessage())

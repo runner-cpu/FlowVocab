@@ -1,5 +1,4 @@
 import { db } from './db'
-import { WORDS } from '../data/words'
 import type { DifficultyLevel, Word, WordBankProgress } from '../types'
 
 const IMPORT_VERSION = 3, BATCH = 2000
@@ -15,6 +14,8 @@ export function getWordPool(level: DifficultyLevel) { return cache?.[level] || [
 
 async function mergeWords(words: Word[]) {
   await db.transaction('rw', db.wordBank, db.userWords, db.wordBankMeta, async () => {
+    const legacyInventory = await db.wordBank.filter(word => /^(cet4|cet6)-/.test(word.id)).toArray()
+    await db.wordBank.bulkDelete(legacyInventory.map(word => word.id))
     for (const word of words) {
       await db.wordBank.put(word)
       for (const legacyId of word.legacyIds || []) {
@@ -43,7 +44,7 @@ export async function importWordBankResponse(response: Response, onProgress: (pr
 
 type Manifest = { version: number; total: number; counts: number[]; urls: string[] }
 export async function ensureWordLevels(levels: DifficultyLevel[], onProgress?: (progress: WordBankProgress) => void) {
-  if (cache && levels.every(level => cache![level].length > 0)) { onProgress?.({ phase: 'ready', loaded: total, total }); return cache }
+  if (cache && await db.wordBank.count() === total && levels.every(level => cache![level].length > 0)) { onProgress?.({ phase: 'ready', loaded: total, total }); return cache }
   if (onProgress) listeners.add(onProgress)
   try {
     const meta = await db.wordBankMeta.get(1); const loaded = new Set(meta?.version === IMPORT_VERSION ? meta.loadedLevels || [] : [])
@@ -54,7 +55,7 @@ export async function ensureWordLevels(levels: DifficultyLevel[], onProgress?: (
       await Promise.all(needed.map(async level => { const response = await fetch(`/data/words/${manifest.urls[level]}`); if (!response.ok) throw new Error(`level ${level} unavailable`); const words = (await response.json() as Word[]).map(normalize); await mergeWords(words); loaded.add(level) }))
       const all = await db.wordBank.toArray(); await db.wordBankMeta.put({ id: 1, version: IMPORT_VERSION, total: manifest.total, updatedAt: Date.now(), loadedLevels: [...loaded].sort() }); cache = buildCache(all); total = all.length
     } else if (!cache) { const all = await db.wordBank.toArray(); cache = buildCache(all); total = all.length }
-  } catch { const saved = await db.wordBank.toArray().catch(() => []); cache = buildCache(saved.length ? saved : WORDS); total = saved.length || WORDS.length; fallbackMessage = '词库分片暂不可用，已使用本地可用词汇继续学习。' }
+  } catch { const saved = await db.wordBank.toArray().catch(() => []); cache = buildCache(saved.filter(word => word.source === 'ecdict')); total = Object.values(cache).flat().length; fallbackMessage = 'ECDICT 词库分片暂不可用，暂时没有可加载的新词。' }
   publish({ phase: 'ready', loaded: total, total }); if (onProgress) listeners.delete(onProgress); return cache!
 }
 export async function ensureWordBank(onProgress?: (progress: WordBankProgress) => void) { return ensureWordLevels([0, 1, 2, 3, 4], onProgress) }
