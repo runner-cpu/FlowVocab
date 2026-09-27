@@ -1,25 +1,4 @@
 /* ===== 心流词境 FlowVocab 全局样式 ===== */
-:root[data-legacy-surface='true'] {
-  --bg: #F5F4EF;
-  --card: #FFFFFF;
-  --ink: #1A1B1C;
-  --ink2: #4B5563;
-  --muted: #6B7280;
-  --line: rgba(0, 0, 0, 0.08);
-  --accent: #5B7FD4;
-  --accent-light: #9BBBF4;
-  --accent-bg: rgba(91, 127, 212, 0.12);
-  --ok: #52C41A;
-  --warn: #F4B400;
-  --err: #EA4335;
-  --gold: #F4B400;
-  --radius: 14px;
-  --shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
-  --nav-h: 56px;
-  --accent-deep: #3457b8;
-  --surface-soft: #F9FAFF;
-}
-
 * { box-sizing: border-box; margin: 0; padding: 0; }
 html, body { height: 100%; }
 body {
@@ -192,6 +171,11 @@ body {
 .planet-core.p3 { background: radial-gradient(circle at 35% 30%, #c8dcff, #3b82f6 55%, #1d4ed8 85%); box-shadow: 0 0 40px rgba(59,130,246,0.5); }
 .planet-core.p4 { background: radial-gradient(circle at 35% 30%, #e6c8ff, #9334e6 55%, #6b21a8 85%); box-shadow: 0 0 40px rgba(147,52,230,0.5); }
 .planet-core.p5 { background: radial-gradient(circle at 35% 30%, #ffd3d3, #ea4335 55%, #b3261e 85%); box-shadow: 0 0 46px rgba(234,67,53,0.55); }
+.planet-core.p6 { background: radial-gradient(circle at 32% 28%, #f6e6b6, #b8794f 48%, #57382f 88%); box-shadow: 0 0 50px rgba(184,121,79,.58), inset -12px -10px 18px rgba(34,23,24,.32); }
+.planet-core.p7 { background: radial-gradient(circle at 35% 27%, #e5f8ff, #4e9ac7 48%, #16466e 88%); box-shadow: 0 0 54px rgba(78,154,199,.62), inset -14px -10px 18px rgba(7,35,62,.3); }
+.planet-core.p8 { background: radial-gradient(circle at 34% 26%, #f2e5ff, #9b72dc 48%, #452b87 88%); box-shadow: 0 0 58px rgba(155,114,220,.65), inset -14px -11px 20px rgba(31,16,78,.32); }
+.planet-core.p9 { background: radial-gradient(circle at 33% 25%, #d9fff4, #2abf9a 48%, #08685e 88%); box-shadow: 0 0 62px rgba(42,191,154,.68), inset -14px -10px 20px rgba(2,61,55,.28); }
+.planet-core.p10 { background: radial-gradient(circle at 32% 24%, #fff7cc, #53d7b4 42%, #1473a5 75%, #19356f 95%); box-shadow: 0 0 72px rgba(83,215,180,.78), 0 0 112px rgba(83,145,255,.28), inset -16px -12px 24px rgba(21,54,111,.3); }
 .planet-core.stale { filter: grayscale(0.85) brightness(0.9); animation: none; }
 .planet-ring {
   position: absolute; left: 50%; top: 50%; width: 150px; height: 150px;
@@ -380,21 +364,6 @@ textarea.essay:focus { outline: none; border-color: var(--accent); }
 }
 
 /* ===== Adventure learning surface ===== */
-:root[data-legacy-surface='true'] {
-  --bg: #06182b;
-  --card: #0b2540;
-  --ink: #eff7ff;
-  --ink2: #b8c9dc;
-  --muted: #829ab3;
-  --line: rgba(132, 183, 226, .16);
-  --accent: #36e0ae;
-  --accent-light: #70f4ce;
-  --accent-bg: rgba(54, 224, 174, .12);
-  --gold: #ffb648;
-  --radius: 16px;
-  --shadow: 0 18px 45px rgba(0, 7, 20, .22);
-  --nav-h: 74px;
-}
 body { background: radial-gradient(circle at 76% -10%, rgba(16, 57, 102, .68), transparent 42%), var(--bg); color: var(--ink); }
 .main { max-width: 1280px; padding: 40px 32px 72px; }
 .topbar { background: rgba(4, 18, 34, .9); border-color: rgba(141, 193, 234, .12); box-shadow: 0 8px 35px rgba(0,0,0,.13); }
@@ -449,22 +418,6 @@ body { background: radial-gradient(circle at 76% -10%, rgba(16, 57, 102, .68), t
 @media (max-width: 640px) { .main { padding: 24px 14px 92px; }.topbar { height: 62px; }.topbar-inner { padding: 0 16px; }.logo span { font-size: 14px; }.nav-links, .rail-status { display: none; }.sound-toggle span { display: none; }.sound-toggle { padding: 8px; }.mission-heading { align-items: start; flex-direction: column; gap: 12px; margin-bottom: 20px; }.mission-heading h1 { font-size: 36px; }.mission-heading small { font-size: 13px; }.quest-card { min-height: 380px; }.quest-card img { object-position: 59% center; }.quest-card::after { background: linear-gradient(180deg, rgba(4,22,40,.94) 0%, rgba(4,22,40,.65) 50%, rgba(4,22,40,.15) 100%); }.quest-copy { padding: 25px 22px; }.quest-copy h2 { font-size: 30px; margin-top: 15px; }.mission-stats { grid-template-columns: 1fr 1fr; }.progress-stat { grid-column: 1 / -1; }.journey-panel { padding: 16px; }.panel-heading { align-items: start; flex-direction: column; gap: 5px; }.journey-track { align-items: stretch; flex-direction: column; gap: 12px; }.journey-step i { width: 2px; height: 15px; flex: 0 0 auto; margin: 0 0 0 21px; }.learning-section-heading { align-items: start; flex-direction: column; gap: 5px; margin-top: 27px; }.learning-scenes { grid-template-columns: 1fr; }.scene-card { min-height: 160px; }.return-strip { align-items: start; flex-wrap: wrap; }.return-strip .btn { margin-left: 53px; }.mobile-nav { display: flex; position: fixed; bottom: 0; left: 0; right: 0; z-index: 200; height: 68px; padding: 8px 12px calc(8px + env(safe-area-inset-bottom)); background: rgba(4,18,34,.96); border-top: 1px solid var(--line); backdrop-filter: blur(16px); justify-content: space-around; }.mobile-nav button { background: transparent; border: 0; color: var(--muted); display: flex; flex-direction: column; align-items: center; gap: 3px; font: inherit; cursor: pointer; min-width: 56px; }.mobile-nav button.active { color: var(--accent); }.mobile-nav small { font-size: 10px; } }
 
 /* ===== 2026 Expedition redesign: light command center ===== */
- :root[data-legacy-surface='true'] {
-  --bg: #f3f7fb;
-  --card: #ffffff;
-  --ink: #12243d;
-  --ink2: #45617f;
-  --muted: #7890aa;
-  --line: #dfe9f3;
-  --accent: #16b88a;
-  --accent-light: #54d7b0;
-  --accent-bg: #e3f8f1;
-  --gold: #f28c5c;
-  --warn: #f28c5c;
-  --shadow: 0 12px 34px rgba(39, 79, 117, .08);
-  --nav-h: 72px;
-  --surface-soft: #eef5fb;
-}
 body { background: radial-gradient(circle at 72% -10%, #e9f8fb 0, transparent 34%), var(--bg); color: var(--ink); }
 .app { min-height: 100dvh; }
 .main { max-width: 1240px; padding: 34px 28px 80px; }

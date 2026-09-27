@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
 import { afterEach, expect, test, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import App from './App'
 import { db } from './store/db'
 import { useProgress } from './store/progressStore'
@@ -29,6 +29,22 @@ test('moves focus to main content after a hash-routed page change', async () => 
 
   const navigation = await screen.findByRole('navigation', { name: '主导航' })
   fireEvent.click(within(navigation).getAllByRole('button')[1])
+
+  await waitFor(() => expect(document.querySelector('#main-content')).toHaveFocus())
+})
+
+test('moves focus even when the body owns focus during a direct route change', async () => {
+  localStorage.setItem('flowvocab-first-run-complete', '1')
+  await db.open()
+  await useProgress.getState().init()
+  useUI.setState({ page: 'home', guideOpen: false })
+  render(<App />)
+  await screen.findByRole('main')
+
+  document.body.tabIndex = -1
+  document.body.focus()
+  expect(document.body).toHaveFocus()
+  act(() => useUI.getState().go('vocab'))
 
   await waitFor(() => expect(document.querySelector('#main-content')).toHaveFocus())
 })

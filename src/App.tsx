@@ -18,9 +18,10 @@ export default function App() {
   const retryInit = useProgress((s) => s.retryInit)
   const page = useUI((s) => s.page)
   useEffect(() => {
-    if (document.activeElement !== document.body) {
-      window.requestAnimationFrame(() => document.getElementById('main-content')?.focus())
-    }
+    const focusMain = () => document.getElementById('main-content')?.focus()
+    focusMain()
+    const retry = window.setTimeout(focusMain, 0)
+    return () => window.clearTimeout(retry)
   }, [page])
 
   useEffect(() => {
