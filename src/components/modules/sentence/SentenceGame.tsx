@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { elapsedSince } from '../../../engine/sessionTiming'
 import { useProgress } from '../../../store/progressStore'
 import { SENTENCE_QUESTS } from '../../../data/sentences'
+import { itemsForTrack } from '../../../data/curriculum'
+import { useUI } from '../../../store/gameStore'
 import type { SentenceQuest } from '../../../types'
 import GameHud from '../../game/GameHud'
 
@@ -16,6 +18,7 @@ export function placeSentenceSegment(segments: { bucket: Bucket }[], placed: Rec
 const bucketNames: Record<Bucket, string> = { main: '主干', clause: '从句', modifier: '修饰成分' }
 
 export default function SentenceGame() {
+  const quests = itemsForTrack(useUI((state) => state.track), 'sentence', SENTENCE_QUESTS)
   const answer = useProgress((state) => state.answer)
   const passSentence = useProgress((state) => state.passSentence)
   const [qIndex, setQIndex] = useState(0)
@@ -29,7 +32,7 @@ export default function SentenceGame() {
   const [done, setDone] = useState(false)
   const startedAt = useRef(performance.now())
   const puzzleMistake = useRef(false)
-  const quest: SentenceQuest = SENTENCE_QUESTS[qIndex]
+  const quest: SentenceQuest = quests[qIndex]
   useEffect(() => { startedAt.current = performance.now(); puzzleMistake.current = false }, [qIndex])
 
   const segments = useMemo(() => {
@@ -44,7 +47,7 @@ export default function SentenceGame() {
 
   function resetPuzzle(message = '已重置本题') { setPlaced({}); setPicked(null); setDragged(null); setAnnouncement(message) }
   function nextQuestion() {
-    if (qIndex + 1 >= SENTENCE_QUESTS.length) setDone(true)
+    if (qIndex + 1 >= quests.length) setDone(true)
     else { setQIndex((index) => index + 1); resetPuzzle(''); setAnswerPicked(null); setAnswered(false) }
   }
   function placeSeg(index: number, bucket: Bucket) {

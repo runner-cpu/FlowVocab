@@ -2,10 +2,13 @@ import { useEffect, useRef, useState } from 'react'
 import { elapsedSince } from '../../../engine/sessionTiming'
 import { useProgress } from '../../../store/progressStore'
 import { CHAPTERS } from '../../../data/reading'
+import { itemsForTrack } from '../../../data/curriculum'
+import { useUI } from '../../../store/gameStore'
 import type { Chapter, NarrativeChoice } from '../../../types'
 import GameHud from '../../game/GameHud'
 
 export default function ReadingGame() {
+  const chapters = itemsForTrack(useUI((state) => state.track), 'reading', CHAPTERS)
   const progress = useProgress((state) => state.progress)
   const answer = useProgress((state) => state.answer)
   const completeReading = useProgress((state) => state.completeReading)
@@ -34,7 +37,7 @@ export default function ReadingGame() {
     if (correct) window.setTimeout(() => { goTo(quizChoice.next); setQuizChoice(null) }, 1200)
   }
 
-  if (!chapter) return <div className="quiz-panel"><GameHud module="reading" /><div className="card"><div className="card-title">📖 叙事剧本 · 章节地图</div><p className="muted">阅读原故事，在考点处作答；地图会保留你的章节通关轨迹。</p><div className="chapter-map mt14">{CHAPTERS.map((candidate, index) => { const done = !!narrative[candidate.id]; return <button key={candidate.id} className={`chapter-stop ${done ? 'done' : ''}`} onClick={() => startChapter(candidate)}><span>{done ? '✓' : index + 1}</span><strong>{candidate.title}</strong><small>{done ? '已通关 · 可重玩' : candidate.intro.slice(0, 36) + '…'}</small></button> })}</div></div></div>
+  if (!chapter) return <div className="quiz-panel"><GameHud module="reading" /><div className="card"><div className="card-title">📖 叙事剧本 · 章节地图</div><p className="muted">阅读原故事，在考点处作答；地图会保留你的章节通关轨迹。</p><div className="chapter-map mt14">{chapters.map((candidate, index) => { const done = !!narrative[candidate.id]; return <button key={candidate.id} className={`chapter-stop ${done ? 'done' : ''}`} onClick={() => startChapter(candidate)}><span>{done ? '✓' : index + 1}</span><strong>{candidate.title}</strong><small>{done ? '已通关 · 可重玩' : candidate.intro.slice(0, 36) + '…'}</small></button> })}</div></div></div>
 
   if (finished) return <div className="quiz-panel"><div className="card center"><div style={{ fontSize: 44 }}>🏆</div><h2>本章完成！</h2><div className="reading-trail compact">{trail.map((step, index) => <span key={`${step}-${index}`}>{index + 1}</span>)}</div><div className="guide-actions mt14"><button className="btn btn-primary" onClick={() => setChapter(null)}>返回章节地图</button><button className="btn btn-ghost" onClick={() => startChapter(chapter)}>重新探索</button></div></div></div>
 

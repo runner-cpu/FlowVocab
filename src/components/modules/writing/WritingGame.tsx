@@ -2,6 +2,8 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { elapsedSince } from '../../../engine/sessionTiming'
 import { useProgress } from '../../../store/progressStore'
 import { WRITING_TASKS } from '../../../data/writing'
+import { itemsForTrack } from '../../../data/curriculum'
+import { useUI } from '../../../store/gameStore'
 import type { WritingTask } from '../../../types'
 import GameHud from '../../game/GameHud'
 
@@ -20,10 +22,11 @@ export function moveWritingSegment<T>(items: T[], index: number, direction: -1 |
 }
 
 export default function WritingGame() {
+  const tasks = itemsForTrack(useUI((state) => state.track), 'writing', WRITING_TASKS)
   const answer = useProgress((state) => state.answer)
   const submitWriting = useProgress((state) => state.submitWriting)
   const [taskIdx, setTaskIdx] = useState(0)
-  const task: WritingTask = WRITING_TASKS[taskIdx]
+  const task: WritingTask = tasks[taskIdx]
   const initialOrder = useMemo(() => shuffle(task.segments ?? []), [task])
   const [order, setOrder] = useState<string[]>(initialOrder)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
@@ -55,7 +58,7 @@ export default function WritingGame() {
 
   return <div className="quiz-panel"><GameHud module="writing" /><div className="card">
     <div className="card-title">🃏 写作·句型工坊（排序 / 改错）</div>
-    <div className="task-tabs">{WRITING_TASKS.map((candidate, index) => <button key={candidate.id} className={`btn ${index === taskIdx ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTaskIdx(index)}>{candidate.type === 'sort' ? '🧩' : '✍️'} {candidate.title}</button>)}</div>
+    <div className="task-tabs">{tasks.map((candidate, index) => <button key={candidate.id} className={`btn ${index === taskIdx ? 'btn-primary' : 'btn-ghost'}`} onClick={() => setTaskIdx(index)}>{candidate.type === 'sort' ? '🧩' : '✍️'} {candidate.title}</button>)}</div>
     <div className="explain-box"><b>📑 {task.title}（{task.type === 'sort' ? '句子排序' : '句子改错'}）</b><div className="ex-eg">{task.prompt}</div></div>
     {task.type === 'sort' && <>
       <div className="card-title mt14">你的答案（拖动或使用方向键调整）</div>
@@ -64,6 +67,6 @@ export default function WritingGame() {
       {result && <div className={`score-report ${result.pass ? '' : 'miss'}`}><strong>{result.pass ? '✓ 排序正确！' : '× 顺序有误'}</strong><div className="ex-eg mt8">💡 {task.explain}</div></div>}
     </>}
     {task.type === 'error' && <><div className="explain-box mt8"><div className="ex-eg">“{task.sentence}”</div></div><div className="options mt14">{(task.options ?? []).map((option, index) => { let className = 'option'; if (result) { if (index === task.answer) className += ' correct'; else if (pickErr === index) className += ' wrong' } else if (pickErr === index) className += ' picked'; return <button key={index} className={className} disabled={!!result} onClick={() => setPickErr(index)}>{option}</button> })}</div>{result && <div className={`score-report ${result.pass ? '' : 'miss'}`}><strong>{result.pass ? '✓ 改对了！' : '× 再想想'}</strong><div className="ex-eg mt8">💡 {task.explain}</div></div>}</>}
-    <div className="progress-strip mt14"><button className="btn btn-primary" onClick={submit} disabled={!sortDone && !errDone}>{result ? '已判定' : '提交判定'}</button>{result && <button className="btn btn-ghost" onClick={() => setTaskIdx((taskIdx + 1) % WRITING_TASKS.length)}>{taskIdx + 1 >= WRITING_TASKS.length ? '再来一轮' : '下一题 →'}</button>}</div>
+    <div className="progress-strip mt14"><button className="btn btn-primary" onClick={submit} disabled={!sortDone && !errDone}>{result ? '已判定' : '提交判定'}</button>{result && <button className="btn btn-ghost" onClick={() => setTaskIdx((taskIdx + 1) % tasks.length)}>{taskIdx + 1 >= tasks.length ? '再来一轮' : '下一题 →'}</button>}</div>
   </div></div>
 }

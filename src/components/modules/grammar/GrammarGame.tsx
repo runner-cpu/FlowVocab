@@ -2,10 +2,13 @@ import { useEffect, useMemo, useRef, useState } from 'react'
 import { elapsedSince } from '../../../engine/sessionTiming'
 import { useProgress } from '../../../store/progressStore'
 import { GRAMMAR_BRANCHES, GRAMMAR_NODES } from '../../../data/grammar'
+import { itemsForTrack } from '../../../data/curriculum'
+import { useUI } from '../../../store/gameStore'
 import type { SkillNode } from '../../../types'
 import GameHud from '../../game/GameHud'
 
 export default function GrammarGame() {
+  const nodesForTrack = itemsForTrack(useUI((state) => state.track), 'grammar', GRAMMAR_NODES)
   const progress = useProgress((state) => state.progress)
   const answer = useProgress((state) => state.answer)
   const completeGrammarNode = useProgress((state) => state.completeGrammarNode)
@@ -17,7 +20,7 @@ export default function GrammarGame() {
   const startedAt = useRef(performance.now())
   const skillTree = progress?.skillTree ?? {}
   useEffect(() => { startedAt.current = performance.now() }, [activeNode?.id, qIndex])
-  const nodeById = useMemo(() => Object.fromEntries(GRAMMAR_NODES.map((node) => [node.id, node])), [])
+  const nodeById = useMemo(() => Object.fromEntries(nodesForTrack.map((node) => [node.id, node])), [nodesForTrack])
   const isLocked = (node: SkillNode) => !!node.parent && !skillTree[node.parent]
   const belongsToBranch = (node: SkillNode, rootId: string) => {
     let current: SkillNode | undefined = node
@@ -38,7 +41,7 @@ export default function GrammarGame() {
 
   return <div className="quiz-panel"><GameHud module="grammar" />
     {!activeNode && <div className="card"><div className="card-title">🌦️ 语法技能树</div><p className="muted">沿着连接路径逐步点亮节点；锁定节点会明确显示前置技能。</p><div className="skill-tree spatial-tree mt14">{GRAMMAR_BRANCHES.map((branch) => {
-      const nodes = GRAMMAR_NODES.filter((node) => belongsToBranch(node, branch.id))
+      const nodes = nodesForTrack.filter((node) => belongsToBranch(node, branch.id))
       return <section className="skill-branch" key={branch.id}><h4>{branch.name}</h4><div className="skill-branch-map"><svg className="skill-paths" viewBox="0 0 300 64" preserveAspectRatio="none" aria-hidden="true"><path d="M42 32 C92 32 88 32 138 32 S212 32 258 32" /></svg><div className="skill-nodes">{nodes.map((node) => {
         const lit = !!skillTree[node.id]; const locked = isLocked(node); const prerequisite = node.parent ? nodeById[node.parent]?.name : null
         return <button key={node.id} className={`skill-node ${lit ? 'lit' : ''} ${locked ? 'locked' : ''}`} disabled={locked} aria-label={locked ? `${node.name}，锁定，需要先完成 ${prerequisite}` : node.name} onClick={() => startNode(node)}><span>{lit ? '✓' : locked ? '🔒' : '◆'} {node.name}</span>{locked && <small>先完成 {prerequisite}</small>}</button>
