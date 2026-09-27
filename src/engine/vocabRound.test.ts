@@ -38,6 +38,15 @@ describe('vocabulary mission questions', () => {
     expect(createVocabQuestion(word, pool, 'meaning', { random: () => 0.4 })).toEqual(createVocabQuestion(word, pool, 'meaning', { random: () => 0.4 }))
     expect(pool.map(w => w.id)).toEqual(before)
   })
+  it('prefers same-part-of-speech distractors without duplicate choices', () => {
+    const target = { ...word, id: 'target', pos: 'n.', meaning: 'target noun' }
+    const nouns = ['noun one', 'noun two', 'noun three'].map((meaning, index) => ({ ...target, id: `n${index}`, meaning }))
+    const verbs = ['verb one', 'verb two', 'verb three'].map((meaning, index) => ({ ...target, id: `v${index}`, pos: 'v.', meaning }))
+    const question = createVocabQuestion(target, [target, ...nouns, ...verbs], 'meaning', { random: () => 0 })
+    expect(question.options.filter(option => !option.correct).map(option => option.text).sort()).toEqual(['noun one', 'noun three', 'noun two'])
+    expect(new Set(question.options.map(option => option.text)).size).toBe(4)
+    expect(question.options.filter(option => option.correct)).toHaveLength(1)
+  })
   it('silently reports unavailable speech in an unsupported browser', () => {
     expect(speakWord('explore', 0.9)).toBe(false)
   })

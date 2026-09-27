@@ -1,6 +1,6 @@
 import type { ListeningItem } from '../types'
 
-// 听力听写题（自编原创示例句，非真题）
+// 听力听写题（自编原创示例句）
 export const LISTENING_ITEMS: ListeningItem[] = [
   {
     id: 'l1', level: 0,
@@ -13,7 +13,7 @@ export const LISTENING_ITEMS: ListeningItem[] = [
     id: 'l2', level: 0,
     text: 'She prefers coffee to tea in the afternoon.',
     blanks: [
-      { index: 1, answer: 'prefers', options: ['prefers', 'preferred', 'prepares', 'prefers'] }
+      { index: 1, answer: 'prefers', options: ['prefers', 'preferred', 'prepares', 'prefers to'] }
     ]
   },
   {
@@ -27,7 +27,7 @@ export const LISTENING_ITEMS: ListeningItem[] = [
     id: 'l4', level: 1,
     text: 'The train to Beijing leaves at half past seven.',
     blanks: [
-      { index: 4, answer: 'leaves', options: ['leaves', 'lives', 'leaves', 'lifts'] }
+      { index: 4, answer: 'leaves', options: ['leaves', 'lives', 'leans', 'lifts'] }
     ]
   },
   {

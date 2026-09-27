@@ -1,4 +1,5 @@
 import { WORDS } from '../data/words'
+import { primaryPos } from '../data/contentValidation'
 import type { VocabMode, VocabQuestion, Word } from '../types'
 
 export function hasPronunciation(): boolean {
@@ -34,18 +35,27 @@ function shuffle<T>(values: T[], random: () => number): T[] {
   }
   return result
 }
+function takeDistractors(word: Word, pool: Word[], random: () => number): string[] {
+  const seen = new Set([word.meaning.trim()]); const picked: string[] = []
+  const all = [...pool, ...WORDS].filter(entry => entry.id !== word.id && entry.meaning.trim() && !seen.has(entry.meaning.trim()))
+  const groups = [all.filter(entry => primaryPos(entry) === primaryPos(word)), all.filter(entry => entry.level === word.level), all]
+  for (const group of groups) {
+    const available = group.filter(entry => !seen.has(entry.meaning.trim()))
+    while (available.length && picked.length < 3) {
+      const index = Math.min(available.length - 1, Math.floor(random() * available.length))
+      const entry = available.splice(index, 1)[0]; seen.add(entry.meaning.trim()); picked.push(entry.meaning.trim())
+    }
+    if (picked.length === 3) break
+  }
+  return picked
+}
 
 export function createVocabQuestion(word: Word, pool: Word[], requestedMode: VocabMode, { random = Math.random, number = 1, pronunciationSupported = hasPronunciation() }: { random?: () => number; number?: number; pronunciationSupported?: boolean } = {}): VocabQuestion {
   const mode = requestedMode === 'listening' && !pronunciationSupported ? 'meaning' : requestedMode
   const options: VocabQuestion['options'] = []
   if (mode !== 'spelling') {
-    const meanings = new Set([word.meaning.trim()])
-    // Built-in entries also keep a sparse difficulty pool playable offline.
-    for (const entry of [...shuffle(pool, random), ...WORDS]) {
-      if (meanings.size === 4) break
-      if (entry.id !== word.id && entry.meaning.trim()) meanings.add(entry.meaning.trim())
-    }
-    options.push(...shuffle([...meanings], random).map(text => ({ text, correct: text === word.meaning.trim() })))
+    const meanings = [word.meaning.trim(), ...takeDistractors(word, pool, random)]
+    options.push(...shuffle(meanings, random).map(text => ({ text, correct: text === word.meaning.trim() })))
   }
   return { word, mode, prompt: mode === 'listening' ? '听发音，选择对应释义' : mode === 'spelling' ? word.meaning : word.word, options, boss: number > 0 && number % 10 === 0 }
 }

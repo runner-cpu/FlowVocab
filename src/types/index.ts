@@ -34,8 +34,10 @@ export interface Word {
   exampleCn: string
   level: DifficultyLevel
   pos: string
-  /** 词库来源：cet4 / cet6（KyleBing english-vocabulary） */
-  source?: 'cet4' | 'cet6'
+  /** Licensed ECDICT inventory. */
+  source?: 'ecdict'
+  tags?: string[]
+  legacyIds?: string[]
   /** 常考搭配/词组 */
   phrases?: { phrase: string; translation: string }[]
 }
@@ -164,14 +166,14 @@ export const LEARNING_TRACKS: Record<LearningTrack, LearningTrackMeta> = {
   primary: { label: '小学启蒙', shortLabel: '小学', description: '图片、故事和基础表达', goal: '用图像和故事建立英语自信', accent: '#f2a65a' },
   'middle-high': { label: '初高中进阶', shortLabel: '初高中', description: '语法、听力和主题阅读', goal: '把知识点放进真实语境里', accent: '#3b82f6' },
   advanced: { label: '高中冲刺', shortLabel: '高中', description: '长难句、写作和综合理解', goal: '让复杂内容变成可拆解的路径', accent: '#8b5cf6' },
-  cet: { label: '四六级备考', shortLabel: '四六级', description: '高频词、真题语境和冲刺训练', goal: '围绕考试目标稳定提分', accent: '#ef745f' }
+  cet: { label: '四六级备考', shortLabel: '四六级', description: '考纲词汇与题型模拟', goal: '围绕考试目标稳定提分', accent: '#ef745f' }
 }
 
 export const TRACK_MODULE_FOCUS: Record<LearningTrack, Record<ModuleKey, string>> = {
   primary: { vocab: '图片认词与基础表达', grammar: '句型规律与颜色提示', sentence: '短句拼图与口语模仿', listening: '慢速对话与声音线索', writing: '看图写一句完整表达', reading: '绘本线索与故事理解' },
   'middle-high': { vocab: '主题词汇与搭配', grammar: '核心时态与从句', sentence: '句子结构与语序', listening: '校园与生活场景', writing: '段落衔接与表达', reading: '主题阅读与证据定位' },
   advanced: { vocab: '长难句高频词', grammar: '非谓语与复杂从句', sentence: '拆解长难句', listening: '综合听力与推断', writing: '论证结构与句型升级', reading: '篇章逻辑与主旨' },
-  cet: { vocab: '四六级高频真题词', grammar: '真题语法辨析', sentence: '真题长句重构', listening: '新闻与讲座听力', writing: '四级/六级写作模板', reading: '真题速读与定位' }
+  cet: { vocab: '考纲词汇与题型模拟', grammar: '考纲语法辨析', sentence: '考纲长句重构', listening: '新闻与讲座听力', writing: '四级/六级写作模板', reading: '题型模拟速读与定位' }
 }
 
 export const MODULE_META: Record<ModuleKey, { name: string; icon: string; color: string; desc: string }> = {

@@ -1,6 +1,6 @@
 import type { Chapter } from '../types'
 
-// 阅读叙事副本（自编原创故事，含考点题；非真题）
+// 阅读叙事副本（自编原创故事，含考点题）
 export const CHAPTERS: Chapter[] = [
   {
     id: 'ch1',

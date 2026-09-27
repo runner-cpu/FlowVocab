@@ -1,11 +1,25 @@
 import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, expect, it } from 'vitest'
 import { db } from './db'
-import { ensureWordBank, importWordBankResponse } from './wordBank'
+import { ensureWordBank, ensureWordLevels, importWordBankResponse } from './wordBank'
 import type { Word, WordBankProgress } from '../types'
 
 beforeEach(async () => { await db.delete(); await db.open() })
 afterEach(async () => { await db.delete() })
+it('fetches only requested word shards and caches only their levels', async () => {
+  const requested: string[] = []; const original = globalThis.fetch
+  globalThis.fetch = async (input) => {
+    const path = String(input); requested.push(path)
+    if (path.endsWith('manifest.json')) return new Response(JSON.stringify({ version: 3, total: 10, counts: [2, 2, 2, 2, 2], urls: ['level-0.json', 'level-1.json', 'level-2.json', 'level-3.json', 'level-4.json'] }))
+    const level = Number(path.match(/level-(\d)/)?.[1])
+    return new Response(JSON.stringify([{ id: `ecdict-${level}`, word: `word${level}`, meaning: 'meaning', phonetic: '', example: '', exampleCn: '', level, pos: 'noun', source: 'ecdict', tags: ['cet4'] }]))
+  }
+  try { await ensureWordLevels([0, 2]) } finally { globalThis.fetch = original }
+  expect(requested).toContain('/data/words/manifest.json')
+  expect(requested).toContain('/data/words/level-0.json')
+  expect(requested).toContain('/data/words/level-2.json')
+  expect(requested.some(path => /level-[134]\.json$/.test(path))).toBe(false)
+})
 const words: Word[] = Array.from({ length: 2001 }, (_, i) => ({ id: `word-${i}`, word: 'island', meaning: '岛屿', phonetic: '', example: '', exampleCn: '', level: 0, pos: 'n.' }))
 it('reports byte download and incremental import progress without removing existing words', async () => {
   await db.wordBank.put({ ...words[0], id: 'existing' })

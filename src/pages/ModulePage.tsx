@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useProgress } from '../store/progressStore'
 import { useUI } from '../store/gameStore'
 import { LEARNING_TRACKS, MODULE_META, TRACK_MODULE_FOCUS, type ModuleKey } from '../types'
+import { isModuleAvailable } from '../data/curriculum'
 import VocabGame from '../components/modules/vocab/VocabGame'
 import GrammarGame from '../components/modules/grammar/GrammarGame'
 import SentenceGame from '../components/modules/sentence/SentenceGame'
@@ -16,14 +17,15 @@ export default function ModulePage({ module }: { module: ModuleKey }) {
   const go = useUI((s) => s.go)
   const track = useUI((s) => s.track)
   const meta = MODULE_META[module]
+  const available = isModuleAvailable(track, module)
 
   useEffect(() => {
-    startSession(module)
+    if (available) startSession(module)
     return () => {
       finishSession()
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [module])
+  }, [module, available])
 
   const render = () => {
     switch (module) {
@@ -36,6 +38,7 @@ export default function ModulePage({ module }: { module: ModuleKey }) {
     }
   }
 
+  if (!available) return <div className="module-shell"><div className="module-context"><button className="back-link" onClick={() => go('home')}>← 返回学习舱</button></div><div className="card" role="status"><h2>此模块尚未对当前路线开放</h2><p>切换学习路线后可进入相应训练。</p><button className="btn btn-primary" onClick={() => go('home')}>切换路线</button></div></div>
   return <div className="module-shell">
     <div className="module-context">
       <button className="back-link" onClick={() => go('home')}>← 返回学习舱</button>

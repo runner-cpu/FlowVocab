@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { useProgress } from '../../../store/progressStore'
 import { LISTENING_ITEMS } from '../../../data/listening'
+import { itemsForTrack } from '../../../data/curriculum'
+import { useUI } from '../../../store/gameStore'
 import type { ListeningItem } from '../../../types'
 import GameHud from '../../game/GameHud'
 import { elapsedSince } from '../../../engine/sessionTiming'
@@ -46,6 +48,8 @@ function alignWords(target: string[], spoken: string[]): boolean[] {
 const clean = (s: string) => s.toLowerCase().replace(/[^a-z0-9']/g, '')
 
 export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: ListeningItem[] }) {
+  const track = useUI((state) => state.track)
+  const selectedItems = items === LISTENING_ITEMS ? itemsForTrack(track, 'listening', items) : items
   const answer = useProgress((s) => s.answer)
   const passListening = useProgress((s) => s.passListening)
 
@@ -62,7 +66,7 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
   const ttsSupport = useRef(typeof window !== 'undefined' && 'speechSynthesis' in window)
   const recRef = useRef<{ start: () => void; stop: () => void } | null>(null)
 
-  const item: ListeningItem = items[qIndex]
+  const item: ListeningItem = selectedItems[qIndex]
   useEffect(() => { t0.current = performance.now() }, [qIndex])
   const targetWords = item.text.split(' ')
 
@@ -158,7 +162,7 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
   const next = () => {
     setResult(null)
     setRecognized('')
-    if (qIndex + 1 >= items.length) setDone(true)
+    if (qIndex + 1 >= selectedItems.length) setDone(true)
     else setQIndex(qIndex + 1)
   }
 
@@ -227,12 +231,12 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
               )}
               <div className="ex-eg mt8">💡 原句：{item.text}</div>
               <button className="btn btn-primary mt8" onClick={next}>
-                {qIndex + 1 >= items.length ? '完成本轮' : '下一句 →'}
+                {qIndex + 1 >= selectedItems.length ? '完成本轮' : '下一句 →'}
               </button>
             </div>
           )}
 
-          <p className="muted mt14" style={{ fontSize: 12 }}>第 {qIndex + 1} / {items.length} 句</p>
+          <p className="muted mt14" style={{ fontSize: 12 }}>第 {qIndex + 1} / {selectedItems.length} 句</p>
         </div>
       </div>
     )
@@ -255,7 +259,7 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
       setAnswered(true)
       passListening()
       setTimeout(() => {
-        if (qIndex + 1 >= items.length) setDone(true)
+        if (qIndex + 1 >= selectedItems.length) setDone(true)
         else {
           setQIndex(qIndex + 1)
           setPicked({})
@@ -318,7 +322,7 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
           )
         })}
 
-        <p className="muted mt14" style={{ fontSize: 12 }}>第 {qIndex + 1} / {items.length} 句</p>
+        <p className="muted mt14" style={{ fontSize: 12 }}>第 {qIndex + 1} / {selectedItems.length} 句</p>
       </div>
     </div>
   )

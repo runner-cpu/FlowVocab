@@ -10,7 +10,7 @@ class FlowVocabDB extends Dexie {
   progress!: Table<Progress, number>
   planet!: Table<Planet, number>
   wordBank!: Table<Word, string>
-  wordBankMeta!: Table<{ id: number; version: number; total: number; updatedAt: number }, number>
+  wordBankMeta!: Table<{ id: number; version: number; total: number; updatedAt: number; loadedLevels?: number[] }, number>
 
   constructor() {
     super('flowvocab-app')
@@ -44,6 +44,7 @@ class FlowVocabDB extends Dexie {
         }
       })
     })
+    this.version(4).stores({})
   }
 }
 

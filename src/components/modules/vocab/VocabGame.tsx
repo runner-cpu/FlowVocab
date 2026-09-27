@@ -1,7 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
 import { Volume2 } from 'lucide-react'
 import { useProgress } from '../../../store/progressStore'
-import { ensureWordBank, getWordPool, wordBankFallbackMessage } from '../../../store/wordBank'
+import { ensureWordLevels, getWordPool, wordBankFallbackMessage } from '../../../store/wordBank'
+import { TRACK_CURRICULUM } from '../../../data/curriculum'
 import { createVocabQuestion, hasPronunciation, isVocabAnswerCorrect, speakWord, vocabModeAt } from '../../../engine/vocabRound'
 import { levelFromXp } from '../../../engine/progression'
 import { elapsedSince } from '../../../engine/sessionTiming'
@@ -53,8 +54,10 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random 
 
   function loadQuestion(nextIndex: number) {
     const state = useProgress.getState()
+    const trackLevels = TRACK_CURRICULUM[useUI.getState().track].levels
+    const allowedLevels = trackLevels.includes(state.difficulty.level) ? trackLevels : [...trackLevels, state.difficulty.level]
     const levelPool = words ?? getWordPool(state.difficulty.level)
-    const pool = levelPool.length ? levelPool : ([0, 1, 2, 3, 4] as const).flatMap(getWordPool)
+    const pool = levelPool.length ? levelPool : allowedLevels.flatMap(getWordPool)
     if (!pool.length) { setEmpty(true); return }
     const reservedWordIds = new Set(requeueAt.current.values())
     const available = pool.filter(word => !reservedWordIds.has(word.id))
@@ -80,7 +83,7 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random 
 
   useEffect(() => {
     let active = true
-    const ready = words ? Promise.resolve() : ensureWordBank(progress => { if (active) setBank(progress) })
+    const ready = words ? Promise.resolve() : ensureWordLevels(TRACK_CURRICULUM[useUI.getState().track].levels, progress => { if (active) setBank(progress) })
     ready.then(() => {
       if (!active) return
       setFallback(words ? '' : wordBankFallbackMessage())

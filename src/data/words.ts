@@ -178,7 +178,9 @@ export const WORDS: Word[] = LEVEL_ORDER.flatMap((level) =>
     meaning: r[3],
     example: r[4],
     exampleCn: r[5],
-    level
+    level,
+    source: 'ecdict',
+    tags: []
   }))
 )
 
