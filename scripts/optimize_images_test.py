@@ -6,11 +6,11 @@ import unittest
 from pathlib import Path
 
 from PIL import Image
+from PIL.PngImagePlugin import PngInfo
 
 
 ROOT = Path(__file__).resolve().parents[1]
 SCRIPT = ROOT / "scripts" / "optimize_images.py"
-ASSETS = ROOT / "public" / "assets"
 SCENE_STEMS = (
     "flowvocab-scene-vocab",
     "flowvocab-scene-grammar",
@@ -19,6 +19,21 @@ SCENE_STEMS = (
     "flowvocab-scene-writing",
     "flowvocab-scene-reading",
 )
+
+
+def write_fixture_assets(directory: Path) -> None:
+    """Create deterministic source PNGs so tests do not depend on shipped inputs."""
+    stems = (*SCENE_STEMS, "neon-harbor-quest")
+    sizes = {stem: (1536, 1152) for stem in SCENE_STEMS}
+    sizes["neon-harbor-quest"] = (1600, 1066)
+    directory.mkdir(parents=True, exist_ok=True)
+    for seed, stem in enumerate(stems, start=1):
+        width, height = sizes[stem]
+        image = Image.new("RGB", (width, height), (seed * 31 % 256, seed * 53 % 256, seed * 79 % 256))
+        metadata = PngInfo()
+        metadata.add_text("fixture", ("flowvocab-deterministic-fixture-" + str(seed)) * 4096)
+        image.save(directory / f"{stem}.png", format="PNG", pnginfo=metadata)
+        image.close()
 
 
 def load_optimizer():
@@ -38,20 +53,24 @@ class OptimizeImagesTest(unittest.TestCase):
         with tempfile.TemporaryDirectory() as first_dir, tempfile.TemporaryDirectory() as second_dir:
             first = Path(first_dir)
             second = Path(second_dir)
-            first_report = optimizer.optimize_assets(ASSETS, first)
-            second_report = optimizer.optimize_assets(ASSETS, second)
+            first_source, second_source = first / "source", second / "source"
+            first_output, second_output = first / "output", second / "output"
+            write_fixture_assets(first_source)
+            write_fixture_assets(second_source)
+            first_report = optimizer.optimize_assets(first_source, first_output)
+            second_report = optimizer.optimize_assets(second_source, second_output)
 
             expected = {f"{stem}-{width}.webp" for stem in SCENE_STEMS for width in (640, 1024)}
             expected.update({"neon-harbor-quest-768.webp", "neon-harbor-quest-1280.webp"})
-            self.assertEqual({path.name for path in first.iterdir()}, expected)
+            self.assertEqual({path.name for path in first_output.iterdir()}, expected)
             self.assertEqual(first_report.output_bytes, second_report.output_bytes)
             self.assertLessEqual(first_report.output_bytes, int(first_report.input_bytes * 0.20))
 
             expected_sizes = {640: (640, 480), 1024: (1024, 768), 768: (768, 512), 1280: (1280, 853)}
             for name in expected:
-                self.assertEqual((first / name).read_bytes(), (second / name).read_bytes())
+                self.assertEqual((first_output / name).read_bytes(), (second_output / name).read_bytes())
                 width = int(name.removesuffix(".webp").rsplit("-", 1)[1])
-                with Image.open(first / name) as image:
+                with Image.open(first_output / name) as image:
                     self.assertEqual(image.format, "WEBP")
                     self.assertEqual(image.size, expected_sizes[width])
                     self.assertNotIn("exif", image.info)
