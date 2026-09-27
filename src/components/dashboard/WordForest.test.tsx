@@ -8,7 +8,7 @@ import type { UserWord, Word } from '../../types'
 import VocabGame from '../modules/vocab/VocabGame'
 import WordForest, { classifyWordTree } from './WordForest'
 
-const selectedWord: Word = { id: 'cet4-000000', word: 'abandon', meaning: '放弃', phonetic: '', example: 'Never abandon the mission.', exampleCn: '永远不要放弃任务。', level: 0, pos: 'v.' }
+const selectedWord: Word = { id: 'ecdict-abandon', word: 'abandon', meaning: '放弃', phonetic: '', example: 'Never abandon the mission.', exampleCn: '永远不要放弃任务。', level: 0, pos: 'v.', source: 'ecdict', tags: ['cet4'], legacyIds: ['cet4-000000'] }
 const base: UserWord = { id: selectedWord.id, wordId: selectedWord.id, status: 'learning', correct: 1, total: 5, lastReview: 1, nextReview: 10_000, interval: 2, quality: 2, successfulReviews: 1 }
 
 beforeEach(async () => {
@@ -29,7 +29,7 @@ describe('word forest health', () => {
 
   it('resolves spelling from IndexedDB and opens that exact word in vocabulary', async () => {
     await db.wordBank.put(selectedWord)
-    await db.wordBankMeta.put({ id: 1, version: 1, total: 1, updatedAt: Date.now() })
+    await db.wordBankMeta.put({ id: 1, version: 3, total: 1, updatedAt: Date.now(), loadedLevels: [0] })
 
     function Journey() {
       const page = useUI((state) => state.page)
