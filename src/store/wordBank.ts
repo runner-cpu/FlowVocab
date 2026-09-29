@@ -2,6 +2,7 @@ import { db } from './db'
 import type { DifficultyLevel, Word, WordBankProgress } from '../types'
 
 const IMPORT_VERSION = 3, BATCH = 2000
+const dataUrl = (path: string) => import.meta.env.BASE_URL + 'data/words/' + path
 let cache: Record<DifficultyLevel, Word[]> | null = null, total = 0, fallbackMessage = ''
 let latestProgress: WordBankProgress = { phase: 'download', loaded: 0, total: 0 }
 const listeners = new Set<(progress: WordBankProgress) => void>()
@@ -57,9 +58,9 @@ export async function ensureWordLevels(levels: DifficultyLevel[], onProgress?: (
     const loaded = new Set(meta?.version === IMPORT_VERSION ? meta.loadedLevels || [] : [])
     const needed = levels.filter(level => !loaded.has(level))
     if (needed.length) {
-      const manifestResponse = await fetch('/data/words/manifest.json'); if (!manifestResponse.ok) throw new Error('manifest unavailable')
+      const manifestResponse = await fetch(dataUrl('manifest.json')); if (!manifestResponse.ok) throw new Error('manifest unavailable')
       const manifest: Manifest = await manifestResponse.json()
-      await Promise.all(needed.map(async level => { const response = await fetch(`/data/words/${manifest.urls[level]}`); if (!response.ok) throw new Error(`level ${level} unavailable`); const words = (await response.json() as Word[]).map(normalize); await mergeWords(words); loaded.add(level) }))
+      await Promise.all(needed.map(async level => { const response = await fetch(dataUrl(manifest.urls[level])); if (!response.ok) throw new Error(`level ${level} unavailable`); const words = (await response.json() as Word[]).map(normalize); await mergeWords(words); loaded.add(level) }))
       const all = await db.wordBank.toArray(); await db.wordBankMeta.put({ id: 1, version: IMPORT_VERSION, total: manifest.total, updatedAt: Date.now(), loadedLevels: [...loaded].sort() }); cache = buildCache(all); total = all.length
     } else if (!cache) { const all = await db.wordBank.toArray(); cache = buildCache(all); total = all.length }
   } catch { const saved = await db.wordBank.toArray().catch(() => []); cache = buildCache(saved.filter(word => word.source === 'ecdict')); total = Object.values(cache).flat().length; fallbackMessage = 'ECDICT 词库分片暂不可用，暂时没有可加载的新词。' }

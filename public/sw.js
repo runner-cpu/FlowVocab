@@ -1,9 +1,11 @@
-const SHELL_CACHE = 'flowvocab-shell-v1'
-const RUNTIME_CACHE = 'flowvocab-runtime-v1'
-const WORDS_URL = new URL('./data/words.json', self.location).pathname
+const SHELL_CACHE = 'flowvocab-shell-v2'
+const RUNTIME_CACHE = 'flowvocab-runtime-v2'
+const WORDS_PREFIX = new URL('./data/words/', self.location).pathname
+const isWordAsset = (pathname) => pathname.startsWith(WORDS_PREFIX)
+const isStaticAsset = (request, pathname) => request.mode === 'navigate' || pathname.includes('/assets/') || pathname.includes('/icons/') || pathname.endsWith('/manifest.webmanifest')
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(['./', './index.html'])))
+  event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(['./', './index.html', './manifest.webmanifest'])))
   self.skipWaiting()
 })
 
@@ -15,7 +17,8 @@ self.addEventListener('fetch', (event) => {
   const request = event.request
   if (request.method !== 'GET' || new URL(request.url).origin !== self.location.origin) return
 
-  if (new URL(request.url).pathname === WORDS_URL) {
+  const pathname = new URL(request.url).pathname
+  if (isWordAsset(pathname)) {
     event.respondWith(staleWhileRevalidate(request))
     return
   }
@@ -28,7 +31,7 @@ async function cacheFirst(request) {
   if (cached) return cached
   try {
     const response = await fetch(request)
-    if (response.ok && (request.url.includes('/assets/') || request.mode === 'navigate')) {
+    if (response.ok && isStaticAsset(request, new URL(request.url).pathname)) {
       const cache = await caches.open(RUNTIME_CACHE)
       await cache.put(request, response.clone())
     }

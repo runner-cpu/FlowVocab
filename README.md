@@ -33,7 +33,7 @@ ECharts 驱动的仪表盘：**学习热力图**（90 天 GitHub 风格）、**�
 
 | 模块 | 玩法 | 状态 |
 |---|---|---|
-| ⚔️ **词汇 · 词魂战场** | 节奏打击四选一：连击/暴击/怒气全生效，动态难度切换词档 | ✅ 完整（13159 词） |
+| ⚔️ **词汇 · 词魂战场** | 节奏打击四选一：连击/暴击/怒气全生效，动态难度切换词档 | ✅ 完整（ECDICT 五级分片） |
 | 🌳 **语法 · 技能树** | 五分支技能树（时态语态/定语从句/名词性从句/非谓语/虚拟语气），通关点亮节点 | ✅ 完整 |
 | 🧩 **句子 · 拆解工坊** | 长难句拼图（主干/从句/修饰三桶）+ 限时翻译对决 | ✅ 完整 |
 | 🎧 **听力 · 听写工坊** | 跟读 → 语音识别 → **逐词 Levenshtein 匹配点亮**（读对变绿/读错变红）；不支持识别时降级为挖空选词 | ✅ 框架 |
@@ -63,13 +63,18 @@ npm run dev
 # 3. 生产构建
 npm run build
 
-# 4. 本地预览构建产物
+# 4. 质量门禁
+npm run lint
+npm test -- --run
+node scripts/validate-content.mjs
+
+# 5. 本地预览构建产物
 npm run preview
 # 访问 http://localhost:4173
 ```
 
 ### 数据说明（重要）
-首次进入「词汇」模块时会自动加载词库（`public/data/words.json`，约 8MB，13159 词）并写入浏览器 IndexedDB，**之后离线可用**。加载失败时自动降级为内置示例词库（150 词）。
+首次进入「词汇」模块时会按需加载 ECDICT 词库分片（public/data/words/manifest.json 与五个 level JSON，共 5805 词）并写入浏览器 IndexedDB，**之后离线可用**。加载失败时保留已缓存词并显示可重试提示。
 
 ---
 
@@ -77,21 +82,18 @@ npm run preview
 
 | 数据 | 来源 | 规模 | 许可证 |
 |---|---|---|---|
-| 词汇词库 | [KyleBing/english-vocabulary](https://github.com/KyleBing/english-vocabulary) | CET4 7508 + CET6 5651 = **13159 词** | ⚠️ 未明确标注，**仅限学习/开发验证** |
+| 词汇词库 | 固定版本 ECDICT（由导入脚本生成） | 5805 词，五级分片 | MIT（见 THIRD_PARTY_NOTICES.md） |
 | 语法/句型 | 公开英语语法规则（自建） | — | — |
 | 听力/阅读 | 自编原创示例 | — | — |
 
-**许可证警告**：KyleBing 词库仓库未明确标注开源许可证，本项目当前仅将其用于学习与开发验证。**正式上线前请替换为 ECDICT（MIT 许可）或自建词库**。代码数据层已预留 `source` 字段便于切换。
+**来源说明**：历史 KyleBing 派生词条只保留用于 IndexedDB 迁移的旧 ID 别名，不作为生产释义来源；当前发布词库全部由固定 ECDICT 快照生成。代码与自建内容采用 MIT 许可，第三方数据以 THIRD_PARTY_NOTICES.md 为准。
 
 ### 词库导入与更新
 
 ```bash
-# 1. 下载 KyleBing CET4/CET6 源 JSON 到 data-src/
-#    (curl 直连 raw.githubusercontent 可能被墙，可用 jsdelivr CDN 镜像)
-#    https://cdn.jsdelivr.net/gh/KyleBing/english-vocabulary@master/json/3-CET4-顺序.json
-#    https://cdn.jsdelivr.net/gh/KyleBing/english-vocabulary@master/json/4-CET6-顺序.json
-
-# 2. 运行导入脚本，生成 public/data/words.json
+# 1. 将已获 MIT 许可、固定提交的 ECDICT CSV 放入
+#    data-src/ecdict-source/ecdict.csv（不要提交大型源 CSV）
+# 2. 运行导入脚本，生成 public/data/words/manifest.json 与分片
 python scripts/import_words.py
 ```
 
@@ -120,9 +122,12 @@ FlowVocab/
 ├── docs/
 │   └── 详细开发设计文档.md      # 完整技术设计文档（v4.0）
 ├── scripts/
-│   └── import_words.py        # 词库导入脚本
+│   ├── import_words.py        # ECDICT 词库导入脚本
+│   └── lint.mjs               # 发布前静态质量门禁
 ├── public/
-│   └── data/words.json        # 真实大纲词库（13159 词）
+│   ├── data/words/             # ECDICT manifest + 五个等级分片
+│   ├── manifest.webmanifest    # PWA 清单
+│   └── sw.js                   # 离线缓存策略
 └── src/
     ├── engine/                # 核心心流引擎
     │   ├── combo.ts           # 连击/暴击/怒气（3 次作答制）
@@ -185,7 +190,7 @@ FlowVocab/
 | `sessions` | id | 每次练习会话记录（含难度流） |
 | `progress` | id | 六维雷达、技能树、写作日志 |
 | `planet` | id | 星球能量/等级/每日目标 |
-| `wordBank` | id | 词库主数据（13159 词，懒加载写入） |
+| `wordBank` | id | 词库主数据（ECDICT 五级分片，懒加载写入） |
 | `wordBankMeta` | id | 词库版本信息 |
 
 ---
@@ -211,23 +216,27 @@ FlowVocab/
 
 ## 📄 许可证
 
-本项目代码部分未指定许可证（保留所有权利）。**注意**：词库数据来自 KyleBing/english-vocabulary，该仓库未明确标注许可证，当前仅用于学习与开发验证；正式商业使用前请替换数据源。
+项目代码与自建内容采用 MIT License（见 LICENSE）。ECDICT 的版权与 MIT 原文见 THIRD_PARTY_NOTICES.md。历史 KyleBing 派生数据没有明确许可证，不作为生产内容分发；仓库中仅保留旧 ID 别名以迁移已有本地学习进度。
 
 ### ECDICT replacement procedure
 
-The checked-in lexical payload retains the original 13,159 IDs and CEFR/CET
-levels for IndexedDB compatibility, but its phonetics and meanings are
-regenerated from the cached ECDICT snapshot at commit
+The checked-in lexical payload contains 5,805 stable ECDICT IDs and five
+difficulty levels. Its phonetics and meanings are regenerated from the cached
+ECDICT snapshot at commit
 bc015ed2e24a7abef49fc6dbbb7fe32c1dadaf8b. Run
-python scripts/import_words.py to reproduce it. The importer matches all
-13,159 words, uses 13,111 available phonetics, and leaves 48 phonetics empty;
+python scripts/import_words.py to reproduce it. The importer currently emits
+5,805 words, uses 5,774 available phonetics, and leaves 31 phonetics empty;
 it never invents missing pronunciation data and does not copy the unlicensed
 legacy phrases. See THIRD_PARTY_NOTICES.md for the exact ECDICT MIT notice.
 
 ---
 
+## 🚀 部署
+
+GitHub Actions 工作流只上传 dist/ 作为 Pages artifact；构建不会把哈希后的 JS/CSS 写入仓库根目录。GitHub Pages 使用相对 URL，因此可从 hash 路由直接打开；首次在线访问后，Service Worker 会缓存已访问的懒加载模块，断网可继续使用。
+
 ## 🙏 致谢
 
-- 词库数据：[KyleBing/english-vocabulary](https://github.com/KyleBing/english-vocabulary)
+- 词库数据：固定版本 ECDICT（MIT，详见第三方声明）
 - 游戏化方法论参考：Duolingo 留存设计、多邻国心流理论
 - 技术栈：React、Vite、Zustand、Dexie、ECharts

@@ -1,18 +1,6 @@
-# Third-party notices
-
-## ECDICT
-
-The lexical payload in public/data/words/ is generated from the
-cached ECDICT snapshot at data-src/ecdict-source, pinned to upstream commit
-bc015ed2e24a7abef49fc6dbbb7fe32c1dadaf8b. It emits 5,805 stable
-word IDs; 5,774 have a phonetic entry and 31 do not. The importer preserves
-those missing values as empty strings and does not invent pronunciations.
-
-The upstream notice is reproduced exactly:
-
 MIT License
 
-Copyright (c) 2025 Linwei
+Copyright (c) 2026 runner-cpu
 
 Permission is hereby granted, free of charge, to any person obtaining a copy
 of this software and associated documentation files (the "Software"), to deal

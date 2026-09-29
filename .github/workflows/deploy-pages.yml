@@ -27,12 +27,16 @@ jobs:
           cache: npm
       - name: Install dependencies
         run: npm ci
+      - name: Lint source and release metadata
+        run: npm run lint
       - name: Build application
         run: npm run build
       - name: Run tests
         run: npm test -- --run
       - name: Typecheck
         run: npx tsc --noEmit
+      - name: Validate vocabulary content
+        run: node scripts/validate-content.mjs
       - name: Check initial bundle
         run: npm run check:bundle
       - name: Check diff whitespace
