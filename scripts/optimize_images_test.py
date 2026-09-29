@@ -1,12 +1,12 @@
 from __future__ import annotations
 
 import importlib.util
+import random
 import tempfile
 import unittest
 from pathlib import Path
 
-from PIL import Image
-from PIL.PngImagePlugin import PngInfo
+from PIL import Image, ImageChops
 
 
 ROOT = Path(__file__).resolve().parents[1]
@@ -29,10 +29,14 @@ def write_fixture_assets(directory: Path) -> None:
     directory.mkdir(parents=True, exist_ok=True)
     for seed, stem in enumerate(stems, start=1):
         width, height = sizes[stem]
-        image = Image.new("RGB", (width, height), (seed * 31 % 256, seed * 53 % 256, seed * 79 % 256))
-        metadata = PngInfo()
-        metadata.add_text("fixture", ("flowvocab-deterministic-fixture-" + str(seed)) * 4096)
-        image.save(directory / f"{stem}.png", format="PNG", pnginfo=metadata)
+        noise = random.Random(seed)
+        channels = [Image.frombytes("L", (width, height), noise.randbytes(width * height)) for _ in range(3)]
+        gradient = Image.linear_gradient("L").resize((width, height), Image.Resampling.BILINEAR)
+        image = Image.merge("RGB", tuple(ImageChops.add_modulo(channel, gradient) for channel in channels))
+        gradient.close()
+        for channel in channels:
+            channel.close()
+        image.save(directory / f"{stem}.png", format="PNG")
         image.close()
 
 
@@ -57,6 +61,12 @@ class OptimizeImagesTest(unittest.TestCase):
             first_output, second_output = first / "output", second / "output"
             write_fixture_assets(first_source)
             write_fixture_assets(second_source)
+            source_pngs = list(first_source.glob("*.png"))
+            self.assertEqual(len(source_pngs), 7)
+            self.assertTrue(all(path.stat().st_size < 8_000_000 for path in source_pngs))
+            for source in source_pngs:
+                with Image.open(source) as image:
+                    self.assertFalse(image.info)
             first_report = optimizer.optimize_assets(first_source, first_output)
             second_report = optimizer.optimize_assets(second_source, second_output)
 
