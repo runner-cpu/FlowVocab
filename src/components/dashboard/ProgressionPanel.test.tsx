@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest'
+import { afterEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, render, screen } from '@testing-library/react'
 import { useProgress, emptyDaily } from '../../store/progressStore'
 import { dayKey } from '../../engine/forget'
@@ -36,5 +36,19 @@ describe('progression surfaces', () => {
     const retry = screen.getByRole('button', { name: '重试保存' })
     retry.focus()
     expect(retry).toHaveFocus()
+  })
+
+  it('reports a chest claim failure inline', async () => {
+    seed()
+    const date = dayKey(Date.now())
+    useProgress.setState({
+      daily: { date, xp: 80, energy: 0, comboMax: 5, modules: { vocab: 10, grammar: 0, sentence: 0, listening: 0, writing: 0, reading: 0 } },
+      claimDailyChest: vi.fn().mockRejectedValue(new Error('database locked')),
+    })
+    render(<ProgressionPanel />)
+    const chest = screen.getByRole('button', { name: /每日宝箱/ })
+    expect(chest).toBeEnabled()
+    chest.click()
+    expect(await screen.findByRole('alert')).toHaveTextContent('宝箱领取失败')
   })
 })

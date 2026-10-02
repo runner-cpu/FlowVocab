@@ -1,16 +1,21 @@
-const SHELL_CACHE = 'flowvocab-shell-v2'
-const RUNTIME_CACHE = 'flowvocab-runtime-v2'
+const CACHE_VERSION = 'flowvocab-shell-template'
+const PRECACHE = []
+const SHELL_CACHE = CACHE_VERSION
+const RUNTIME_CACHE = `flowvocab-runtime-${CACHE_VERSION}`
 const WORDS_PREFIX = new URL('./data/words/', self.location).pathname
 const isWordAsset = (pathname) => pathname.startsWith(WORDS_PREFIX)
 const isStaticAsset = (request, pathname) => request.mode === 'navigate' || pathname.includes('/assets/') || pathname.includes('/icons/') || pathname.endsWith('/manifest.webmanifest')
 
 self.addEventListener('install', (event) => {
-  event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(['./', './index.html', './manifest.webmanifest'])))
+  event.waitUntil(caches.open(SHELL_CACHE).then((cache) => cache.addAll(PRECACHE)))
   self.skipWaiting()
 })
 
 self.addEventListener('activate', (event) => {
-  event.waitUntil(self.clients.claim())
+  event.waitUntil(caches.keys().then((keys) => {
+    const keep = new Set([SHELL_CACHE, RUNTIME_CACHE])
+    return Promise.all(keys.filter((key) => key.startsWith('flowvocab-') && !keep.has(key)).map((key) => caches.delete(key)))
+  }).then(() => self.clients.claim()))
 })
 
 self.addEventListener('fetch', (event) => {

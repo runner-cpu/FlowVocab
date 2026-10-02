@@ -2,8 +2,11 @@
   "name": "FlowVocab",
   "short_name": "FlowVocab",
   "description": "离线英语学习航线",
+  "id": "./",
   "start_url": "./",
+  "scope": "./",
   "display": "standalone",
+  "orientation": "portrait-primary",
   "background_color": "#f6fbff",
   "theme_color": "#082949",
   "icons": [

@@ -30,6 +30,24 @@ it('requires a visible second reset confirmation and reports invalid uploads inl
   expect(await screen.findByRole('alert')).toHaveTextContent('备份文件无效')
 })
 
+it('rejects oversized backup files before parsing them', async () => {
+  render(<SettingsPanel onClose={() => undefined} />)
+  const huge = new File(['x'], 'too-large.json', { type: 'application/json' })
+  Object.defineProperty(huge, 'size', { configurable: true, value: 10 * 1024 * 1024 + 1 })
+  fireEvent.change(screen.getByLabelText('恢复学习数据'), { target: { files: [huge] } })
+  expect(await screen.findByRole('alert')).toHaveTextContent('备份文件过大')
+})
+
+it('reports reset failures inline instead of leaving an unhandled rejection', async () => {
+  const reset = await import('../../store/backup')
+  const resetSpy = vi.spyOn(reset, 'resetProgress').mockRejectedValue(new Error('database locked'))
+  render(<SettingsPanel onClose={() => undefined} />)
+  fireEvent.click(screen.getByRole('button', { name: '重置学习数据' }))
+  fireEvent.click(screen.getByRole('button', { name: '确认重置' }))
+  expect(await screen.findByRole('alert')).toHaveTextContent('无法重置学习数据')
+  resetSpy.mockRestore()
+})
+
 it('does not request storage again when the panel remounts or the store re-initializes', async () => {
   const persist = navigator.storage.persist as ReturnType<typeof vi.fn>
   render(<SettingsPanel onClose={() => undefined} />).unmount(); render(<SettingsPanel onClose={() => undefined} />)

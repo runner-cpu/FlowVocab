@@ -10,6 +10,7 @@ import RevealOnScroll from '../components/ui/RevealOnScroll'
 import AnimatedNumber from '../components/ui/AnimatedNumber'
 import ProgressionPanel from '../components/dashboard/ProgressionPanel'
 import ResponsiveSceneImage from '../components/ui/ResponsiveSceneImage'
+import { useNow } from '../hooks/useNow'
 
 const MODULES: ModuleKey[] = ['vocab', 'grammar', 'sentence', 'listening', 'writing', 'reading']
 const JOURNEY: { module: ModuleKey; title: string; note: string; icon: typeof BookOpen }[] = [
@@ -27,11 +28,12 @@ export default function Home() {
   const daily = useProgress((s) => s.daily)
   const progress = useProgress((s) => s.progress)
   const userWords = useProgress((s) => s.userWords)
+  const now = useNow()
   const xpToday = daily?.xp ?? 0
   const goal = planet?.dailyGoal ?? 100
   const pct = Math.min(100, Math.round((xpToday / Math.max(goal, 1)) * 100))
   const completedModules = Object.values(daily?.modules ?? {}).filter((n) => n > 0).length
-  const dueWords = userWords.filter((word) => word.status !== 'mastered' && word.nextReview <= Date.now()).length
+  const dueWords = userWords.filter((word) => word.status !== 'mastered' && word.nextReview <= now).length
   const radar = progress?.radar
   const weakest = MODULES.reduce((low, key) => (radar?.[key] ?? 0) < (radar?.[low] ?? 0) ? key : low, 'vocab')
   const track = useUI((s) => s.track)

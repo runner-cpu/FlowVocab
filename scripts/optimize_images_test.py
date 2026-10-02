@@ -92,6 +92,19 @@ class OptimizeImagesTest(unittest.TestCase):
         self.assertEqual(optimizer.resize_dimensions((1536, 1024), 1280), (1280, 853))
         self.assertEqual(optimizer.resize_dimensions((320, 240), 640), (320, 240))
 
+    def test_supports_a_generated_asset_without_requiring_the_legacy_scene_set(self):
+        optimizer = load_optimizer()
+        with tempfile.TemporaryDirectory() as directory:
+            root = Path(directory)
+            source = root / 'flowvocab-memory-garden.png'
+            Image.new('RGB', (1536, 1024), (8, 35, 65)).save(source, format='PNG')
+            output = root / 'output'
+            report = optimizer.optimize_asset(source, output, 'flowvocab-memory-garden', (640, 1024))
+            self.assertGreater(report.output_bytes, 0)
+            self.assertEqual({path.name for path in output.iterdir()}, {'flowvocab-memory-garden-640.webp', 'flowvocab-memory-garden-1024.webp'})
+            with Image.open(output / 'flowvocab-memory-garden-640.webp') as image:
+                self.assertEqual(image.size, (640, 427))
+
 
 if __name__ == "__main__":
     unittest.main()

@@ -23,6 +23,7 @@ export default function ProgressionPanel({ achievements = false }: { achievement
   const claim = useProgress(s => s.claimDailyChest)
   const [today, setToday] = useState(() => dayKey(Date.now()))
   const [claiming, setClaiming] = useState(false)
+  const [claimError, setClaimError] = useState<string | null>(null)
   useEffect(() => {
     const refresh = () => setToday(dayKey(Date.now()))
     const timer = window.setInterval(refresh, 1000)
@@ -46,7 +47,7 @@ export default function ProgressionPanel({ achievements = false }: { achievement
       <ol className="planet-stages" aria-label="星球十阶段">{PLANET_STAGES.map((stage, index) => <li key={stage} className={model.planetLevel >= index + 1 ? 'reached' : ''} aria-current={model.planetLevel === index + 1 ? 'step' : undefined}><span>{String(index + 1).padStart(2, '0')}</span>{stage}</li>)}</ol>
     </> : <div className="daily-quest-layout">
       <ul className="daily-quests">{model.quests.map(quest => <li key={quest.id}><span className={`quest-check ${quest.complete ? 'complete' : ''}`} aria-label={quest.complete ? '已完成' : '未完成'}>{quest.complete ? <Check size={15} aria-hidden="true" /> : null}</span><span>{quest.title}<small>{Math.min(quest.value, quest.target)}/{quest.target}</small></span><strong>+{quest.rewardXp} XP{quest.claimed ? ' · 已获得' : ''}</strong></li>)}</ul>
-      <div className="daily-chest"><Gift size={26} aria-hidden="true" /><strong>每日补给 · 50 能量</strong><small>任务完成自动获得 XP，全部完成可领取宝箱。</small><button className="btn btn-ghost" disabled={model.chest !== 'available' || claiming} aria-label={`每日宝箱，${model.chest === 'claimed' ? '今日已领取' : model.chest === 'available' ? '领取 50 能量' : '完成三项任务后解锁'}`} onClick={async () => { setClaiming(true); try { await claim() } finally { setClaiming(false) } }}>{claiming ? '正在领取…' : model.chest === 'claimed' ? '今日已领取' : model.chest === 'available' ? '领取宝箱' : '完成任务解锁'}</button></div>
+          <div className="daily-chest"><Gift size={26} aria-hidden="true" /><strong>每日补给 · 50 能量</strong><small>任务完成自动获得 XP，全部完成可领取宝箱。</small><button className="btn btn-ghost" disabled={model.chest !== 'available' || claiming} aria-label={`每日宝箱，${model.chest === 'claimed' ? '今日已领取' : model.chest === 'available' ? '领取 50 能量' : '完成三项任务后解锁'}`} onClick={async () => { setClaiming(true); setClaimError(null); try { await claim() } catch { setClaimError('宝箱领取失败，请检查本地存储后重试') } finally { setClaiming(false) } }}>{claiming ? '正在领取…' : model.chest === 'claimed' ? '今日已领取' : model.chest === 'available' ? '领取宝箱' : '完成任务解锁'}</button>{claimError && <p className="settings-message" role="alert">{claimError}</p>}</div>
     </div>}
   </section>
 }

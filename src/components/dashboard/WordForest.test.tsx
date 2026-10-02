@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto'
-import { afterEach, beforeEach, describe, expect, it } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
 import { db } from '../../store/db'
 import { useProgress } from '../../store/progressStore'
@@ -57,5 +57,14 @@ describe('word forest health', () => {
     expect(await screen.findByText('词条暂不可用')).toBeVisible()
     expect(screen.queryByText('unknown-id')).toBeNull()
     expect(screen.getByRole('status')).toHaveTextContent('1 个词条尚未在离线词库中找到')
+  })
+
+  it('shows a visual empty state and starts a vocabulary mission', () => {
+    const onStart = vi.fn()
+    render(<WordForest words={[]} onReview={() => {}} onStart={onStart} />)
+    expect(screen.getByRole('img', { name: '发光记忆花园插画' })).toBeVisible()
+    const start = screen.getByRole('button', { name: '开始词汇任务' })
+    fireEvent.click(start)
+    expect(onStart).toHaveBeenCalledTimes(1)
   })
 })

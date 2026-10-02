@@ -1,6 +1,7 @@
-"""Deterministically create responsive WebP variants from the seven shipped PNGs."""
+"""Deterministically create responsive WebP variants from shipped and generated PNGs."""
 from __future__ import annotations
 
+import argparse
 from pathlib import Path
 from PIL import Image
 
@@ -11,6 +12,7 @@ SCENES = (
 )
 QUALITY = 72
 METHOD = 6
+GENERATED_ASSETS = ("flowvocab-memory-garden",)
 
 class OptimizeReport:
     def __init__(self, input_bytes: int, output_bytes: int) -> None:
@@ -34,11 +36,24 @@ def _write(source: Path, destination: Path, target_width: int) -> int:
         image.close()
     return destination.stat().st_size
 
+def optimize_asset(source: str | Path, output_dir: str | Path, stem: str, widths: tuple[int, ...] = (640, 1024)) -> OptimizeReport:
+    """Create responsive variants for one new/generated image without legacy inputs."""
+    source, output_dir = Path(source), Path(output_dir)
+    if not source.is_file():
+        raise FileNotFoundError(str(source))
+    output_dir.mkdir(parents=True, exist_ok=True)
+    output_bytes = sum(_write(source, output_dir / f"{stem}-{width}.webp", width) for width in widths)
+    return OptimizeReport(source.stat().st_size, output_bytes)
+
 def optimize_assets(source_dir: str | Path, output_dir: str | Path) -> OptimizeReport:
     source_dir, output_dir = Path(source_dir), Path(output_dir)
+    required_stems = (*SCENES, "neon-harbor-quest")
+    optional_stems = tuple(stem for stem in GENERATED_ASSETS if (source_dir / f"{stem}.png").is_file())
+    all_stems = (*required_stems, *optional_stems)
     jobs = [(stem, width) for stem in SCENES for width in (640, 1024)]
-    jobs.extend((("neon-harbor-quest", width) for width in (768, 1280)))
-    input_names = [f"{stem}.png" for stem in (*SCENES, "neon-harbor-quest")]
+    jobs.extend(("neon-harbor-quest", width) for width in (768, 1280))
+    jobs.extend((stem, width) for stem in optional_stems for width in (640, 1024))
+    input_names = [f"{stem}.png" for stem in all_stems]
     missing = [name for name in input_names if not (source_dir / name).is_file()]
     if missing:
         raise FileNotFoundError(", ".join(missing))
@@ -55,8 +70,22 @@ def optimize_assets(source_dir: str | Path, output_dir: str | Path) -> OptimizeR
 
 if __name__ == "__main__":
     root = Path(__file__).resolve().parents[1]
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--asset-source", type=Path)
+    parser.add_argument("--asset-stem")
+    parser.add_argument("--output-dir", type=Path)
+    parser.add_argument("--widths", nargs="+", type=int, default=[640, 1024])
+    args = parser.parse_args()
+    if args.asset_source:
+        if not args.asset_stem:
+            parser.error("--asset-stem is required with --asset-source")
+        report = optimize_asset(args.asset_source, args.output_dir or root / "public" / "assets", args.asset_stem, tuple(args.widths))
+        print(f"optimized {args.asset_stem}: {report.input_bytes} -> {report.output_bytes} bytes")
+        raise SystemExit(0)
     assets = root / "public" / "assets"
     report = optimize_assets(assets, assets)
-    for stem in (*SCENES, "neon-harbor-quest"):
-        (assets / f"{stem}.png").unlink()
+    for stem in (*SCENES, "neon-harbor-quest", *GENERATED_ASSETS):
+        source = assets / f"{stem}.png"
+        if source.exists():
+            source.unlink()
     print(f"optimized {report.input_bytes} -> {report.output_bytes} bytes")

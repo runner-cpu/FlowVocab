@@ -3,11 +3,14 @@ import { Download, RotateCcw, Upload, X } from 'lucide-react'
 import { useProgress } from '../../store/progressStore'
 import { exportProgressBackup, importProgressBackup, resetProgress } from '../../store/backup'
 
+const MAX_BACKUP_BYTES = 10 * 1024 * 1024
+
 export default function SettingsPanel({ onClose, opener }: { onClose: () => void; opener?: HTMLElement | null }) {
   const profile = useProgress((state) => state.profile)
   const updateSettings = useProgress((state) => state.updateSettings)
   const durable = useProgress((state) => state.durableStorage)
   const [resetting, setResetting] = useState(false)
+  const [resetInFlight, setResetInFlight] = useState(false)
   const [message, setMessage] = useState<string | null>(null)
   const file = useRef<HTMLInputElement>(null)
   const dialog = useRef<HTMLElement>(null)
@@ -17,17 +20,38 @@ export default function SettingsPanel({ onClose, opener }: { onClose: () => void
   if (!profile) return null
   const settings = profile.settings
   const download = async () => {
-    const blob = new Blob([JSON.stringify(await exportProgressBackup(), null, 2)], { type: 'application/json' })
-    const url = URL.createObjectURL(blob); const link = document.createElement('a')
-    link.href = url; link.download = 'flowvocab-backup.json'; link.click(); URL.revokeObjectURL(url)
-    setMessage('学习数据已导出到本设备')
+    try {
+      const blob = new Blob([JSON.stringify(await exportProgressBackup(), null, 2)], { type: 'application/json' })
+      const url = URL.createObjectURL(blob); const link = document.createElement('a')
+      link.href = url; link.download = 'flowvocab-backup.json'; link.click(); URL.revokeObjectURL(url)
+      setMessage('学习数据已导出到本设备')
+    } catch {
+      setMessage('无法导出学习数据，请重试')
+    }
   }
   const restore = async (input: HTMLInputElement) => {
     const selected = input.files?.[0]
     if (!selected) return
+    if (selected.size > MAX_BACKUP_BYTES) {
+      setMessage('备份文件过大（上限 10 MB），未更改学习数据')
+      input.value = ''
+      return
+    }
     try { await importProgressBackup(JSON.parse(await selected.text())); setMessage('学习数据已恢复') }
     catch { setMessage('备份文件无效，未更改学习数据') }
     finally { input.value = '' }
+  }
+  const confirmReset = async () => {
+    setResetInFlight(true)
+    try {
+      await resetProgress()
+      setResetting(false)
+      setMessage('学习进度已重置')
+    } catch {
+      setMessage('无法重置学习数据，请重试')
+    } finally {
+      setResetInFlight(false)
+    }
   }
   const trapFocus = (event: React.KeyboardEvent<HTMLElement>) => {
     if (event.key === 'Escape') { event.preventDefault(); close(); return }
@@ -46,7 +70,7 @@ export default function SettingsPanel({ onClose, opener }: { onClose: () => void
       <p className="settings-status" role="status">{durable === null ? '正在确认离线存储…' : durable ? '已请求持久离线存储' : '浏览器未授予持久离线存储'}</p>
       {message && <p role="alert" className="settings-message">{message}</p>}
       <div className="settings-actions"><button onClick={() => void download()}><Download size={16} />导出学习数据</button><button onClick={() => file.current?.click()}><Upload size={16} />恢复学习数据</button><input ref={file} aria-label="恢复学习数据" type="file" accept="application/json" hidden onChange={(event) => void restore(event.currentTarget)} /></div>
-      <div className="settings-danger">{resetting ? <><p>此操作会清除本设备的学习进度，词库会保留。</p><button className="danger" onClick={() => void resetProgress().then(() => { setResetting(false); setMessage('学习进度已重置') })}>确认重置</button><button onClick={() => setResetting(false)}>取消</button></> : <button className="danger" onClick={() => setResetting(true)}><RotateCcw size={16} />重置学习数据</button>}</div>
+      <div className="settings-danger">{resetting ? <><p>此操作会清除本设备的学习进度，词库会保留。</p><button className="danger" disabled={resetInFlight} onClick={() => void confirmReset()}>{resetInFlight ? '正在重置…' : '确认重置'}</button><button disabled={resetInFlight} onClick={() => setResetting(false)}>取消</button></> : <button className="danger" onClick={() => setResetting(true)}><RotateCcw size={16} />重置学习数据</button>}</div>
     </section>
   </div>
 }

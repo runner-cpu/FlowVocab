@@ -13,6 +13,7 @@ import ProgressionPanel from '../components/dashboard/ProgressionPanel'
 import { planetLevelFromEnergy } from '../engine/progression'
 import WordForest from '../components/dashboard/WordForest'
 import { findStoredWordLevel } from '../store/wordBank'
+import { useNow } from '../hooks/useNow'
 
 export default function Dashboard() {
   const profile = useProgress((s) => s.profile)
@@ -21,6 +22,7 @@ export default function Dashboard() {
   const go = useUI((s) => s.go)
   const radar = useProgress((s) => s.progress?.radar)
   const userWords = useProgress((s) => s.userWords)
+  const now = useNow()
   const [range, setRange] = useState<7 | 30 | 90>(90)
   const [selected, setSelected] = useState<ModuleKey | null>(null)
   const radarEntries = (Object.entries(radar ?? {}) as [ModuleKey, number][]).sort((a, b) => b[1] - a[1])
@@ -33,13 +35,13 @@ export default function Dashboard() {
     useUI.getState().reviewWord(wordId, level ?? undefined)
   }, [])
   const reviewLoad = useMemo(() => {
-    const now = Date.now(); const day = 86400000
+    const day = 86400000
     return [
       { label: '今日到期', value: userWords.filter((word) => word.status !== 'mastered' && word.nextReview <= now).length, tone: 'coral' },
       { label: '未来 3 天', value: userWords.filter((word) => word.status !== 'mastered' && word.nextReview > now && word.nextReview <= now + 3 * day).length, tone: 'blue' },
       { label: '已掌握', value: userWords.filter((word) => word.status === 'mastered').length, tone: 'mint' }
     ]
-  }, [userWords])
+  }, [userWords, now])
 
   if (isFirstStudy) return <div className="growth-page"><div className="insight-banner"><div className="insight-mark"><Sparkles size={20} /></div><div className="insight-copy"><strong>成长提示</strong><p>完成第一轮练习后，这里会显示你的能力变化</p></div></div><div className="card"><RadarChart onModuleSelect={selectModule} /></div></div>
 
@@ -75,7 +77,7 @@ export default function Dashboard() {
 
       <div className="card review-load-card"><div className="card-title"><TimerReset size={16} /> 复习负担 <span className="chart-hint">根据记忆节奏自动安排</span></div><div className="review-load-grid">{reviewLoad.map((item) => <SpotlightCard key={item.label} className={`review-load-item ${item.tone}`}><span>{item.label}</span><strong>{item.value}</strong><small>{item.label === '今日到期' ? '优先处理' : item.label === '未来 3 天' ? '提前预览' : '稳固记忆'}</small></SpotlightCard>)}</div></div>
 
-      <WordForest words={userWords} onReview={reviewWord} />
+      <WordForest words={userWords} onReview={reviewWord} onStart={() => go('vocab')} />
 
       <div className="card">
         <div className="card-title"><Activity size={16} /> 难度流 · 心流质量</div>

@@ -2,6 +2,8 @@ import { useEffect, useMemo, useState } from 'react'
 import { WORDS } from '../../data/words'
 import { db } from '../../store/db'
 import type { UserWord } from '../../types'
+import { useNow } from '../../hooks/useNow'
+import ResponsiveSceneImage from '../ui/ResponsiveSceneImage'
 
 export type TreeHealth = 'fragile' | 'due' | 'learning' | 'mastered'
 
@@ -35,8 +37,8 @@ async function resolveWordLabels(wordIds: string[]) {
   return labelsById
 }
 
-export default function WordForest({ words, onReview }: { words: UserWord[]; onReview: (wordId: string) => void }) {
-  const now = useMemo(() => Date.now(), [words])
+export default function WordForest({ words, onReview, onStart }: { words: UserWord[]; onReview: (wordId: string) => void; onStart?: () => void }) {
+  const now = useNow()
   const trees = useMemo(() => [...words].sort((left, right) => {
     const rank: Record<TreeHealth, number> = { fragile: 0, due: 1, learning: 2, mastered: 3 }
     return rank[classifyWordTree(left, now)] - rank[classifyWordTree(right, now)] || left.nextReview - right.nextReview
@@ -61,7 +63,10 @@ export default function WordForest({ words, onReview }: { words: UserWord[]; onR
 
   return <section className="card word-forest" aria-labelledby="word-forest-title">
     <div className="card-title" id="word-forest-title">🌲 错词森林 <span className="chart-hint">错误率、复习日期与掌握度共同决定树木状态</span></div>
-    {trees.length === 0 ? <p className="muted">完成词汇任务后，你的记忆森林会在这里生长。</p> : wordLabels === null ? <p className="muted" role="status">正在读取离线词库…</p> : <>
+    {trees.length === 0 ? <div className="forest-empty">
+      <ResponsiveSceneImage assetStem="flowvocab-memory-garden" sizes="(max-width: 640px) 100vw, 50vw" alt="发光记忆花园插画" />
+      <div className="forest-empty-copy"><strong>你的记忆花园还在等第一颗种子</strong><p className="muted">完成一轮词汇任务，错词森林会记录每个词的成长状态。</p>{onStart && <button className="btn btn-primary" onClick={onStart}>开始词汇任务</button>}</div>
+    </div> : wordLabels === null ? <p className="muted" role="status">正在读取离线词库…</p> : <>
       <div className="forest-groups">{groups.map(({ health, trees: groupTrees }) => <section className="forest-group" key={health} aria-labelledby={`forest-${health}-title`}>
         <h3 id={`forest-${health}-title`}>{labels[health]} <span>{groupTrees.length}</span></h3>
         <div className="forest-grid">{groupTrees.map((word) => {
