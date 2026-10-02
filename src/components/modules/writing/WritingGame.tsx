@@ -22,12 +22,13 @@ export function moveWritingSegment<T>(items: T[], index: number, direction: -1 |
 }
 
 export default function WritingGame() {
-  const tasks = itemsForTrack(useUI((state) => state.track), 'writing', WRITING_TASKS)
+  const track = useUI((state) => state.track)
+  const tasks = useMemo(() => itemsForTrack(track, 'writing', WRITING_TASKS), [track])
   const answer = useProgress((state) => state.answer)
   const submitWriting = useProgress((state) => state.submitWriting)
   const [taskIdx, setTaskIdx] = useState(0)
-  const task: WritingTask = tasks[taskIdx]
-  const initialOrder = useMemo(() => shuffle(task.segments ?? []), [task])
+  const task = tasks[taskIdx] ?? tasks[0]
+  const initialOrder = useMemo(() => shuffle(task?.segments ?? []), [task])
   const [order, setOrder] = useState<string[]>(initialOrder)
   const [previousOrder, setPreviousOrder] = useState<string[] | null>(null)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)
@@ -36,9 +37,19 @@ export default function WritingGame() {
   const [result, setResult] = useState<{ pass: boolean } | null>(null)
   const startedAt = useRef(performance.now())
 
+  useEffect(() => {
+    setTaskIdx(0)
+    setOrder([])
+    setPreviousOrder(null)
+    setDraggedIndex(null)
+    setPickErr(null)
+    setResult(null)
+    setAnnouncement('')
+    startedAt.current = performance.now()
+  }, [track])
   useEffect(() => { setOrder(initialOrder); setPreviousOrder(null); setPickErr(null); setResult(null); setAnnouncement(''); startedAt.current = performance.now() }, [initialOrder])
-  const sortDone = task.type === 'sort' && order.length === (task.segments?.length ?? 0)
-  const errDone = task.type === 'error' && pickErr !== null
+  const sortDone = task?.type === 'sort' && order.length === (task.segments?.length ?? 0)
+  const errDone = task?.type === 'error' && pickErr !== null
 
   function moveSegment(index: number, direction: -1 | 1) {
     if (result) return
@@ -52,10 +63,12 @@ export default function WritingGame() {
     setPreviousOrder(order); setOrder(next); setDraggedIndex(null); setAnnouncement(`已移动 ${item} 到第 ${destination + 1} 位`)
   }
   function submit() {
-    if (result) return
+    if (result || !task) return
     const pass = task.type === 'sort' ? order.every((segment, index) => segment === task.segments?.[index]) : pickErr === task.answer
     setResult({ pass }); void answer({ module: 'writing', correct: pass, timeMs: elapsedSince(startedAt.current, performance.now()) }); void submitWriting(task.id, pass ? 5 : 1)
   }
+
+  if (!task) return <div className="quiz-panel"><GameHud module="writing" /><div className="card center"><h2>当前路线暂无写作练习</h2><p className="muted">请切换学习路线后重试。</p></div></div>
 
   return <div className="quiz-panel"><GameHud module="writing" /><div className="card">
     <div className="card-title">🃏 写作·句型工坊（排序 / 改错）</div>
@@ -68,6 +81,6 @@ export default function WritingGame() {
       {result && <div className={`score-report ${result.pass ? '' : 'miss'}`}><strong>{result.pass ? '✓ 排序正确！' : '× 顺序有误'}</strong><div className="ex-eg mt8">💡 {task.explain}</div></div>}
     </>}
     {task.type === 'error' && <><div className="explain-box mt8"><div className="ex-eg">“{task.sentence}”</div></div><div className="options mt14">{(task.options ?? []).map((option, index) => { let className = 'option'; if (result) { if (index === task.answer) className += ' correct'; else if (pickErr === index) className += ' wrong' } else if (pickErr === index) className += ' picked'; return <button key={index} className={className} disabled={!!result} onClick={() => setPickErr(index)}>{option}</button> })}</div>{result && <div className={`score-report ${result.pass ? '' : 'miss'}`}><strong>{result.pass ? '✓ 改对了！' : '× 再想想'}</strong><div className="ex-eg mt8">💡 {task.explain}</div></div>}</>}
-    <div className="progress-strip mt14"><button className="btn btn-primary" onClick={submit} disabled={!sortDone && !errDone}>{result ? '已判定' : '提交判定'}</button>{result && <button className="btn btn-ghost" onClick={() => setTaskIdx((taskIdx + 1) % tasks.length)}>{taskIdx + 1 >= tasks.length ? '再来一轮' : '下一题 →'}</button>}</div>
+    <div className="progress-strip mt14"><button className="btn btn-primary" onClick={submit} disabled={!sortDone && !errDone}>{result ? '已判定' : '提交判定'}</button>{result && tasks.length > 0 && <button className="btn btn-ghost" onClick={() => setTaskIdx((taskIdx + 1) % tasks.length)}>{taskIdx + 1 >= tasks.length ? '再来一轮' : '下一题 →'}</button>}</div>
   </div></div>
 }

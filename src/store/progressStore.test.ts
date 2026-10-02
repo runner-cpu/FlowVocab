@@ -2,7 +2,7 @@ import 'fake-indexeddb/auto'
 import Dexie from 'dexie'
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { db } from './db'
-import { useProgress } from './progressStore'
+import { pausePersistenceWrites, useProgress } from './progressStore'
 import { computeRadar } from './progressStore'
 import { dayKey } from '../engine/forget'
 import type { UserWord } from '../types'
@@ -194,6 +194,38 @@ describe('atomic answer persistence', () => {
     useProgress.setState({ daily: { ...useProgress.getState().daily!, date: '2020-01-01', xp: 80, comboMax: 5, modules: { ...useProgress.getState().daily!.modules, vocab: 10 } } })
     await useProgress.getState().claimDailyChest()
     expect(useProgress.getState().planet?.energy).toBe(0)
+  })
+})
+
+describe('initialization concurrency', () => {
+  it('shares one in-flight initialization across concurrent callers', async () => {
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => { release = resolve })
+    const originalGet = db.userProfile.get.bind(db.userProfile)
+    let profileReads = 0
+    const get = vi.spyOn(db.userProfile, 'get').mockImplementation((key) => {
+      profileReads += 1
+      return gate.then(() => originalGet(key)) as ReturnType<typeof db.userProfile.get>
+    })
+
+    const first = useProgress.getState().init()
+    await Promise.resolve()
+    const second = useProgress.getState().init()
+    expect(profileReads).toBe(1)
+    release()
+    await Promise.all([first, second])
+    expect(useProgress.getState().ready).toBe(true)
+    expect(get).toHaveBeenCalledOnce()
+  })
+
+  it('defers new writes until a persistence transition releases the gate', async () => {
+    const release = await pausePersistenceWrites()
+    const answerPromise = useProgress.getState().answer(answer)
+    await Promise.resolve()
+    expect((await db.userProfile.get(1))?.totalXp).toBe(0)
+    release()
+    await answerPromise
+    expect((await db.userProfile.get(1))?.totalXp).toBe(10)
   })
 })
 

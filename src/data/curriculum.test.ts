@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { itemsForTrack, isModuleAvailable, TRACK_CURRICULUM } from './curriculum'
+import { itemsForTrack, isModuleAvailable, TRACK_CURRICULUM, vocabLevelsForTrack } from './curriculum'
 import { LISTENING_ITEMS } from './listening'
 
 describe('track curriculum', () => {
@@ -15,6 +15,12 @@ describe('track curriculum', () => {
   it('makes every module available to CET and assigns different vocabulary levels to each track', () => {
     expect(Object.values(TRACK_CURRICULUM.cet.modules).every(Boolean)).toBe(true)
     expect(new Set(Object.values(TRACK_CURRICULUM).map(track => track.levels.join(','))).size).toBe(4)
+  })
+
+  it('keeps the route levels when adaptive or review levels are outside the route', () => {
+    expect(vocabLevelsForTrack('primary', 4)).toEqual([0, 4])
+    expect(vocabLevelsForTrack('primary', 4, 3)).toEqual([0, 4, 3])
+    expect(vocabLevelsForTrack('advanced', 1, 4)).toEqual([1, 2, 3, 4])
   })
 
   it('filters listening content differently for primary and CET', () => {

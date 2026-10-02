@@ -63,12 +63,32 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
   const [picked, setPicked] = useState<Record<number, number>>({})
   const [answered, setAnswered] = useState(false)
   const t0 = useRef(performance.now())
+  const submitted = useRef(false)
   const ttsSupport = useRef(typeof window !== 'undefined' && 'speechSynthesis' in window)
   const recRef = useRef<{ start: () => void; stop: () => void } | null>(null)
+  const advanceTimer = useRef<number | null>(null)
 
-  const item: ListeningItem = selectedItems[qIndex]
-  useEffect(() => { t0.current = performance.now() }, [qIndex])
-  const targetWords = item.text.split(' ')
+  const item = selectedItems[qIndex]
+  const contentKey = selectedItems.map((candidate) => candidate.id).join('|')
+  useEffect(() => {
+    if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current)
+    advanceTimer.current = null
+    t0.current = performance.now()
+    submitted.current = false
+    setQIndex(0)
+    setPicked({})
+    setAnswered(false)
+    setResult(null)
+    setRecognized('')
+    setDone(false)
+    recRef.current?.stop()
+    return () => {
+      if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current)
+      advanceTimer.current = null
+    }
+  }, [track, contentKey])
+  useEffect(() => { t0.current = performance.now(); submitted.current = false }, [qIndex])
+  const targetWords = item?.text.split(' ') ?? []
 
   // 探测语音识别可用性
   const [recSupport] = useState(() => {
@@ -78,7 +98,7 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
   })
 
   const speak = () => {
-    if (!ttsSupport.current) return
+    if (!ttsSupport.current || !item) return
     const u = new SpeechSynthesisUtterance(item.text)
     u.lang = 'en-US'
     u.rate = 0.85
@@ -91,10 +111,11 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
   useEffect(() => () => {
     if (ttsSupport.current) window.speechSynthesis.cancel()
     recRef.current?.stop()
+    if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current)
   }, [])
 
   const startListen = () => {
-    if (!recSupport) return
+    if (!recSupport || !item || submitted.current) return
     const w = window as unknown as {
       SpeechRecognition?: new () => {
         lang: string
@@ -126,6 +147,7 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
     setListening(true)
     setRecognized('')
     setResult(null)
+    submitted.current = false
     t0.current = performance.now()
     rec.onresult = (e) => {
       const transcript = e.results[0]?.[0]?.transcript ?? ''
@@ -146,6 +168,8 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
   }
 
   const finish = (transcript: string) => {
+    if (!item || submitted.current) return
+    submitted.current = true
     const spoken = transcript
       .split(/\s+/)
       .map(clean)
@@ -160,10 +184,17 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
   }
 
   const next = () => {
+    submitted.current = false
     setResult(null)
     setRecognized('')
+    setPicked({})
+    setAnswered(false)
     if (qIndex + 1 >= selectedItems.length) setDone(true)
     else setQIndex(qIndex + 1)
+  }
+
+  if (!item && !done) {
+    return <div className="quiz-panel"><GameHud module="listening" /><div className="card center" role="status"><h2>当前路线暂无听力内容</h2><p className="muted">请选择其他学习路线或返回路线地图。</p></div></div>
   }
 
   if (done) {
@@ -246,24 +277,24 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
   const words = item.text.split(' ')
 
   const pick = (blankIdx: number, optIdx: number) => {
-    if (answered || picked[blankIdx] !== undefined) return
+    if (answered || submitted.current || picked[blankIdx] !== undefined) return
     const blank = item.blanks.find((candidate) => candidate.index === blankIdx)
     if (!blank) return
-    const correct = blank.options[optIdx] === blank.answer
     const next = { ...picked, [blankIdx]: optIdx }
     setPicked(next)
-    answer({ module: 'listening', correct, timeMs: elapsedSince(t0.current, performance.now()) })
     const allAnswered = item.blanks.every((b) => next[b.index] !== undefined)
     const allCorrect = item.blanks.every((b) => b.options[next[b.index]] === b.answer) && allAnswered
+    if (!allAnswered) return
+    submitted.current = true
+    setAnswered(true)
+    answer({ module: 'listening', correct: allCorrect, timeMs: elapsedSince(t0.current, performance.now()) })
     if (allCorrect) {
-      setAnswered(true)
       passListening()
-      setTimeout(() => {
+      advanceTimer.current = window.setTimeout(() => {
+        advanceTimer.current = null
         if (qIndex + 1 >= selectedItems.length) setDone(true)
         else {
           setQIndex(qIndex + 1)
-          setPicked({})
-          setAnswered(false)
         }
       }, 1100)
     }
@@ -321,6 +352,7 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
             </div>
           )
         })}
+        {answered && !item.blanks.every((blank) => blank.options[picked[blank.index]] === blank.answer) && <div className="score-report miss" role="status"><strong>本题有错误，请继续练习。</strong><button className="btn btn-primary mt8" onClick={() => { submitted.current = false; setAnswered(false); setPicked({}); t0.current = performance.now() }}>再试一次</button><button className="btn btn-ghost mt8" onClick={next}>跳过本题</button></div>}
 
         <p className="muted mt14" style={{ fontSize: 12 }}>第 {qIndex + 1} / {selectedItems.length} 句</p>
       </div>

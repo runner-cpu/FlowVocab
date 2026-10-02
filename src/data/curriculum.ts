@@ -8,6 +8,13 @@ export const TRACK_CURRICULUM: Record<LearningTrack, Curriculum> = {
   cet: { levels: [0, 1, 2, 3, 4], modules: { vocab: true, grammar: true, sentence: true, listening: true, writing: true, reading: true }, content: { listening: ['l1', 'l2', 'l3', 'l4', 'l5', 'l6', 'l7', 'l8'], grammar: ['tense-basic', 'relative-pronoun', 'subject-clause', 'infinitive'], sentence: ['p1', 'p2', 't1', 't2'], writing: ['w-sort-1', 'w-sort-2', 'w-err-1', 'w-err-2', 'w-err-3'], reading: ['ch1', 'ch2'] } },
 }
 export function isModuleAvailable(track: LearningTrack, module: ModuleKey): boolean { return TRACK_CURRICULUM[track].modules[module] }
+
+/** Return the route curriculum first, then any adaptive/review levels needed to
+ * keep the current session responsive without hiding route content. */
+export function vocabLevelsForTrack(track: LearningTrack, adaptiveLevel: DifficultyLevel, reviewLevel?: DifficultyLevel | null): DifficultyLevel[] {
+  return [...new Set([...TRACK_CURRICULUM[track].levels, adaptiveLevel, ...(reviewLevel === undefined || reviewLevel === null ? [] : [reviewLevel])])]
+}
+
 export function itemsForTrack<T extends { id: string }>(track: LearningTrack, module: ModuleKey, items: T[]): T[] {
   const ids = TRACK_CURRICULUM[track].content[module]
   return ids ? items.filter(item => ids.includes(item.id)) : items

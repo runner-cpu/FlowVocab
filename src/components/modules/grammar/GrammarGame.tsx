@@ -8,7 +8,8 @@ import type { SkillNode } from '../../../types'
 import GameHud from '../../game/GameHud'
 
 export default function GrammarGame() {
-  const nodesForTrack = itemsForTrack(useUI((state) => state.track), 'grammar', GRAMMAR_NODES)
+  const track = useUI((state) => state.track)
+  const nodesForTrack = itemsForTrack(track, 'grammar', GRAMMAR_NODES)
   const progress = useProgress((state) => state.progress)
   const answer = useProgress((state) => state.answer)
   const completeGrammarNode = useProgress((state) => state.completeGrammarNode)
@@ -18,8 +19,23 @@ export default function GrammarGame() {
   const [answered, setAnswered] = useState(false)
   const [finished, setFinished] = useState(false)
   const startedAt = useRef(performance.now())
+  const advanceTimer = useRef<number | null>(null)
   const skillTree = progress?.skillTree ?? {}
   useEffect(() => { startedAt.current = performance.now() }, [activeNode?.id, qIndex])
+  useEffect(() => {
+    if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current)
+    advanceTimer.current = null
+    setActiveNode(null)
+    setQIndex(0)
+    setPicked(null)
+    setAnswered(false)
+    setFinished(false)
+    startedAt.current = performance.now()
+    return () => {
+      if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current)
+      advanceTimer.current = null
+    }
+  }, [track])
   const nodeById = useMemo(() => Object.fromEntries(nodesForTrack.map((node) => [node.id, node])), [nodesForTrack])
   const isLocked = (node: SkillNode) => !!node.parent && !skillTree[node.parent]
   const belongsToBranch = (node: SkillNode, rootId: string) => {
@@ -33,7 +49,8 @@ export default function GrammarGame() {
     if (answered || !activeNode) return
     const correct = index === activeNode.quizzes[qIndex].answer
     setPicked(index); setAnswered(true); void answer({ module: 'grammar', correct, timeMs: elapsedSince(startedAt.current, performance.now()) })
-    if (correct) window.setTimeout(() => {
+    if (correct) advanceTimer.current = window.setTimeout(() => {
+      advanceTimer.current = null
       if (qIndex + 1 >= activeNode.quizzes.length) { setFinished(true); void completeGrammarNode(activeNode.id) }
       else { setQIndex((value) => value + 1); setPicked(null); setAnswered(false) }
     }, 1000)

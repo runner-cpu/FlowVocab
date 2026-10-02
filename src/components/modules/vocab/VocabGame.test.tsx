@@ -26,6 +26,26 @@ describe('real vocabulary mission', () => {
     render(<VocabGame loadLevels={async (levels) => { requested.push(levels); return { 0: [], 1: [], 2: [], 3: [], 4: [] } }} />)
     await waitFor(() => expect(requested).toEqual([[0, 4]]))
   })
+  it('selects the requested review word from the loaded route pools', async () => {
+    const reviewWord: Word = { id: 'review-level-4', word: 'advance', meaning: 'advance', phonetic: '', example: 'advance steadily', exampleCn: '', level: 4, pos: 'v.' }
+    useUI.setState({ track: 'primary', reviewWordId: reviewWord.id, reviewWordLevel: reviewWord.level })
+    render(<VocabGame roundSize={1} loadLevels={async (levels) => {
+      expect(levels).toEqual([0, 4])
+      return { 0: [], 1: [], 2: [], 3: [], 4: [reviewWord] }
+    }} />)
+    expect(await screen.findByRole('heading', { name: reviewWord.word })).toBeVisible()
+  })
+  it('reloads and resets the mission when the learning route changes', async () => {
+    const primaryWord: Word = { id: 'primary-word', word: 'primary', meaning: 'primary', phonetic: '', example: '', exampleCn: '', level: 0, pos: 'adj.' }
+    const advancedWord: Word = { id: 'advanced-word', word: 'advanced', meaning: 'advanced', phonetic: '', example: '', exampleCn: '', level: 1, pos: 'adj.' }
+    useUI.setState({ track: 'primary', reviewWordId: null, reviewWordLevel: null })
+    render(<VocabGame roundSize={1} loadLevels={async (levels) => levels.includes(3)
+      ? { 0: [], 1: [advancedWord], 2: [], 3: [], 4: [] }
+      : { 0: [primaryWord], 1: [], 2: [], 3: [], 4: [] }} />)
+    expect(await screen.findByRole('heading', { name: primaryWord.word })).toBeVisible()
+    act(() => { useUI.getState().setTrack('advanced') })
+    expect(await screen.findByRole('heading', { name: advancedWord.word })).toBeVisible()
+  })
   it('accepts a digit exactly once, disables answers, then uses Enter to advance', async () => {
     render(<VocabGame words={words} roundSize={2} random={() => 0.999} />)
     await screen.findByRole('heading', { name: 'explore' })

@@ -55,6 +55,43 @@ describe('local progress backup', () => {
     expect(await db.userWords.count()).toBe(1)
   })
 
+  it.each([
+    ['duplicate user-word id', (value: Awaited<ReturnType<typeof exportProgressBackup>>) => { value.userWords.push({ ...value.userWords[0], wordId: 'another-word' }) }],
+    ['duplicate user-word wordId', (value: Awaited<ReturnType<typeof exportProgressBackup>>) => { value.userWords.push({ ...value.userWords[0], id: 'another-id' }) }],
+    ['invalid daily date', (value: Awaited<ReturnType<typeof exportProgressBackup>>) => { value.dailyStats[0].date = 'not-a-date' }],
+    ['daily module count greater than total', (value: Awaited<ReturnType<typeof exportProgressBackup>>) => { value.dailyStats[0].modules.vocab = -1 }],
+    ['session correct greater than total', (value: Awaited<ReturnType<typeof exportProgressBackup>>) => { value.sessions[0].correct = value.sessions[0].total + 1 }],
+    ['radar value outside range', (value: Awaited<ReturnType<typeof exportProgressBackup>>) => { value.progress.radar.vocab = 101 }],
+    ['negative planet energy', (value: Awaited<ReturnType<typeof exportProgressBackup>>) => { value.planet.energy = -1 }]
+  ])('rejects %s before touching stored tables', async (_label, mutate) => {
+    const invalid = await exportProgressBackup()
+    mutate(invalid)
+    await expect(importProgressBackup(invalid)).rejects.toThrow('Invalid FlowVocab backup')
+    expect(await db.userProfile.get(1)).toEqual(profile)
+    expect(await db.userWords.count()).toBe(1)
+    expect(await db.progress.get(1)).toEqual(progress)
+  })
+
+  it('waits for an in-flight answer before replacing the snapshot', async () => {
+    let release!: () => void
+    const gate = new Promise<void>((resolve) => { release = resolve })
+    const holdProgressWrite = () => gate
+    db.progress.hook('updating', holdProgressWrite)
+    const answerPromise = useProgress.getState().answer({ module: 'vocab', wordId: 'bank-1', correct: true, timeMs: 4000 })
+    await Promise.resolve()
+    const next = await exportProgressBackup()
+    next.profile.totalXp = 99
+    const importPromise = importProgressBackup(next)
+    await Promise.resolve()
+    release()
+    try {
+      await Promise.all([answerPromise, importPromise])
+    } finally {
+      db.progress.hook('updating').unsubscribe(holdProgressWrite)
+    }
+    expect((await db.userProfile.get(1))?.totalXp).toBe(99)
+  })
+
   it('rolls back all user tables when an import write fails', async () => {
     const next = await exportProgressBackup(); next.profile.totalXp = 99
     const fail = () => { throw new Error('disk full') }

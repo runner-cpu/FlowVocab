@@ -17,7 +17,6 @@ const JOURNEY: { module: ModuleKey; title: string; note: string; icon: typeof Bo
   { module: 'listening', title: '完成听力挑战', note: '听见真实语境', icon: Headphones },
   { module: 'sentence', title: '拼好 3 个句子', note: '完成今日输出', icon: PenLine }
 ]
-const MODULE_LABELS: Record<ModuleKey, string> = { vocab: '语境词卡', grammar: '技能树', sentence: '句子拼图', listening: '声音探险', writing: '表达工坊', reading: '剧情副本' }
 const SCENE_ICONS: Record<ModuleKey, typeof BookOpen> = { vocab: BookOpen, grammar: GitBranch, sentence: Puzzle, listening: Headphones, writing: PenLine, reading: BookOpenText }
 const TRACK_ORDER: LearningTrack[] = ['primary', 'middle-high', 'advanced', 'cet']
 

@@ -64,7 +64,7 @@ export default function Dashboard() {
       <div className="grid mt20" style={{ alignItems: 'stretch' }}>
         <div className="card chart-interactive">
           <div className="card-title"><Target size={16} /> 六维能力雷达 <span className="chart-hint">点击维度进入训练</span></div>
-          <RadarChart onModuleSelect={(module) => { setSelected(module); go(module) }} />
+          <RadarChart onModuleSelect={selectModule} />
           <div className="radar-links">{radarEntries.map(([module, value]) => <button key={module} className={selected === module ? 'active' : ''} onClick={() => { setSelected(module); go(module) }}><span style={{ background: MODULE_META[module].color }} />{MODULE_META[module].name.split('·')[0]}<strong>{value}%</strong></button>)}</div>
         </div>
         <div className="card">

@@ -40,6 +40,12 @@ let pendingWrites: Promise<void> = Promise.resolve()
 let writeQueue: (() => Promise<void>)[] = []
 let writesBlocked = false
 let retryInFlight: Promise<void> | null = null
+let initInFlight: Promise<void> | null = null
+let transitionRequested = false
+let writesPaused = false
+let transitionInFlight: Promise<() => void> | null = null
+type DeferredWrite = { operation: () => Promise<void>; resolve: () => void; reject: (error: unknown) => void }
+let deferredWrites: DeferredWrite[] = []
 let durableStorageRequest: Promise<boolean> | null = null
 
 function requestDurableStorage(): Promise<boolean> | null {
@@ -67,10 +73,53 @@ async function drainWrites(): Promise<void> {
 
 function serializeWrite(operation: (submittedAt: number) => Promise<void>): Promise<void> {
   const submittedAt = Date.now()
-  writeQueue.push(() => operation(submittedAt))
+  const queued = () => operation(submittedAt)
+  if (writesPaused || transitionRequested) {
+    return new Promise<void>((resolve, reject) => {
+      deferredWrites.push({ operation: queued, resolve, reject })
+    })
+  }
+  writeQueue.push(queued)
   pendingWrites = pendingWrites.then(drainWrites)
   // While blocked this acknowledges enqueueing, not persistence; saveError stays visible.
   return pendingWrites
+}
+
+function resumeDeferredWrites(): void {
+  const queued = deferredWrites.splice(0)
+  writesPaused = false
+  transitionRequested = false
+  transitionInFlight = null
+  for (const item of queued) {
+    const persisted = serializeWrite(() => item.operation())
+    persisted.then(item.resolve, item.reject)
+  }
+}
+
+/** Pause user writes while a backup/reset replaces the IndexedDB snapshot. */
+export function pausePersistenceWrites(): Promise<() => void> {
+  if (transitionInFlight) return transitionInFlight
+  transitionRequested = true
+  const operation = (async () => {
+    await pendingWrites
+    if (writesBlocked || writeQueue.length > 0) {
+      await useProgress.getState().retrySave()
+      await pendingWrites
+    }
+    if (writesBlocked || writeQueue.length > 0) throw new Error('Unable to drain pending FlowVocab writes')
+    writesPaused = true
+    let released = false
+    return () => {
+      if (released) return
+      released = true
+      resumeDeferredWrites()
+    }
+  })()
+  transitionInFlight = operation.catch((error) => {
+    resumeDeferredWrites()
+    throw error
+  })
+  return transitionInFlight
 }
 
 export function emptyDaily(date: string): DailyStat {
@@ -174,6 +223,8 @@ export const useProgress = create<ProgressStore>((set, get) => ({
   },
 
   init: async (preserveEmptyTables = false) => {
+    if (initInFlight) return initInFlight
+    const operation = (async () => {
     set({ ready: false, initError: null })
     try {
     const now = Date.now()
@@ -205,8 +256,10 @@ export const useProgress = create<ProgressStore>((set, get) => ({
       await db.progress.put(progress)
     }
     rollingTimes = []
-    writeQueue = []
-    writesBlocked = false
+    if (!writesPaused && !transitionRequested) {
+      writeQueue = []
+      writesBlocked = false
+    }
 
     const durableStorage = await requestDurableStorage()
     set({ ready: true, profile, planet, progress, daily: daily ?? null, userWords, saveError: null, initError: null, durableStorage: durableStorage ?? get().durableStorage })
@@ -214,6 +267,13 @@ export const useProgress = create<ProgressStore>((set, get) => ({
     SoundBank.setMuted(profile.settings.zenMode)
     } catch {
       set({ ready: false, initError: '无法读取本地学习数据' })
+    }
+    })()
+    initInFlight = operation
+    try {
+      await operation
+    } finally {
+      if (initInFlight === operation) initInFlight = null
     }
   },
   retryInit: async () => get().init(),

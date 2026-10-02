@@ -1,6 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createElement } from 'react'
-import { cleanup, fireEvent, render, screen } from '@testing-library/react'
+import { act, cleanup, fireEvent, render, screen } from '@testing-library/react'
 import { useProgress } from '../../store/progressStore'
 import { useUI } from '../../store/gameStore'
 import GrammarGame from './grammar/GrammarGame'
@@ -12,6 +12,7 @@ import { GRAMMAR_NODES } from '../../data/grammar'
 import { LISTENING_ITEMS } from '../../data/listening'
 import { WRITING_TASKS } from '../../data/writing'
 import { CHAPTERS } from '../../data/reading'
+import { SENTENCE_QUESTS } from '../../data/sentences'
 import { placeSentenceSegment } from './sentence/SentenceGame'
 import { moveWritingSegment } from './writing/WritingGame'
 
@@ -92,12 +93,77 @@ describe('single-step undo', () => {
   })
 })
 
+describe('learning-route state isolation', () => {
+  beforeEach(() => {
+    useProgress.setState({ answer: vi.fn().mockResolvedValue(undefined), passSentence: vi.fn().mockResolvedValue(undefined), passListening: vi.fn().mockResolvedValue(undefined), submitWriting: vi.fn().mockResolvedValue(undefined), completeReading: vi.fn().mockResolvedValue(undefined), completeGrammarNode: vi.fn().mockResolvedValue(undefined), progress: { id: 1, radar: { vocab: 0, grammar: 0, sentence: 0, listening: 0, writing: 0, reading: 0 }, skillTree: {}, cards: [], narrative: {}, writingLog: [], sentencePassed: 0, listeningPassed: 0, writingDone: 0, writingScoreSum: 0, readingDone: 0 } })
+  })
+  afterEach(() => cleanup())
+
+  it('leaves an active grammar lesson when the route changes', () => {
+    useUI.setState({ track: 'middle-high' })
+    const node = GRAMMAR_NODES.find((candidate) => candidate.id === 'relative-pronoun')!
+    render(createElement(GrammarGame))
+    fireEvent.click(screen.getByRole('button', { name: node.name }))
+    expect(screen.getByText(node.desc)).toBeVisible()
+    act(() => { useUI.getState().setTrack('primary') })
+    expect(screen.queryByText(node.desc)).toBeNull()
+    expect(screen.getByRole('button', { name: GRAMMAR_NODES.find((candidate) => candidate.id === 'tense-basic')!.name })).toBeVisible()
+  })
+
+  it('clears placed sentence fragments when the route changes', () => {
+    useUI.setState({ track: 'middle-high' })
+    render(createElement(SentenceGame))
+    const fragment = SENTENCE_QUESTS.find((quest) => quest.id === 'p1')!.segments![0].text
+    const button = screen.getByRole('button', { name: fragment })
+    fireEvent.click(button)
+    fireEvent.click(screen.getByRole('button', { name: /放入主干/ }))
+    expect(button).toBeDisabled()
+    act(() => { useUI.getState().setTrack('advanced') })
+    const advanced = SENTENCE_QUESTS.find((quest) => quest.id === 't1')!
+    expect(screen.getByText(advanced.sentence)).toBeVisible()
+    expect(screen.queryByRole('button', { name: fragment })).toBeNull()
+  })
+
+  it('returns writing practice to the first task when the route changes', () => {
+    useUI.setState({ track: 'middle-high' })
+    render(createElement(WritingGame))
+    const middleTask = WRITING_TASKS.find((task) => task.id === 'w-sort-2')!
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(middleTask.title) }))
+    expect(screen.getByText(middleTask.prompt)).toBeVisible()
+    act(() => { useUI.getState().setTrack('advanced') })
+    const advancedTask = WRITING_TASKS.find((task) => task.id === 'w-sort-3')!
+    expect(screen.getByText(advancedTask.prompt)).toBeVisible()
+  })
+
+  it('exits an active reading chapter when the route changes', () => {
+    useUI.setState({ track: 'middle-high' })
+    render(createElement(ReadingGame))
+    const secondChapter = CHAPTERS.find((candidate) => candidate.id === 'ch2')!
+    fireEvent.click(screen.getByRole('button', { name: new RegExp(secondChapter.title) }))
+    expect(screen.getByText(secondChapter.nodes[secondChapter.start].text)).toBeVisible()
+    act(() => { useUI.getState().setTrack('primary') })
+    const primaryChapter = CHAPTERS.find((candidate) => candidate.id === 'ch1')!
+    expect(screen.getByRole('button', { name: new RegExp(primaryChapter.title) })).toBeVisible()
+    expect(screen.queryByText(secondChapter.nodes[secondChapter.start].text)).toBeNull()
+  })
+
+  it('reloads the listening pool when the route changes', () => {
+    useUI.setState({ track: 'primary' })
+    render(createElement(ListeningGame))
+    expect(screen.getByRole('button', { name: 'opens' })).toBeVisible()
+    act(() => { useUI.getState().setTrack('advanced') })
+    expect(screen.getByRole('button', { name: 'report' })).toBeVisible()
+    expect(screen.queryByRole('button', { name: 'opens' })).toBeNull()
+  })
+})
+
 describe('module submission timing', () => {
   let answer: ReturnType<typeof vi.fn>
   let now = 100
   beforeEach(() => {
     now = 100
     answer = vi.fn().mockResolvedValue(undefined)
+    useUI.setState({ track: 'middle-high' })
     vi.spyOn(performance, 'now').mockImplementation(() => now)
     useProgress.setState({ answer, passSentence: vi.fn(), passListening: vi.fn(), submitWriting: vi.fn(), completeReading: vi.fn(), completeGrammarNode: vi.fn(), progress: { id: 1, radar: { vocab: 0, grammar: 0, sentence: 0, listening: 0, writing: 0, reading: 0 }, skillTree: {}, cards: [], narrative: {}, writingLog: [], sentencePassed: 0, listeningPassed: 0, writingDone: 0, writingScoreSum: 0, readingDone: 0 } })
   })
@@ -123,7 +189,35 @@ describe('module submission timing', () => {
     expect(passListening).not.toHaveBeenCalled()
     fireEvent.click(screen.getByRole('button', { name: 'delta.' }))
     expect(passListening).toHaveBeenCalledOnce()
-    expect(answer.mock.calls.map(([call]) => call.correct)).toEqual([true, true])
+    expect(answer).toHaveBeenCalledOnce()
+    expect(answer.mock.calls[0][0]).toMatchObject({ module: 'listening', correct: true })
+  })
+  it('ignores duplicate speech-recognition result callbacks for one sentence', () => {
+    const original = Object.getOwnPropertyDescriptor(window, 'SpeechRecognition')
+    class DuplicateRecognition {
+      lang = ''
+      interimResults = false
+      continuous = false
+      onresult: ((event: { results: { 0: { 0: { transcript: string } } } }) => void) | null = null
+      onend: (() => void) | null = null
+      onerror: (() => void) | null = null
+      start() {
+        const event = { results: { 0: { 0: { transcript: 'Students practice speaking English every day' } } } }
+        this.onresult?.(event)
+        this.onresult?.(event)
+        this.onend?.()
+      }
+      stop() {}
+    }
+    Object.defineProperty(window, 'SpeechRecognition', { configurable: true, value: DuplicateRecognition })
+    try {
+      render(createElement(ListeningGame, { items: [{ id: 'speech-once', level: 0, text: 'Students practice speaking English every day', blanks: [] }] }))
+      fireEvent.click(screen.getByRole('button', { name: /开始/ }))
+      expect(answer).toHaveBeenCalledOnce()
+    } finally {
+      if (original) Object.defineProperty(window, 'SpeechRecognition', original)
+      else delete (window as unknown as { SpeechRecognition?: unknown }).SpeechRecognition
+    }
   })
   it('sends one incorrect sentence result after a wrong bucket then completion', () => {
     render(createElement(SentenceGame)); const first = screen.getByRole('button', { name: 'Students' }); fireEvent.click(first)

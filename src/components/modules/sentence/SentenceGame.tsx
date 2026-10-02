@@ -18,7 +18,8 @@ export function placeSentenceSegment(segments: { bucket: Bucket }[], placed: Rec
 const bucketNames: Record<Bucket, string> = { main: '主干', clause: '从句', modifier: '修饰成分' }
 
 export default function SentenceGame() {
-  const quests = itemsForTrack(useUI((state) => state.track), 'sentence', SENTENCE_QUESTS)
+  const track = useUI((state) => state.track)
+  const quests = useMemo(() => itemsForTrack(track, 'sentence', SENTENCE_QUESTS), [track])
   const answer = useProgress((state) => state.answer)
   const passSentence = useProgress((state) => state.passSentence)
   const [qIndex, setQIndex] = useState(0)
@@ -33,11 +34,37 @@ export default function SentenceGame() {
   const [done, setDone] = useState(false)
   const startedAt = useRef(performance.now())
   const puzzleMistake = useRef(false)
-  const quest: SentenceQuest = quests[qIndex]
+  const quest = quests[qIndex]
+  const advanceTimer = useRef<number | null>(null)
+  const flashTimer = useRef<number | null>(null)
   useEffect(() => { startedAt.current = performance.now(); puzzleMistake.current = false }, [qIndex])
+  useEffect(() => {
+    if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current)
+    if (flashTimer.current !== null) window.clearTimeout(flashTimer.current)
+    advanceTimer.current = null
+    flashTimer.current = null
+    setQIndex(0)
+    setPlaced({})
+    setPreviousPlaced(null)
+    setPicked(null)
+    setDragged(null)
+    setFlashWrong(null)
+    setAnnouncement('')
+    setAnswerPicked(null)
+    setAnswered(false)
+    setDone(false)
+    startedAt.current = performance.now()
+    puzzleMistake.current = false
+    return () => {
+      if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current)
+      if (flashTimer.current !== null) window.clearTimeout(flashTimer.current)
+      advanceTimer.current = null
+      flashTimer.current = null
+    }
+  }, [track])
 
   const segments = useMemo(() => {
-    if (quest.type !== 'puzzle' || !quest.segments) return []
+    if (!quest || quest.type !== 'puzzle' || !quest.segments) return []
     const result = quest.segments.map((segment, index) => ({ ...segment, idx: index }))
     for (let i = result.length - 1; i > 0; i -= 1) {
       const j = Math.floor(Math.random() * (i + 1))
@@ -52,30 +79,34 @@ export default function SentenceGame() {
     else { setQIndex((index) => index + 1); resetPuzzle(''); setAnswerPicked(null); setAnswered(false) }
   }
   function placeSeg(index: number, bucket: Bucket) {
-    if (!quest.segments) return
+    if (!quest?.segments) return
     const result = placeSentenceSegment(quest.segments, placed, index, bucket)
     setPicked(null); setDragged(null)
     if (!result.correct) {
       setFlashWrong(index); setAnnouncement(`位置不对，${quest.segments[index].text} 仍在待选区`)
       puzzleMistake.current = true
-      window.setTimeout(() => setFlashWrong(null), 500); return
+      flashTimer.current = window.setTimeout(() => { flashTimer.current = null; setFlashWrong(null) }, 500); return
     }
     setPreviousPlaced(placed); setPlaced(result.placed); setAnnouncement(`${quest.segments[index].text} 已放入${bucketNames[bucket]}`)
-    if (result.complete) { void answer({ module: 'sentence', correct: !puzzleMistake.current, timeMs: elapsedSince(startedAt.current, performance.now()) }); void passSentence(); window.setTimeout(nextQuestion, 900) }
+    if (result.complete) { void answer({ module: 'sentence', correct: !puzzleMistake.current, timeMs: elapsedSince(startedAt.current, performance.now()) }); void passSentence(); advanceTimer.current = window.setTimeout(() => { advanceTimer.current = null; nextQuestion() }, 900) }
   }
   function onTranslate(index: number) {
-    if (answered) return
+    if (!quest || answered) return
     const correct = index === quest.answer
     setAnswerPicked(index); setAnswered(true)
     void answer({ module: 'sentence', correct, timeMs: elapsedSince(startedAt.current, performance.now()) })
-    window.setTimeout(() => { if (correct) { void passSentence(); nextQuestion() } else { setAnswered(false); setAnswerPicked(null) } }, correct ? 1300 : 1000)
+    advanceTimer.current = window.setTimeout(() => {
+      advanceTimer.current = null
+      if (correct) { void passSentence(); nextQuestion() } else { setAnswered(false); setAnswerPicked(null) }
+    }, correct ? 1300 : 1000)
   }
-  const bucketCorrect = (bucket: Bucket) => quest.type === 'puzzle' && quest.segments!.filter((segment) => segment.bucket === bucket).every((segment) => placed[quest.segments!.findIndex((candidate) => candidate === segment)] === bucket)
+  const bucketCorrect = (bucket: Bucket) => quest?.type === 'puzzle' && quest.segments!.filter((segment) => segment.bucket === bucket).every((segment) => placed[quest.segments!.findIndex((candidate) => candidate === segment)] === bucket)
+  if (!quest && !done) return <div className="quiz-panel"><div className="card center"><h2>当前路线暂无句子练习</h2><p className="muted">请切换学习路线后重试。</p></div></div>
 
   if (done) return <div className="quiz-panel"><div className="card center"><div style={{ fontSize: 44 }}>🧩</div><h2 className="mt8">拆解工坊全部完成！</h2><p className="muted mt8">长难句拆解与翻译对决已经全部通关。</p><button className="btn btn-primary mt14" onClick={() => { setQIndex(0); setDone(false); resetPuzzle('') }}>再来一轮</button></div></div>
 
   return <div className="quiz-panel"><GameHud module="sentence" /><div className="card">
-    <div className="card-title">{quest.type === 'puzzle' ? '🧩 长难句拼图' : '🔧 翻译对决'}<span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--muted)' }}>{qIndex + 1} / {SENTENCE_QUESTS.length}</span></div>
+    <div className="card-title">{quest.type === 'puzzle' ? '🧩 长难句拼图' : '🔧 翻译对决'}<span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--muted)' }}>{qIndex + 1} / {quests.length}</span></div>
     <div className="story-box" style={{ fontSize: 14.5 }}>{quest.sentence}</div>
     {quest.type === 'puzzle' && quest.segments && <>
       <div className="chips segment-pool">{segments.map((segment) => <button type="button" key={segment.idx} draggable={placed[segment.idx] === undefined} disabled={placed[segment.idx] !== undefined} aria-pressed={picked === segment.idx} onDragStart={() => setDragged(segment.idx)} onDragEnd={() => setDragged(null)} onClick={() => setPicked(picked === segment.idx ? null : segment.idx)} className={`chip segment-chip ${picked === segment.idx ? 'picked' : ''} ${placed[segment.idx] !== undefined ? 'placed' : ''} ${flashWrong === segment.idx ? 'wrong-flash' : ''}`}>{segment.text}</button>)}</div>

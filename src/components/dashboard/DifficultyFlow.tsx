@@ -1,7 +1,18 @@
 import { useEffect, useRef } from 'react'
 import echarts from '../../charts/echarts'
 import { db } from '../../store/db'
-import { DIFFICULTY_COLORS, DIFFICULTY_NAMES } from '../../engine/difficulty'
+import { DIFFICULTY_NAMES } from '../../engine/difficulty'
+
+type AxisTooltipParam = { dataIndex?: unknown; value?: unknown }
+
+function formatTooltip(params: unknown): string {
+  const first = Array.isArray(params) ? params[0] : params
+  if (typeof first !== 'object' || first === null) return ''
+  const candidate = first as AxisTooltipParam
+  const dataIndex = typeof candidate.dataIndex === 'number' ? candidate.dataIndex : 0
+  const value = typeof candidate.value === 'number' ? candidate.value : 0
+  return `第 ${dataIndex + 1} 题 · ${DIFFICULTY_NAMES[value] ?? DIFFICULTY_NAMES[0]}`
+}
 
 export default function DifficultyFlow() {
   const ref = useRef<HTMLDivElement>(null)
@@ -9,25 +20,26 @@ export default function DifficultyFlow() {
   useEffect(() => {
     let chart: echarts.ECharts | null = null
     let disposed = false
+    const onResize = () => chart?.resize()
     db.sessions.orderBy('time').reverse().limit(10).toArray().then((sessions) => {
       if (disposed || !ref.current) return
       const sessionsRev = [...sessions].reverse()
       const all: number[] = []
-      sessionsRev.forEach((s) => all.push(...s.difficultyFlow))
+      sessionsRev.forEach((session) => all.push(...session.difficultyFlow))
       if (all.length === 0) {
-        ref.current!.innerHTML = '<div style="padding:30px;text-align:center;color:#6B7280;font-size:13px;">还没有难度数据，去任意模块刷一轮吧！</div>'
+        ref.current.innerHTML = '<div style="padding:30px;text-align:center;color:#6B7280;font-size:13px;">还没有难度数据，去任意模块刷一轮吧！</div>'
         return
       }
       const flow = all.slice(-60)
-      chart = echarts.init(ref.current!)
+      chart = echarts.init(ref.current)
       chart.setOption({
         backgroundColor: 'transparent',
-        tooltip: { trigger: 'axis', formatter: (p: any) => `第 ${p[0].dataIndex + 1} 题 · ${DIFFICULTY_NAMES[p[0].value]}` },
+        tooltip: { trigger: 'axis', formatter: formatTooltip },
         grid: { left: 40, right: 16, top: 16, bottom: 24 },
-        xAxis: { type: 'category', data: flow.map((_, i) => i + 1), axisLabel: { color: '#6B7280', fontSize: 10 }, axisLine: { lineStyle: { color: 'rgba(0,0,0,0.1)' } } },
+        xAxis: { type: 'category', data: flow.map((_, index) => index + 1), axisLabel: { color: '#6B7280', fontSize: 10 }, axisLine: { lineStyle: { color: 'rgba(0,0,0,0.1)' } } },
         yAxis: {
           type: 'value', min: 0, max: 4, interval: 1,
-          axisLabel: { color: '#6B7280', fontSize: 10, formatter: (v: number) => DIFFICULTY_NAMES[v] },
+          axisLabel: { color: '#6B7280', fontSize: 10, formatter: (value: number) => DIFFICULTY_NAMES[value] ?? DIFFICULTY_NAMES[0] },
           splitLine: { lineStyle: { color: 'rgba(0,0,0,0.06)' } }
         },
         series: [{
@@ -44,11 +56,11 @@ export default function DifficultyFlow() {
         }],
         visualMap: { show: false, dimension: 1, pieces: [{ min: 0, max: 4 }] }
       })
-      const onResize = () => chart?.resize()
       window.addEventListener('resize', onResize)
     })
     return () => {
       disposed = true
+      window.removeEventListener('resize', onResize)
       chart?.dispose()
     }
   }, [])

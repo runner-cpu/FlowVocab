@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Volume2 } from 'lucide-react'
 import { useProgress } from '../../../store/progressStore'
 import { ensureWordLevels, getWordPool, wordBankFallbackMessage } from '../../../store/wordBank'
-import { TRACK_CURRICULUM } from '../../../data/curriculum'
+import { vocabLevelsForTrack } from '../../../data/curriculum'
 import { createVocabQuestion, hasPronunciation, isVocabAnswerCorrect, speakWord, vocabModeAt } from '../../../engine/vocabRound'
 import { levelFromXp } from '../../../engine/progression'
 import { elapsedSince } from '../../../engine/sessionTiming'
@@ -25,6 +25,9 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
   const combo = useProgress(s => s.combo)
   const profile = useProgress(s => s.profile)
   const saveError = useProgress(s => s.saveError)
+  const track = useUI(s => s.track)
+  const reviewWordId = useUI(s => s.reviewWordId)
+  const reviewWordLevel = useUI(s => s.reviewWordLevel)
   const target = Math.max(1, Math.floor(roundSize))
   const [question, setQuestion] = useState<VocabQuestion | null>(null)
   const [index, setIndex] = useState(0)
@@ -39,6 +42,7 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
   const [fallback, setFallback] = useState('')
   const [speechMessage, setSpeechMessage] = useState('')
   const [empty, setEmpty] = useState(false)
+  const loadedPools = useRef<Awaited<ReturnType<typeof ensureWordLevels>> | null>(null)
   const heading = useRef<HTMLHeadingElement>(null)
   const continueButton = useRef<HTMLButtonElement>(null)
   const spellingInput = useRef<HTMLInputElement>(null)
@@ -54,15 +58,13 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
 
   function loadQuestion(nextIndex: number) {
     const state = useProgress.getState()
-    const trackLevels = TRACK_CURRICULUM[useUI.getState().track].levels
-    const allowedLevels = trackLevels.includes(state.difficulty.level) ? trackLevels : [...trackLevels, state.difficulty.level]
-    const levelPool = words ?? getWordPool(state.difficulty.level)
-    const pool = levelPool.length ? levelPool : allowedLevels.flatMap(getWordPool)
+    const allowedLevels = vocabLevelsForTrack(track, state.difficulty.level, reviewWordLevel)
+    const pool = words ?? allowedLevels.flatMap((level) => loadedPools.current?.[level] ?? getWordPool(level))
     if (!pool.length) { setEmpty(true); return }
     const reservedWordIds = new Set(requeueAt.current.values())
     const available = pool.filter(word => !reservedWordIds.has(word.id))
     const fresh = available.filter(word => !used.current.has(word.id))
-    const requestedWordId = nextIndex === 0 ? useUI.getState().reviewWordId : null
+    const requestedWordId = nextIndex === 0 ? reviewWordId : null
     const candidates = orderReviewCandidates(fresh.length ? fresh : available, state.userWords, Date.now(), randomSource.current, requestedWordId)
     const consumed = consumeRetry(requeueAt.current, nextIndex)
     const requeuedWord = consumed.wordId
@@ -83,20 +85,38 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
 
   useEffect(() => {
     let active = true
+    const currentProfile = useProgress.getState().profile
+    setQuestion(null)
+    setIndex(0)
+    setPicked(null)
+    setSpelling('')
+    setPersisted(false)
+    setGuide('idle')
+    setResult(null)
+    setStats({ total: 0, correct: 0, maxCombo: 0 })
+    setEmpty(false)
+    setSpeechMessage('')
+    setBank({ phase: 'download', loaded: 0, total: 0 })
+    used.current.clear()
+    requeued.current.clear()
+    requeueAt.current.clear()
+    pending.current = null
+    loadedPools.current = null
+    baseline.current = { xp: currentProfile?.totalXp ?? 0, achievements: currentProfile?.unlockedAchievements ?? [], claims: currentProfile?.claimedQuestDates ?? [] }
     const adaptiveLevel = useProgress.getState().difficulty.level
-    const reviewId = useUI.getState().reviewWordId
-    const reviewLevel = useUI.getState().reviewWordLevel ?? (reviewId ? ([0, 1, 2, 3, 4] as const).flatMap(getWordPool).find(word => word.id === reviewId || word.word === reviewId)?.level : undefined)
-    const levels = [...new Set([...TRACK_CURRICULUM[useUI.getState().track].levels, adaptiveLevel, ...(reviewLevel === undefined ? [] : [reviewLevel])])]
-    const ready = words ? Promise.resolve() : loadLevels(levels, progress => { if (active) setBank(progress) })
-    ready.then(() => {
+    const reviewLevel = reviewWordLevel ?? (reviewWordId ? ([0, 1, 2, 3, 4] as const).flatMap(getWordPool).find(word => word.id === reviewWordId || word.word === reviewWordId)?.level : undefined)
+    const levels = vocabLevelsForTrack(track, adaptiveLevel, reviewLevel)
+    const ready = words ? Promise.resolve(null) : loadLevels(levels, progress => { if (active) setBank(progress) })
+    ready.then((loaded) => {
       if (!active) return
+      loadedPools.current = loaded
       setFallback(words ? '' : wordBankFallbackMessage())
       loadQuestion(0)
     })
     return () => { active = false; if (hasPronunciation()) window.speechSynthesis.cancel() }
     // The mission owns its initial pool; later questions read the latest difficulty.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [words])
+  }, [words, track])
 
   useEffect(() => {
     locked.current = false

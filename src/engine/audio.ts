@@ -6,12 +6,15 @@ let muted = false
 function ac(): AudioContext | null {
   try {
     if (!ctx) {
-      const AC = window.AudioContext || (window as any).webkitAudioContext
+      type AudioContextConstructor = new (contextOptions?: AudioContextOptions) => AudioContext
+      const audioWindow = window as unknown as { AudioContext?: AudioContextConstructor; webkitAudioContext?: AudioContextConstructor }
+      const AC = audioWindow.AudioContext || audioWindow.webkitAudioContext
       if (!AC) return null
       ctx = new AC()
     }
-    if (ctx.state === 'suspended') ctx.resume()
-    return ctx
+    const current = ctx
+    if (current.state === 'suspended') current.resume()
+    return current
   } catch {
     return null
   }
