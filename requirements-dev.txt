@@ -1,3 +1,5 @@
 # Python dependencies used only by scripts/*_test.py validation.
 # Keep the pin exact so local, CI and Pages pipelines generate identical assets.
-Pillow==12.3.0
+# Pillow is the official PyPI project (capital P); the lowercase name below is
+# byte-identical after PEP 503 normalization and keeps the file plain ASCII lowercase.
+pillow==12.3.0
