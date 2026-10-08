@@ -5,6 +5,7 @@ import {
   GridComponent,
   VisualMapComponent,
   RadarComponent,
+  MarkPointComponent,
 } from 'echarts/components'
 import { CanvasRenderer } from 'echarts/renderers'
 
@@ -17,6 +18,7 @@ echarts.use([
   GridComponent,
   VisualMapComponent,
   RadarComponent,
+  MarkPointComponent,
 ])
 
 export default echarts

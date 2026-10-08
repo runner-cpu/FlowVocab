@@ -42,7 +42,7 @@ export default function App() {
 
   return (
     <div className="app">
-      <a className="skip-link" href="#main-content">跳到主要内容</a>
+      <a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); document.getElementById('main-content')?.focus() }}>跳到主要内容</a>
       <TopBar />
       <main className="main" id="main-content" tabIndex={-1}>
         <SaveStatus />

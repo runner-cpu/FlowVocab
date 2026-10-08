@@ -60,6 +60,11 @@ function normalizeProgress(value: unknown): Progress {
   const radar = object(value.radar) ? value.radar : null
   if (!radar || !modules.every((key) => nonNegative(radar[key]) && radar[key] <= 100) || !object(value.skillTree) || !Array.isArray(value.cards) || !object(value.narrative) || !Array.isArray(value.writingLog) || !['sentencePassed', 'listeningPassed', 'writingDone', 'writingScoreSum', 'readingDone'].every((key) => count(value[key]))) fail('progress')
   if (!Object.values(value.skillTree).every((item) => typeof item === 'boolean') || !Object.values(value.narrative).every((item) => typeof item === 'string') || !value.cards.every((x) => typeof x === 'string') || !value.writingLog.every((x) => object(x) && typeof x.taskId === 'string' && nonNegative(x.score) && x.score <= 5 && nonNegative(x.time))) fail('progress fields')
+  for (const key of ['legacySentenceFloor', 'legacyListeningFloor'] as const) if (value[key] !== undefined && !count(value[key])) fail(key)
+  for (const key of ['completedSentenceIds', 'completedListeningIds'] as const) {
+    const ids = value[key]
+    if (ids !== undefined && (!Array.isArray(ids) || !ids.every(id => typeof id === 'string' && id.length > 0) || new Set(ids).size !== ids.length)) fail(key)
+  }
   return value as unknown as Progress
 }
 function normalizePlanet(value: unknown): Planet {
@@ -79,8 +84,13 @@ function validate(value: unknown): FlowVocabBackupV1 {
 }
 
 export async function exportProgressBackup(): Promise<FlowVocabBackupV1> {
-  const [profile, userWords, dailyStats, sessions, progress, planet] = await Promise.all([db.userProfile.get(1), db.userWords.toArray(), db.dailyStats.toArray(), db.sessions.toArray(), db.progress.get(1), db.planet.get(1)])
-  return validate({ format: 'flowvocab-backup', version: 1, exportedAt: new Date().toISOString(), profile, userWords, dailyStats, sessions, progress, planet })
+  const release = await pausePersistenceWrites()
+  try {
+    return await db.transaction('r', [db.userProfile, db.userWords, db.dailyStats, db.sessions, db.progress, db.planet], async () => {
+      const [profile, userWords, dailyStats, sessions, progress, planet] = await Promise.all([db.userProfile.get(1), db.userWords.toArray(), db.dailyStats.toArray(), db.sessions.toArray(), db.progress.get(1), db.planet.get(1)])
+      return validate({ format: 'flowvocab-backup', version: 1, exportedAt: new Date().toISOString(), profile, userWords, dailyStats, sessions, progress, planet })
+    })
+  } finally { release() }
 }
 
 export async function importProgressBackup(value: unknown): Promise<void> {

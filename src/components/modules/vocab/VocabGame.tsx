@@ -42,6 +42,8 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
   const [fallback, setFallback] = useState('')
   const [speechMessage, setSpeechMessage] = useState('')
   const [empty, setEmpty] = useState(false)
+  const [loadAttempt, setLoadAttempt] = useState(0)
+  const [loadError, setLoadError] = useState('')
   const loadedPools = useRef<Awaited<ReturnType<typeof ensureWordLevels>> | null>(null)
   const heading = useRef<HTMLHeadingElement>(null)
   const continueButton = useRef<HTMLButtonElement>(null)
@@ -65,7 +67,7 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
     const available = pool.filter(word => !reservedWordIds.has(word.id))
     const fresh = available.filter(word => !used.current.has(word.id))
     const requestedWordId = nextIndex === 0 ? reviewWordId : null
-    const candidates = orderReviewCandidates(fresh.length ? fresh : available, state.userWords, Date.now(), randomSource.current, requestedWordId)
+    const candidates = orderReviewCandidates(fresh.length ? fresh : available.length ? available : pool, state.userWords, Date.now(), randomSource.current, requestedWordId)
     const consumed = consumeRetry(requeueAt.current, nextIndex)
     const requeuedWord = consumed.wordId
     const word = requeuedWord ? pool.find((candidate) => candidate.id === requeuedWord) ?? candidates[0] : candidates[0]
@@ -95,6 +97,7 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
     setResult(null)
     setStats({ total: 0, correct: 0, maxCombo: 0 })
     setEmpty(false)
+    setLoadError('')
     setSpeechMessage('')
     setBank({ phase: 'download', loaded: 0, total: 0 })
     used.current.clear()
@@ -112,11 +115,13 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
       loadedPools.current = loaded
       setFallback(words ? '' : wordBankFallbackMessage())
       loadQuestion(0)
+    }).catch(() => {
+      if (active) { setEmpty(true); setLoadError('词库暂时无法加载，请检查网络后重试。已保存的学习记录不会丢失。') }
     })
     return () => { active = false; if (hasPronunciation()) window.speechSynthesis.cancel() }
     // The mission owns its initial pool; later questions read the latest difficulty.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [words, track])
+  }, [words, track, loadAttempt])
 
   useEffect(() => {
     locked.current = false
@@ -192,6 +197,8 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
     const current = useProgress.getState().profile
     baseline.current = { xp: current?.totalXp ?? 0, achievements: current?.unlockedAchievements ?? [], claims: current?.claimedQuestDates ?? [] }
     used.current.clear()
+    requeued.current.clear()
+    requeueAt.current.clear()
     setStats({ total: 0, correct: 0, maxCombo: 0 })
     setResult(null)
     loadQuestion(0)
@@ -215,7 +222,8 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
     {saveError && <div className="bank-fallback" role="alert"><p>{saveError}</p><button className="btn btn-ghost" onClick={() => void useProgress.getState().retrySave()}>重试保存</button></div>}
     {result ? <RoundSummary result={result} onRestart={() => void restart()} busy={restarting || !!saveError} /> : !question ? <div className="card bank-progress" role="status">
       <h2>{empty ? '暂时没有可用词汇' : '正在准备词汇航程'}</h2>
-      {!empty && <><p>{bank.phase === 'import' ? '正在保存离线词库' : '正在下载词库'} · {bank.total ? percent + '%' : '等待文件信息'}</p><progress aria-label="词库准备进度" max={100} value={percent} /><p>已导入 {bank.phase === 'import' || bank.phase === 'ready' ? bank.loaded.toLocaleString() : 0} 个词</p><p className="muted">{bank.total ? '首次导入完成后即可离线学习。' : '下载大小未知，完成后将显示分批导入进度。网络不可用时会自动启用内置词库。'}</p></>}
+      {empty && <><p role="alert">{loadError || fallback || '当前路线的词库未缓存，请联网后重试。'}</p><button className="btn btn-primary mt14" onClick={() => setLoadAttempt(attempt => attempt + 1)}>重试加载词库</button></>}
+      {!empty && <><p>{bank.phase === 'import' ? '正在保存离线词库' : '正在下载词库'} · {bank.total ? percent + '%' : '等待文件信息'}</p><progress aria-label="词库准备进度" max={100} value={percent} /><p>已导入 {bank.phase === 'import' || bank.phase === 'ready' ? bank.loaded.toLocaleString() : 0} 个词</p><p className="muted">{bank.total ? '首次导入完成后即可离线学习。' : '下载大小未知，完成后将显示分批导入进度。网络不可用时仅能使用已缓存的 ECDICT 词库。'}</p></>}
     </div> : <>
       {fallback && <p className="bank-fallback" role="status">{fallback}</p>}
       <ol className="mission-route" aria-label={target + ' 站航线'}>{Array.from({ length: target }, (_, stop) => <li key={stop} className={(stop < index || (stop === index && persisted) ? 'reached ' : '') + ((stop + 1) % 10 === 0 ? 'boss-stop' : '')} aria-label={'第 ' + (stop + 1) + ' 站' + ((stop + 1) % 10 === 0 ? '，首领关' : '')} aria-current={stop === index ? 'step' : undefined}>{(stop + 1) % 10 === 0 && <span>{stop + 1}</span>}</li>)}</ol>

@@ -227,6 +227,11 @@ export interface Progress {
   // 模块完成度计数
   sentencePassed: number
   listeningPassed: number
+  completedSentenceIds?: string[]
+  completedListeningIds?: string[]
+  /** Counts imported before per-content IDs existed; retained as a non-increasing floor. */
+  legacySentenceFloor?: number
+  legacyListeningFloor?: number
   writingDone: number
   writingScoreSum: number
   readingDone: number

@@ -1,0 +1,3 @@
+# Python dependencies used only by scripts/*_test.py validation.
+# Keep the pin exact so local, CI and Pages pipelines generate identical assets.
+Pillow==12.3.0

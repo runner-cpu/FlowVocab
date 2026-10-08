@@ -88,7 +88,7 @@ export default function SentenceGame() {
       flashTimer.current = window.setTimeout(() => { flashTimer.current = null; setFlashWrong(null) }, 500); return
     }
     setPreviousPlaced(placed); setPlaced(result.placed); setAnnouncement(`${quest.segments[index].text} 已放入${bucketNames[bucket]}`)
-    if (result.complete) { void answer({ module: 'sentence', correct: !puzzleMistake.current, timeMs: elapsedSince(startedAt.current, performance.now()) }); void passSentence(); advanceTimer.current = window.setTimeout(() => { advanceTimer.current = null; nextQuestion() }, 900) }
+    if (result.complete) { void answer({ module: 'sentence', correct: !puzzleMistake.current, timeMs: elapsedSince(startedAt.current, performance.now()) }); void passSentence(quest.id); advanceTimer.current = window.setTimeout(() => { advanceTimer.current = null; nextQuestion() }, 900) }
   }
   function onTranslate(index: number) {
     if (!quest || answered) return
@@ -97,7 +97,7 @@ export default function SentenceGame() {
     void answer({ module: 'sentence', correct, timeMs: elapsedSince(startedAt.current, performance.now()) })
     advanceTimer.current = window.setTimeout(() => {
       advanceTimer.current = null
-      if (correct) { void passSentence(); nextQuestion() } else { setAnswered(false); setAnswerPicked(null) }
+      if (correct) { void passSentence(quest.id); nextQuestion() } else { setAnswered(false); setAnswerPicked(null) }
     }, correct ? 1300 : 1000)
   }
   const bucketCorrect = (bucket: Bucket) => quest?.type === 'puzzle' && quest.segments!.filter((segment) => segment.bucket === bucket).every((segment) => placed[quest.segments!.findIndex((candidate) => candidate === segment)] === bucket)

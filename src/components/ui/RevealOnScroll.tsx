@@ -4,7 +4,11 @@ export default function RevealOnScroll({ children, className = '' }: { children:
   const ref = useRef<HTMLDivElement>(null)
   useEffect(() => {
     const node = ref.current
-    if (!node || !('IntersectionObserver' in window)) return
+    if (!node) return
+    if (typeof window.IntersectionObserver !== 'function' || window.matchMedia?.('(prefers-reduced-motion: reduce)').matches) {
+      node.dataset.revealed = 'true'
+      return
+    }
     const observer = new IntersectionObserver(([entry]) => {
       if (entry.isIntersecting) {
         node.dataset.revealed = 'true'

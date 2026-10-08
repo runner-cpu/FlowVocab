@@ -6,7 +6,7 @@ export const LISTENING_ITEMS: ListeningItem[] = [
     id: 'l1', level: 0,
     text: 'The library opens at nine o\'clock every morning.',
     blanks: [
-      { index: 1, answer: 'opens', options: ['opens', 'opened', 'open', 'opening'] }
+      { index: 2, answer: 'opens', options: ['opens', 'opened', 'open', 'opening'] }
     ]
   },
   {
@@ -20,7 +20,7 @@ export const LISTENING_ITEMS: ListeningItem[] = [
     id: 'l3', level: 1,
     text: 'We need to finish the report before Friday.',
     blanks: [
-      { index: 4, answer: 'report', options: ['report', 'repair', 'repeat', 'record'] }
+      { index: 5, answer: 'report', options: ['report', 'repair', 'repeat', 'record'] }
     ]
   },
   {
@@ -34,7 +34,7 @@ export const LISTENING_ITEMS: ListeningItem[] = [
     id: 'l5', level: 2,
     text: 'He is studying for the final examination this week.',
     blanks: [
-      { index: 5, answer: 'examination', options: ['examination', 'exclamation', 'examine', 'extension'] }
+      { index: 6, answer: 'examination', options: ['examination', 'exclamation', 'examine', 'extension'] }
     ]
   },
   {
@@ -55,7 +55,7 @@ export const LISTENING_ITEMS: ListeningItem[] = [
     id: 'l8', level: 3,
     text: 'Researchers are trying to find a cure for the disease.',
     blanks: [
-      { index: 1, answer: 'Researchers', options: ['Researchers', 'Reporters', 'Rescuers', 'Retailers'] }
+      { index: 0, answer: 'Researchers', options: ['Researchers', 'Reporters', 'Rescuers', 'Retailers'] }
     ]
   }
 ]

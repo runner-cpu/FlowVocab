@@ -43,9 +43,10 @@ let retryInFlight: Promise<void> | null = null
 let initInFlight: Promise<void> | null = null
 let transitionRequested = false
 let writesPaused = false
-let transitionInFlight: Promise<() => void> | null = null
+let transitionInFlight: Promise<void> | null = null
 type DeferredWrite = { operation: () => Promise<void>; resolve: () => void; reject: (error: unknown) => void }
 let deferredWrites: DeferredWrite[] = []
+let transitionConsumers = 0
 let durableStorageRequest: Promise<boolean> | null = null
 
 function requestDurableStorage(): Promise<boolean> | null {
@@ -86,6 +87,8 @@ function serializeWrite(operation: (submittedAt: number) => Promise<void>): Prom
 }
 
 function resumeDeferredWrites(): void {
+  // Keep writes paused until every concurrent transition holder releases its lease.
+  if (transitionConsumers > 0) return
   const queued = deferredWrites.splice(0)
   writesPaused = false
   transitionRequested = false
@@ -96,30 +99,40 @@ function resumeDeferredWrites(): void {
   }
 }
 
+/** Wait until every queued answer write has settled before reading IndexedDB directly. */
+export async function whenWritesSettled(): Promise<void> {
+  await pendingWrites
+  await pendingWrites
+}
+
 /** Pause user writes while a backup/reset replaces the IndexedDB snapshot. */
 export function pausePersistenceWrites(): Promise<() => void> {
-  if (transitionInFlight) return transitionInFlight
   transitionRequested = true
-  const operation = (async () => {
-    await pendingWrites
-    if (writesBlocked || writeQueue.length > 0) {
-      await useProgress.getState().retrySave()
+  transitionConsumers += 1
+  if (!transitionInFlight) {
+    transitionInFlight = (async () => {
       await pendingWrites
-    }
-    if (writesBlocked || writeQueue.length > 0) throw new Error('Unable to drain pending FlowVocab writes')
-    writesPaused = true
-    let released = false
-    return () => {
-      if (released) return
-      released = true
+      if (writesBlocked || writeQueue.length > 0) {
+        await useProgress.getState().retrySave()
+        await pendingWrites
+      }
+      if (writesBlocked || writeQueue.length > 0) throw new Error('Unable to drain pending FlowVocab writes')
+      writesPaused = true
+    })().catch((error) => {
+      // A failed transition must not leave writes deferred forever.
+      transitionConsumers = 0
+      transitionInFlight = null
+      resumeDeferredWrites()
+      throw error
+    })
+  }
+  const draining = transitionInFlight
+  return draining.then(() => () => {
+    if (--transitionConsumers <= 0) {
+      transitionConsumers = 0
       resumeDeferredWrites()
     }
-  })()
-  transitionInFlight = operation.catch((error) => {
-    resumeDeferredWrites()
-    throw error
   })
-  return transitionInFlight
 }
 
 export function emptyDaily(date: string): DailyStat {
@@ -131,6 +144,24 @@ function median(arr: number[]): number {
   const s = [...arr].sort((a, b) => a - b)
   const mid = Math.floor(s.length / 2)
   return s.length % 2 ? s[mid] : (s[mid - 1] + s[mid]) / 2
+}
+
+function normalizedProgress(progress: Progress): Progress {
+  const sentenceFloor = progress.completedSentenceIds === undefined
+    ? Math.max(progress.legacySentenceFloor ?? 0, Math.min(progress.sentencePassed, SENTENCE_QUESTS.length))
+    : progress.legacySentenceFloor ?? 0
+  const listeningFloor = progress.completedListeningIds === undefined
+    ? Math.max(progress.legacyListeningFloor ?? 0, Math.min(progress.listeningPassed, LISTENING_ITEMS.length))
+    : progress.legacyListeningFloor ?? 0
+  const readingFloor = Math.min(progress.readingDone, CHAPTERS.length)
+  return {
+    ...progress,
+    legacySentenceFloor: sentenceFloor,
+    legacyListeningFloor: listeningFloor,
+    sentencePassed: Math.min(SENTENCE_QUESTS.length, Math.max(sentenceFloor, progress.completedSentenceIds?.length ?? 0)),
+    listeningPassed: Math.min(LISTENING_ITEMS.length, Math.max(listeningFloor, progress.completedListeningIds?.length ?? 0)),
+    readingDone: Math.min(CHAPTERS.length, Math.max(readingFloor, new Set(Object.keys(progress.narrative ?? {})).size)),
+  }
 }
 
 function defaultRadar(): Radar {
@@ -186,8 +217,8 @@ interface ProgressStore {
   finishSession: () => Promise<void>
   answer: (opts: { module: ModuleKey; wordId?: string; correct: boolean; timeMs: number; medianMs?: number }) => Promise<void>
   completeGrammarNode: (nodeId: string) => Promise<void>
-  passSentence: () => Promise<void>
-  passListening: () => Promise<void>
+  passSentence: (questId?: string) => Promise<void>
+  passListening: (itemId?: string) => Promise<void>
   submitWriting: (taskId: string, score: number) => Promise<void>
   completeReading: (chapterId: string) => Promise<void>
   toggleZen: () => void
@@ -244,6 +275,12 @@ export const useProgress = create<ProgressStore>((set, get) => ({
     if (!progress) {
       progress = { id: 1, radar: defaultRadar(), skillTree: {}, cards: [], narrative: {}, writingLog: [], sentencePassed: 0, listeningPassed: 0, writingDone: 0, writingScoreSum: 0, readingDone: 0 }
       await db.progress.put(progress)
+    } else {
+      const normalized = normalizedProgress(progress)
+      if (normalized.sentencePassed !== progress.sentencePassed || normalized.listeningPassed !== progress.listeningPassed || normalized.readingDone !== progress.readingDone || normalized.legacySentenceFloor !== progress.legacySentenceFloor || normalized.legacyListeningFloor !== progress.legacyListeningFloor) {
+        progress = normalized
+        await db.progress.put(progress)
+      }
     }
     let daily = (await db.dailyStats.get(today)) as DailyStat | undefined
     if (!daily && !preserveEmptyTables) {
@@ -297,7 +334,11 @@ export const useProgress = create<ProgressStore>((set, get) => ({
         difficultyFlow: session.difficultyFlow,
         energy: session.energy
       }
-      await db.sessions.add(rec)
+      await db.transaction('rw', db.sessions, async () => {
+        const last = await db.sessions.orderBy('id').last()
+        rec.id = Math.max(submittedAt, (last?.id ?? 0) + 1)
+        await db.sessions.add(rec)
+      })
     }
     // Answers already persist date-scoped combo maxima. A session can span days.
     set({ session: { ...emptySession } })
@@ -449,19 +490,27 @@ export const useProgress = create<ProgressStore>((set, get) => ({
     set({ progress })
   }),
 
-  passSentence: () => serializeWrite(async () => {
+  passSentence: (questId) => serializeWrite(async () => {
     const s = get()
-    if (!s.progress) return
-    const progress: Progress = { ...s.progress, sentencePassed: s.progress.sentencePassed + 1 }
+    if (!s.progress || (questId && s.progress.completedSentenceIds?.includes(questId))) return
+    const current = normalizedProgress(s.progress)
+    const ids = questId ? [...(current.completedSentenceIds ?? []), questId] : current.completedSentenceIds
+    const progress: Progress = { ...current,
+      sentencePassed: questId ? Math.min(SENTENCE_QUESTS.length, Math.max(s.progress.legacySentenceFloor ?? 0, ids?.length ?? 0)) : s.progress.sentencePassed + 1,
+      ...(ids ? { completedSentenceIds: ids } : {}) }
     progress.radar = computeRadar(progress, s.userWords)
     await db.progress.put(progress)
     set({ progress })
   }),
 
-  passListening: () => serializeWrite(async () => {
+  passListening: (itemId) => serializeWrite(async () => {
     const s = get()
-    if (!s.progress) return
-    const progress: Progress = { ...s.progress, listeningPassed: s.progress.listeningPassed + 1 }
+    if (!s.progress || (itemId && s.progress.completedListeningIds?.includes(itemId))) return
+    const current = normalizedProgress(s.progress)
+    const ids = itemId ? [...(current.completedListeningIds ?? []), itemId] : current.completedListeningIds
+    const progress: Progress = { ...current,
+      listeningPassed: itemId ? Math.min(LISTENING_ITEMS.length, Math.max(s.progress.legacyListeningFloor ?? 0, ids?.length ?? 0)) : s.progress.listeningPassed + 1,
+      ...(ids ? { completedListeningIds: ids } : {}) }
     progress.radar = computeRadar(progress, s.userWords)
     await db.progress.put(progress)
     set({ progress })
@@ -483,7 +532,7 @@ export const useProgress = create<ProgressStore>((set, get) => ({
 
   completeReading: (chapterId) => serializeWrite(async () => {
     const s = get()
-    if (!s.progress) return
+    if (!s.progress || Object.prototype.hasOwnProperty.call(s.progress.narrative, chapterId)) return
     const progress: Progress = {
       ...s.progress,
       readingDone: s.progress.readingDone + 1,
