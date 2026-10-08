@@ -14,40 +14,44 @@ import { planetLevelFromEnergy } from '../engine/progression'
 import WordForest from '../components/dashboard/WordForest'
 import { findStoredWordLevel } from '../store/wordBank'
 import { useNow } from '../hooks/useNow'
+import { dayKey } from '../engine/forget'
+import { isModuleAvailable } from '../data/curriculum'
 
 export default function Dashboard() {
   const profile = useProgress((s) => s.profile)
   const planet = useProgress((s) => s.planet)
-  const daily = useProgress((s) => s.daily)
+  const storedDaily = useProgress((s) => s.daily)
   const go = useUI((s) => s.go)
   const radar = useProgress((s) => s.progress?.radar)
   const userWords = useProgress((s) => s.userWords)
   const now = useNow()
+  const daily = storedDaily?.date === dayKey(now) ? storedDaily : null
+  const track = useUI(state => state.track)
+  const todayKey = dayKey(now)
   const [range, setRange] = useState<7 | 30 | 90>(90)
   const [selected, setSelected] = useState<ModuleKey | null>(null)
   const radarEntries = (Object.entries(radar ?? {}) as [ModuleKey, number][]).sort((a, b) => b[1] - a[1])
   const strongest = radarEntries[0]
-  const weakest = radarEntries[radarEntries.length - 1]
+  const availableEntries = radarEntries.filter(([module]) => isModuleAvailable(track, module))
+  const weakest = availableEntries[availableEntries.length - 1]
   const isFirstStudy = radarEntries.length === 0 || radarEntries.every(([, value]) => value === 0)
   const selectModule = useCallback((module: ModuleKey) => { setSelected(module); go(module) }, [go])
   const reviewWord = useCallback(async (wordId: string) => {
-    const level = await findStoredWordLevel(wordId)
+    const level = await findStoredWordLevel(wordId).catch(() => null)
     useUI.getState().reviewWord(wordId, level ?? undefined)
   }, [])
   const reviewLoad = useMemo(() => {
     const day = 86400000
     return [
-      { label: '今日到期', value: userWords.filter((word) => word.status !== 'mastered' && word.nextReview <= now).length, tone: 'coral' },
-      { label: '未来 3 天', value: userWords.filter((word) => word.status !== 'mastered' && word.nextReview > now && word.nextReview <= now + 3 * day).length, tone: 'blue' },
+      { label: '今日到期', value: userWords.filter((word) => word.nextReview <= now).length, tone: 'coral' },
+      { label: '未来 3 天', value: userWords.filter((word) => word.nextReview > now && word.nextReview <= now + 3 * day).length, tone: 'blue' },
       { label: '已掌握', value: userWords.filter((word) => word.status === 'mastered').length, tone: 'mint' }
     ]
   }, [userWords, now])
 
-  if (isFirstStudy) return <div className="growth-page"><div className="insight-banner"><div className="insight-mark"><Sparkles size={20} /></div><div className="insight-copy"><strong>成长提示</strong><p>完成第一轮练习后，这里会显示你的能力变化</p></div></div><div className="card"><RadarChart onModuleSelect={selectModule} /></div></div>
-
   return (
     <div className="growth-page">
-      <div className="growth-heading"><div><div className="growth-kicker"><Activity size={15} /> 学习数据</div><h1>成长图谱</h1><p>看见自己的进步，找到下一步的方向。</p></div><div className="range-switcher" role="group" aria-label="学习时间范围">{([7, 30, 90] as const).map((item) => <button key={item} className={range === item ? 'active' : ''} onClick={() => setRange(item)}>{item}天</button>)}</div></div>
+      <div className="growth-heading"><div><div className="growth-kicker"><Activity size={15} /> 学习数据</div><h1>成长图谱</h1><p>看见自己的进步，找到下一步的方向。</p></div><div className="range-switcher" role="group" aria-label="热力图时间范围">{([7, 30, 90] as const).map((item) => <button key={item} aria-pressed={range === item} className={range === item ? 'active' : ''} onClick={() => setRange(item)}>{item}天</button>)}</div></div>
       <div className="stat-row">
         <div className="stat"><div className="v"><AnimatedNumber value={profile?.totalXp ?? 0} /></div><div className="k">累计 XP</div></div>
         <div className="stat"><div className="v"><AnimatedNumber value={profile?.bestCombo ?? 0} /></div><div className="k">最佳连击</div></div>
@@ -59,8 +63,8 @@ export default function Dashboard() {
       <ProgressionPanel achievements />
       <div className="insight-banner">
         <div className="insight-mark"><Sparkles size={20} /></div>
-        <div className="insight-copy"><strong>成长提示</strong><p>你在 {strongest ? MODULE_META[strongest[0]].name.split('·')[0] : '词汇'} 上表现亮眼（{strongest?.[1] ?? 0}%），下一步建议补强 {weakest ? MODULE_META[weakest[0]].name.split('·')[0] : '听力'}，让能力更均衡。</p></div>
-        <button className="btn btn-ghost" onClick={() => weakest && go(weakest[0])}>去补强 →</button>
+        <div className="insight-copy"><strong>成长提示</strong>{isFirstStudy ? <p>完成第一轮练习后，这里会显示你的能力变化</p> : <p>{strongest ? MODULE_META[strongest[0]].name.split('·')[0] : '词汇'} 的练习进度为 {strongest?.[1] ?? 0}%。建议继续练习 {weakest ? MODULE_META[weakest[0]].name.split('·')[0] : '词汇'}。这些数值反映本站练习记录，不代表考试能力评分。</p>}</div>
+        <button className="btn btn-ghost" onClick={() => go(isFirstStudy ? 'vocab' : weakest?.[0] ?? 'vocab')}>{isFirstStudy ? '开始第一轮练习' : '去补强 →'}</button>
       </div>
 
       <div className="grid mt20" style={{ alignItems: 'stretch' }}>
@@ -89,7 +93,7 @@ export default function Dashboard() {
 
       <div className="card">
         <div className="card-title"><Flame size={16} /> 学习热力图（近 {range} 天）</div>
-        <Heatmap days={range} />
+        <Heatmap days={range} today={todayKey} />
       </div>
     </div>
   )

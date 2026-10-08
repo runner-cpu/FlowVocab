@@ -24,7 +24,7 @@ export default function GameHud({ module }: { module: ModuleKey }) {
         </span>}
         <span
           className="diff-badge"
-          style={{ background: DIFFICULTY_COLORS[difficulty.level] }}
+          style={{ background: DIFFICULTY_COLORS[difficulty.level], color: difficulty.level === 2 ? '#ffffff' : '#101820' }}
           key={difficulty.level}
         >
           {DIFFICULTY_NAMES[difficulty.level]} 难度

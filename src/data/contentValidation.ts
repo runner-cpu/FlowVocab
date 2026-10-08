@@ -9,8 +9,15 @@ export function primaryPos(word: Pick<Word, 'pos'>): LexicalClass {
   return 'other'
 }
 export function validateListeningItems(items: ListeningItem[]): string[] {
-  return items.flatMap(item => item.blanks.flatMap(blank => {
-    const answerCount = blank.options.filter(option => option === blank.answer).length
-    return new Set(blank.options).size === blank.options.length && answerCount === 1 ? [] : [`${item.id}:${blank.index}`]
-  }))
+  return items.flatMap(item => {
+    const words = item.text.split(/\s+/)
+    return item.blanks.flatMap(blank => {
+      const answerCount = blank.options.filter(option => option === blank.answer).length
+      const missingWord = words[blank.index]?.replace(/^[^a-z0-9']+|[^a-z0-9']+$/gi, '')
+      const valid = Number.isInteger(blank.index) && blank.index >= 0 && blank.index < words.length
+        && new Set(blank.options).size === blank.options.length && answerCount === 1
+        && missingWord?.toLocaleLowerCase('en-US') === blank.answer.toLocaleLowerCase('en-US')
+      return valid ? [] : [`${item.id}:${blank.index}`]
+    })
+  })
 }

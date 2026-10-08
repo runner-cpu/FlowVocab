@@ -11,12 +11,13 @@ import AnimatedNumber from '../components/ui/AnimatedNumber'
 import ProgressionPanel from '../components/dashboard/ProgressionPanel'
 import ResponsiveSceneImage from '../components/ui/ResponsiveSceneImage'
 import { useNow } from '../hooks/useNow'
+import { dayKey } from '../engine/forget'
 
 const MODULES: ModuleKey[] = ['vocab', 'grammar', 'sentence', 'listening', 'writing', 'reading']
-const JOURNEY: { module: ModuleKey; title: string; note: string; icon: typeof BookOpen }[] = [
-  { module: 'vocab', title: '唤醒 5 个词', note: '词汇热身', icon: BookOpen },
-  { module: 'listening', title: '完成听力挑战', note: '听见真实语境', icon: Headphones },
-  { module: 'sentence', title: '拼好 3 个句子', note: '完成今日输出', icon: PenLine }
+const JOURNEY: { module: ModuleKey; title: string; target: number; icon: typeof BookOpen }[] = [
+  { module: 'vocab', title: '完成 5 次词汇作答', target: 5, icon: BookOpen },
+  { module: 'listening', title: '完成 1 次听力作答', target: 1, icon: Headphones },
+  { module: 'sentence', title: '完成 3 次句子练习', target: 3, icon: PenLine }
 ]
 const SCENE_ICONS: Record<ModuleKey, typeof BookOpen> = { vocab: BookOpen, grammar: GitBranch, sentence: Puzzle, listening: Headphones, writing: PenLine, reading: BookOpenText }
 const TRACK_ORDER: LearningTrack[] = ['primary', 'middle-high', 'advanced', 'cet']
@@ -25,18 +26,20 @@ export default function Home() {
   const go = useUI((s) => s.go)
   const profile = useProgress((s) => s.profile)
   const planet = useProgress((s) => s.planet)
-  const daily = useProgress((s) => s.daily)
+  const storedDaily = useProgress((s) => s.daily)
   const progress = useProgress((s) => s.progress)
   const userWords = useProgress((s) => s.userWords)
   const now = useNow()
+  const daily = storedDaily?.date === dayKey(now) ? storedDaily : null
   const xpToday = daily?.xp ?? 0
   const goal = planet?.dailyGoal ?? 100
   const pct = Math.min(100, Math.round((xpToday / Math.max(goal, 1)) * 100))
   const completedModules = Object.values(daily?.modules ?? {}).filter((n) => n > 0).length
-  const dueWords = userWords.filter((word) => word.status !== 'mastered' && word.nextReview <= now).length
+  const dueWords = userWords.filter((word) => word.nextReview <= now).length
   const radar = progress?.radar
-  const weakest = MODULES.reduce((low, key) => (radar?.[key] ?? 0) < (radar?.[low] ?? 0) ? key : low, 'vocab')
   const track = useUI((s) => s.track)
+  const weakest = MODULES.filter(key => isModuleAvailable(track, key)).reduce((low, key) => (radar?.[key] ?? 0) < (radar?.[low] ?? 0) ? key : low, 'vocab')
+  const journey = JOURNEY.map(item => isModuleAvailable(track, item.module) ? item : { module: 'grammar' as const, title: '完成 3 次语法作答', target: 3, icon: GitBranch })
   const setTrack = useUI((s) => s.setTrack)
   const trackMeta = LEARNING_TRACKS[track]
 
@@ -48,10 +51,9 @@ export default function Home() {
 
     <section className="track-switcher" aria-label="选择学习阶段">
       <div className="track-switcher-copy"><span>学习路线</span><strong>{trackMeta.label}</strong><small>{trackMeta.description}</small></div>
-      <div className="track-options">{TRACK_ORDER.map((key) => <button key={key} className={`track-option ${track === key ? 'active' : ''}`} style={{ '--track-accent': LEARNING_TRACKS[key].accent } as CSSProperties} onClick={() => setTrack(key)}>{LEARNING_TRACKS[key].shortLabel}<small>{key === 'primary' ? '图像启蒙' : key === 'cet' ? '目标冲刺' : '能力进阶'}</small></button>)}</div>
+      <div className="track-options">{TRACK_ORDER.map((key) => <button key={key} aria-pressed={track === key} className={`track-option ${track === key ? 'active' : ''}`} style={{ '--track-accent': LEARNING_TRACKS[key].accent } as CSSProperties} onClick={() => setTrack(key)}>{LEARNING_TRACKS[key].shortLabel}<small>{key === 'primary' ? '图像启蒙' : key === 'cet' ? '目标冲刺' : '能力进阶'}</small></button>)}</div>
     </section>
 
-    <ProgressionPanel />
     <section className="mission-layout" aria-label="今日核心任务">
       <article className="quest-card"><ResponsiveSceneImage assetStem="neon-harbor-quest" eager sizes="(max-width: 640px) 100vw, 65vw" alt="戴耳机的小狐狸站在夜色港湾，准备展开英语词汇探险" /><div className="quest-copy"><span className="quest-type">词汇探险</span><h2>微光港 · 记忆航线</h2><p>在真实语境里认出新词，让每一次选择都推动故事向前。</p><button className="btn quest-start" onClick={() => go('vocab')}><Play size={17} fill="currentColor" /> 开始任务</button></div></article>
       <aside className="mission-stats" aria-label="学习状态">
@@ -61,7 +63,8 @@ export default function Home() {
       </aside>
     </section>
 
-    <RevealOnScroll><section className="journey-panel" aria-labelledby="journey-title"><div className="panel-heading"><div><Sparkles size={18} /><h2 id="journey-title">今日旅程</h2></div><p>完成三个短任务，留下比“三分钟热度”更可靠的轨迹。</p></div><div className="journey-track">{JOURNEY.map((item, index) => { const complete = (daily?.modules?.[item.module] ?? 0) > 0; const Icon = item.icon; return <button key={item.module} className={`journey-step ${complete ? 'complete' : ''}`} onClick={() => go(item.module)}><span className="step-icon">{complete ? <Check size={20} /> : <Icon size={20} />}</span><span><strong>{item.title}</strong><small>{complete ? '已完成' : item.note}</small></span>{index < JOURNEY.length - 1 ? <i aria-hidden="true" /> : null}</button> })}</div></section></RevealOnScroll>
+    <ProgressionPanel />
+    <RevealOnScroll><section className="journey-panel" aria-labelledby="journey-title"><div className="panel-heading"><div><Sparkles size={18} /><h2 id="journey-title">今日旅程</h2></div><p>完成三个短任务，留下比“三分钟热度”更可靠的轨迹。</p></div><div className="journey-track">{journey.map((item, index) => { const count = daily?.modules?.[item.module] ?? 0; const complete = count >= item.target; const Icon = item.icon; return <button key={item.module} className={`journey-step ${complete ? 'complete' : ''}`} onClick={() => go(item.module)}><span className="step-icon">{complete ? <Check size={20} /> : <Icon size={20} />}</span><span><strong>{item.title}</strong><small>{complete ? '已完成' : `${count}/${item.target} 次作答`}</small></span>{index < JOURNEY.length - 1 ? <i aria-hidden="true" /> : null}</button> })}</div></section></RevealOnScroll>
 
     <div className="learning-section-heading"><div><h2>选择你的学习场景</h2><p>图像、声音和任务一起工作，难度会随表现自动调整。</p></div><span><AnimatedNumber value={completedModules} />/6 今日已探索</span></div>
     <section className="learning-scenes" aria-label="英语学习模块">{MODULES.map((key, index) => { const meta = MODULE_META[key]; const mastery = radar?.[key] ?? 0; const scene = LEARNING_SCENES[index]; const Icon = SCENE_ICONS[key]; const available = isModuleAvailable(track, key); return <SpotlightCard key={key} as={available ? 'button' : 'div'} aria-disabled={available ? undefined : 'true'} className={`scene-card scene-${index + 1} ${available ? '' : 'scene-muted'}`} onClick={available ? () => go(key) : undefined}><ResponsiveSceneImage className="scene-visual" assetStem={scene.visual} sizes="(max-width: 640px) 100vw, (max-width: 900px) 50vw, 33vw" alt={`${scene.title}学习场景插画`} /><span className="scene-shade" /><span className="scene-index">0{index + 1}</span><span className="scene-icon" aria-hidden="true"><Icon size={19} /></span><span className="scene-copy"><small>{scene.eyebrow}</small><strong>{scene.title}</strong><em>{available ? scene.prompt : '此路线暂未开放'}</em></span><span className="scene-progress"><i style={{ width: `${mastery}%` }} /><small>{mastery}%</small></span><ArrowRight className="scene-arrow" size={18} /></SpotlightCard> })}</section>

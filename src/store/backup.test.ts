@@ -5,7 +5,7 @@ import { exportProgressBackup, importProgressBackup } from './backup'
 import { useProgress } from './progressStore'
 
 const profile = { id: 1, totalXp: 12, bestCombo: 3, streakDays: 2, lastStudyDate: null, claimedQuestDates: [], unlockedAchievements: [], createdAt: 1, settings: { zenMode: false, volume: .8, voiceRate: .9 } }
-const progress = { id: 1, radar: { vocab: 0, grammar: 0, sentence: 0, listening: 0, writing: 0, reading: 0 }, skillTree: {}, cards: [], narrative: {}, writingLog: [], sentencePassed: 0, listeningPassed: 0, writingDone: 0, writingScoreSum: 0, readingDone: 0 }
+const progress = { id: 1, legacySentenceFloor: 0, legacyListeningFloor: 0, radar: { vocab: 0, grammar: 0, sentence: 0, listening: 0, writing: 0, reading: 0 }, skillTree: {}, cards: [], narrative: {}, writingLog: [], sentencePassed: 0, listeningPassed: 0, writingDone: 0, writingScoreSum: 0, readingDone: 0 }
 const planet = { id: 1, energy: 4, level: 0, lastActive: 1, dailyGoal: 100 }
 
 beforeEach(async () => {
@@ -22,6 +22,21 @@ beforeEach(async () => {
 afterEach(async () => { await db.delete() })
 
 describe('local progress backup', () => {
+  it('includes a queued answer in one consistent export snapshot', async () => {
+    const answer = useProgress.getState().answer({ module: 'vocab', wordId: 'bank-1', correct: true, timeMs: 4000 })
+    const backup = await exportProgressBackup()
+    await answer
+    expect(backup.profile.totalXp).toBe((await db.userProfile.get(1))?.totalXp)
+    expect(backup.userWords[0].total).toBe(3)
+  })
+
+  it('rejects invalid completed-content identifiers before replacing progress', async () => {
+    const backup = await exportProgressBackup()
+    backup.progress.completedSentenceIds = ['p1', 'p1']
+    await expect(importProgressBackup(backup)).rejects.toThrow('Invalid FlowVocab backup')
+    expect(await db.progress.get(1)).toEqual(progress)
+  })
+
   it('exports only user-owned tables in the versioned format', async () => {
     const backup = await exportProgressBackup()
     expect(backup).toMatchObject({ format: 'flowvocab-backup', version: 1, profile, progress, planet })
@@ -33,18 +48,18 @@ describe('local progress backup', () => {
   it('replaces every user table while retaining the lexical bank', async () => {
     const next = await exportProgressBackup()
     next.profile.totalXp = 99; next.userWords = []; next.dailyStats = []; next.sessions = []
-    next.progress.sentencePassed = 8; next.progress.radar = { vocab: 77, grammar: 66, sentence: 55, listening: 44, writing: 33, reading: 22 }; next.planet.energy = 88
+    next.progress.sentencePassed = 8; next.progress.legacySentenceFloor = 8; next.progress.radar = { vocab: 77, grammar: 66, sentence: 55, listening: 44, writing: 33, reading: 22 }; next.planet.energy = 88
     await importProgressBackup(next)
     expect(await db.userProfile.get(1)).toMatchObject({ totalXp: 99 })
     expect(await db.userWords.count()).toBe(0)
     expect(await db.dailyStats.count()).toBe(0)
     expect(await db.sessions.count()).toBe(0)
-    expect(await db.progress.get(1)).toMatchObject({ sentencePassed: 8 })
+    expect(await db.progress.get(1)).toMatchObject({ sentencePassed: 6 })
     expect((await db.progress.get(1))?.radar).toEqual(next.progress.radar)
     expect(await db.planet.get(1)).toMatchObject({ energy: 88 })
     expect(await db.wordBank.get('bank-1')).toMatchObject({ word: 'retain' })
     expect(useProgress.getState().profile?.totalXp).toBe(99)
-    expect(useProgress.getState().progress?.sentencePassed).toBe(8)
+    expect(useProgress.getState().progress?.sentencePassed).toBe(6)
     expect(useProgress.getState().progress?.radar).toEqual(next.progress.radar)
   })
 

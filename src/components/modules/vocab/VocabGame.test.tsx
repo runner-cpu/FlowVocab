@@ -20,6 +20,32 @@ beforeEach(async () => {
 afterEach(async () => { cleanup(); await db.delete() })
 
 describe('real vocabulary mission', () => {
+  it('offers a retry after a failed download without requiring a page reload', async () => {
+    let attempt = 0
+    render(<VocabGame loadLevels={async () => {
+      if (attempt++ === 0) throw new Error('offline')
+      return { 0: words, 1: [], 2: [], 3: [], 4: [] }
+    }} />)
+    fireEvent.click(await screen.findByRole('button', { name: '重试加载词库' }))
+    expect(await screen.findByRole('group', { name: '答案选项' })).toBeVisible()
+  })
+
+  it('keeps a one-word offline pool playable after a wrong answer reserves a retry', async () => {
+    render(<VocabGame words={words.slice(0, 1)} roundSize={6} random={() => .999} />)
+    for (let index = 0; index < 2; index++) {
+      fireEvent.click(await screen.findByRole('button', { name: /探索/ }))
+      const next = screen.getByRole('button', { name: /下一站/ })
+      await waitFor(() => expect(next).toBeEnabled())
+      fireEvent.click(next)
+    }
+    fireEvent.change(screen.getByRole('textbox'), { target: { value: 'wrong' } })
+    fireEvent.click(screen.getByRole('button', { name: '提交拼写' }))
+    const next = screen.getByRole('button', { name: /下一站/ })
+    await waitFor(() => expect(next).toBeEnabled())
+    fireEvent.click(next)
+    expect(screen.getByText('第 4 / 6 站')).toBeVisible()
+  })
+
   it('loads a forest review word level outside the current track before selecting a question', async () => {
     useUI.setState({ track: 'primary', reviewWordId: 'forest-word', reviewWordLevel: 4 })
     const requested: number[][] = []
@@ -136,25 +162,30 @@ describe('real vocabulary mission', () => {
   it('keeps a missed word out of normal selection until its reserved retry stop', async () => {
     render(<VocabGame words={words.slice(0, 3)} roundSize={5} random={() => 0.999} />)
     await screen.findByRole('heading', { name: 'explore' })
+    const advanceWhenSaved = async () => {
+      const next = await screen.findByRole('button', { name: /下一站|查看战报/ })
+      await waitFor(() => expect(next).toBeEnabled())
+      fireEvent.click(next)
+    }
     const wrong = within(screen.getByRole('group', { name: '答案选项' })).getAllByRole('button').find(button => !button.textContent?.includes('探索'))!
     fireEvent.click(wrong)
     await waitFor(() => expect(useProgress.getState().session.total).toBe(1))
-    fireEvent.click(await screen.findByRole('button', { name: /下一站/ }))
+    await advanceWhenSaved()
     await screen.findByRole('heading', { name: 'discover' })
     fireEvent.click(screen.getByRole('button', { name: '发现' }))
     await waitFor(() => expect(useProgress.getState().session.total).toBe(2))
-    fireEvent.click(screen.getByRole('button', { name: /下一站/ }))
+    await advanceWhenSaved()
     await screen.findByRole('heading', { name: '航行' })
     fireEvent.change(screen.getByRole('textbox'), { target: { value: 'sail' } })
     fireEvent.click(screen.getByRole('button', { name: '提交拼写' }))
     await waitFor(() => expect(useProgress.getState().session.total).toBe(3))
-    fireEvent.click(screen.getByRole('button', { name: /下一站/ }))
+    await advanceWhenSaved()
     expect(await screen.findByRole('heading', { name: /discover|sail/ })).toBeVisible()
     expect(screen.queryByRole('heading', { name: 'explore' })).toBeNull()
     const duplicate = screen.getByRole('heading').textContent === 'discover' ? '发现' : '航行'
     fireEvent.click(screen.getByRole('button', { name: duplicate }))
     await waitFor(() => expect(useProgress.getState().session.total).toBe(4))
-    fireEvent.click(screen.getByRole('button', { name: /下一站/ }))
+    await advanceWhenSaved()
     await screen.findByRole('heading', { name: 'explore' })
     fireEvent.click(screen.getByRole('button', { name: '探索' }))
     await waitFor(() => expect(useProgress.getState().session.total).toBe(5))

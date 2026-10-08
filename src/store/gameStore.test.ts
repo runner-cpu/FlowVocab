@@ -1,4 +1,4 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest'
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 
 async function loadStore(hash: string) {
   vi.resetModules()
@@ -11,6 +11,25 @@ describe('hash navigation', () => {
   beforeEach(() => {
     window.location.hash = ''
     window.localStorage.clear()
+  })
+
+  afterEach(() => vi.restoreAllMocks())
+
+  it('remains usable when browser preferences cannot be read or saved', async () => {
+    vi.spyOn(Storage.prototype, 'getItem').mockImplementation(() => { throw new DOMException('Blocked', 'SecurityError') })
+    vi.spyOn(Storage.prototype, 'setItem').mockImplementation(() => { throw new DOMException('Full', 'QuotaExceededError') })
+    const useUI = await loadStore('#/home')
+    expect(() => useUI.getState().toggleTheme()).not.toThrow()
+    expect(() => useUI.getState().setTrack('cet')).not.toThrow()
+    expect(() => useUI.getState().closeGuide()).not.toThrow()
+    expect(useUI.getState()).toMatchObject({ track: 'cet', guideOpen: false })
+  })
+
+  it('does not treat the skip-link fragment as a missing route', async () => {
+    const useUI = await loadStore('#/module/reading')
+    window.location.hash = '#main-content'
+    window.dispatchEvent(new HashChangeEvent('hashchange'))
+    expect(useUI.getState().page).toBe('reading')
   })
 
   it('opens a module directly from its hash route', async () => {

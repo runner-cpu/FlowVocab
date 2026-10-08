@@ -1,4 +1,5 @@
 import { create } from 'zustand'
+import { readPreference, savePreference } from './preferences'
 import type { DifficultyLevel, LearningTrack } from '../types'
 
 export type NavigablePageKey =
@@ -33,14 +34,14 @@ interface GameUI {
 
 function readTheme(): 'light' | 'dark' {
   if (typeof window === 'undefined') return 'light'
-  const stored = window.localStorage.getItem('flowvocab-theme')
+  const stored = readPreference('flowvocab-theme')
   if (stored === 'dark' || stored === 'light') return stored
   return window.matchMedia?.('(prefers-color-scheme: dark)').matches ? 'dark' : 'light'
 }
 
 function readTrack(): LearningTrack {
   if (typeof window === 'undefined') return 'middle-high'
-  const stored = window.localStorage.getItem('flowvocab-track')
+  const stored = readPreference('flowvocab-track')
   return stored === 'primary' || stored === 'middle-high' || stored === 'advanced' || stored === 'cet' ? stored : 'middle-high'
 }
 
@@ -50,7 +51,7 @@ function applyTheme(theme: 'light' | 'dark') {
 
 function pageFromHash(hash: string): PageKey {
   const path = hash.replace(/^#/, '') || '/home'
-  if (path === '/home') return 'home'
+  if (path === '/home' || path === 'main-content') return 'home'
   if (path === '/dashboard') return 'dashboard'
   const match = path.match(/^\/module\/([^/]+)$/)
   if (match && MODULE_KEYS.includes(match[1] as (typeof MODULE_KEYS)[number])) {
@@ -84,28 +85,29 @@ export const useUI = create<GameUI>((set) => ({
     set({ page: 'vocab' })
   },
   consumeReviewWord: () => set({ reviewWordId: null, reviewWordLevel: null }),
-  guideOpen: typeof window !== 'undefined' && window.localStorage.getItem('flowvocab-first-run-complete') !== '1',
+  guideOpen: typeof window !== 'undefined' && readPreference('flowvocab-first-run-complete') !== '1',
   openGuide: () => set({ guideOpen: true }),
   closeGuide: () => {
-    if (typeof window !== 'undefined') window.localStorage.setItem('flowvocab-first-run-complete', '1')
+    if (typeof window !== 'undefined') savePreference('flowvocab-first-run-complete', '1')
     set({ guideOpen: false })
   },
   theme: initialTheme,
   toggleTheme: () => set((state) => {
     const theme = state.theme === 'light' ? 'dark' : 'light'
-    if (typeof window !== 'undefined') window.localStorage.setItem('flowvocab-theme', theme)
+    if (typeof window !== 'undefined') savePreference('flowvocab-theme', theme)
     applyTheme(theme)
     return { theme }
   }),
   track: readTrack(),
   setTrack: (track) => {
-    if (typeof window !== 'undefined') window.localStorage.setItem('flowvocab-track', track)
+    if (typeof window !== 'undefined') savePreference('flowvocab-track', track)
     set({ track })
   }
 }))
 
 if (typeof window !== 'undefined') {
   window.addEventListener('hashchange', () => {
+    if (window.location.hash === '#main-content') return
     useUI.setState({ page: pageFromHash(window.location.hash) })
   })
 }

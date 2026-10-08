@@ -1,6 +1,8 @@
-import { useEffect, useRef } from 'react'
-import echarts from '../../charts/echarts'
+import { useEffect, useMemo, useState } from 'react'
+import { ChartDataDetails, ChartError } from '../../charts/ChartDataDetails'
+import { useChartAppearance, useDashboardChart } from '../../charts/useDashboardChart'
 import { db } from '../../store/db'
+import { whenWritesSettled } from '../../store/progressStore'
 import { DIFFICULTY_NAMES } from '../../engine/difficulty'
 
 type AxisTooltipParam = { dataIndex?: unknown; value?: unknown }
@@ -11,59 +13,75 @@ function formatTooltip(params: unknown): string {
   const candidate = first as AxisTooltipParam
   const dataIndex = typeof candidate.dataIndex === 'number' ? candidate.dataIndex : 0
   const value = typeof candidate.value === 'number' ? candidate.value : 0
-  return `第 ${dataIndex + 1} 题 · ${DIFFICULTY_NAMES[value] ?? DIFFICULTY_NAMES[0]}`
+  return `第 ${dataIndex + 1} 题 · ${DIFFICULTY_NAMES[value] ?? '未知难度'}`
 }
 
 export default function DifficultyFlow() {
-  const ref = useRef<HTMLDivElement>(null)
+  const [flow, setFlow] = useState<number[] | null>(null)
+  const [loadError, setLoadError] = useState(false)
+  const [attempt, setAttempt] = useState(0)
+  const appearance = useChartAppearance()
 
   useEffect(() => {
-    let chart: echarts.ECharts | null = null
-    let disposed = false
-    const onResize = () => chart?.resize()
-    db.sessions.orderBy('time').reverse().limit(10).toArray().then((sessions) => {
-      if (disposed || !ref.current) return
-      const sessionsRev = [...sessions].reverse()
-      const all: number[] = []
-      sessionsRev.forEach((session) => all.push(...session.difficultyFlow))
-      if (all.length === 0) {
-        ref.current.innerHTML = '<div style="padding:30px;text-align:center;color:#6B7280;font-size:13px;">还没有难度数据，去任意模块刷一轮吧！</div>'
-        return
+    let active = true
+    setFlow(null)
+    setLoadError(false)
+    void (async () => {
+      try {
+        // The previous module's session is committed by its unmount cleanup, so wait for queued writes first.
+        await whenWritesSettled()
+        const sessions = await db.sessions.orderBy('time').reverse().limit(10).toArray()
+        if (active) setFlow([...sessions].reverse().flatMap((session) => session.difficultyFlow).slice(-60))
+      } catch {
+        if (active) setLoadError(true)
       }
-      const flow = all.slice(-60)
-      chart = echarts.init(ref.current)
-      chart.setOption({
-        backgroundColor: 'transparent',
-        tooltip: { trigger: 'axis', formatter: formatTooltip },
-        grid: { left: 40, right: 16, top: 16, bottom: 24 },
-        xAxis: { type: 'category', data: flow.map((_, index) => index + 1), axisLabel: { color: '#6B7280', fontSize: 10 }, axisLine: { lineStyle: { color: 'rgba(0,0,0,0.1)' } } },
-        yAxis: {
-          type: 'value', min: 0, max: 4, interval: 1,
-          axisLabel: { color: '#6B7280', fontSize: 10, formatter: (value: number) => DIFFICULTY_NAMES[value] ?? DIFFICULTY_NAMES[0] },
-          splitLine: { lineStyle: { color: 'rgba(0,0,0,0.06)' } }
-        },
-        series: [{
-          type: 'line', data: flow, smooth: true, symbolSize: 6,
-          lineStyle: { color: '#5B7FD4', width: 2.5 },
-          itemStyle: { color: '#5B7FD4' },
-          markPoint: {
-            data: [
-              { type: 'max', name: '最高难度', itemStyle: { color: '#EA4335' } },
-              { type: 'min', name: '最低难度', itemStyle: { color: '#52C41A' } }
-            ],
-            label: { fontSize: 10 }
-          }
-        }],
-        visualMap: { show: false, dimension: 1, pieces: [{ min: 0, max: 4 }] }
-      })
-      window.addEventListener('resize', onResize)
-    })
-    return () => {
-      disposed = true
-      window.removeEventListener('resize', onResize)
-      chart?.dispose()
-    }
-  }, [])
+    })()
+    return () => { active = false }
+  }, [attempt])
 
-  return <div ref={ref} style={{ width: '100%', height: 260 }} />
+  const option = useMemo(() => {
+    if (!flow?.length) return null
+    const { palette, animation, tooltip } = appearance
+    return {
+      backgroundColor: 'transparent', animation,
+      textStyle: { color: palette.text },
+      tooltip: { ...tooltip, trigger: 'axis', formatter: formatTooltip },
+      grid: { left: 72, right: 16, top: 16, bottom: 24 },
+      xAxis: { type: 'category', data: flow.map((_, index) => index + 1), axisLabel: { color: palette.secondary, fontSize: 10 }, axisLine: { lineStyle: { color: palette.line } } },
+      yAxis: {
+        type: 'value', min: 0, max: 4, interval: 1,
+        axisLabel: { color: palette.secondary, fontSize: 10, formatter: (value: number) => DIFFICULTY_NAMES[value] ?? '未知难度' },
+        splitLine: { lineStyle: { color: palette.line } },
+      },
+      series: [{
+        type: 'line', data: flow, smooth: true, symbolSize: 6,
+        lineStyle: { color: palette.accent, width: 2.5 },
+        itemStyle: { color: palette.accent },
+        markPoint: {
+          data: [
+            { type: 'max', name: '最高难度', itemStyle: { color: palette.highlight } },
+            { type: 'min', name: '最低难度', itemStyle: { color: palette.accent } },
+          ],
+          label: { fontSize: 10, color: palette.surface },
+        },
+      }],
+    }
+  }, [flow, appearance])
+  const chart = useDashboardChart(option)
+  const loading = flow === null && !loadError
+
+  return (
+    <figure className="chart-panel" aria-label="难度变化" aria-busy={loading}>
+      {loading && <p className="chart-status" role="status">正在加载难度数据…</p>}
+      {loadError && <ChartError message="难度数据加载失败，请重试。" onRetry={() => setAttempt((value) => value + 1)} />}
+      {flow?.length === 0 && <p className="chart-status" role="status">还没有难度数据，去任意模块刷一轮吧！</p>}
+      {chart.error && <ChartError message={chart.error} onRetry={chart.retry} />}
+      <div ref={chart.ref} aria-hidden="true" hidden={!option || !!chart.error} style={{ width: '100%', height: 260 }} />
+      {!!flow?.length && (
+        <ChartDataDetails caption="难度变化（最近 10 次练习，最多 60 题）" headers={['题目顺序', '难度']}>
+          {flow.map((difficulty, index) => <tr key={index}><th scope="row">{index + 1}</th><td>{DIFFICULTY_NAMES[difficulty] ?? '未知难度'}</td></tr>)}
+        </ChartDataDetails>
+      )}
+    </figure>
+  )
 }

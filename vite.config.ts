@@ -4,7 +4,7 @@ import react from '@vitejs/plugin-react'
 export default defineConfig({
   plugins: [react()],
   base: './',
-  server: { port: 5173, host: true },
+  server: { port: 5173, host: '127.0.0.1' },
   build: {
     outDir: 'dist',
     manifest: true,
@@ -20,7 +20,9 @@ export default defineConfig({
     }
   },
   test: {
+    include: ['src/**/*.test.{ts,tsx}'],
     environment: 'jsdom',
+    testTimeout: 15000,
     setupFiles: './src/test/setup.ts'
   }
 })

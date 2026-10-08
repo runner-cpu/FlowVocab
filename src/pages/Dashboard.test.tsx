@@ -15,6 +15,9 @@ test('shows the first-study state without a catch-up CTA when every radar axis i
   render(<Dashboard />)
   expect(screen.getByText('完成第一轮练习后，这里会显示你的能力变化')).toBeVisible()
   expect(screen.queryByRole('button', { name: /去补强/ })).toBeNull()
+  expect(screen.getByRole('heading', { name: '成长图谱' })).toBeVisible()
+  expect(screen.getByText('累计 XP')).toBeVisible()
+  expect(screen.getByRole('button', { name: '开始第一轮练习' })).toBeVisible()
 })
 
 beforeEach(async () => {

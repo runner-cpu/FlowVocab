@@ -158,7 +158,7 @@ describe('learning-route state isolation', () => {
 })
 
 describe('module submission timing', () => {
-  let answer: ReturnType<typeof vi.fn>
+  let answer: ReturnType<typeof vi.fn<ReturnType<typeof useProgress.getState>['answer']>>
   let now = 100
   beforeEach(() => {
     now = 100

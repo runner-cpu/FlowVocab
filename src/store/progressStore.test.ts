@@ -6,6 +6,7 @@ import { pausePersistenceWrites, useProgress } from './progressStore'
 import { computeRadar } from './progressStore'
 import { dayKey } from '../engine/forget'
 import type { UserWord } from '../types'
+import { SENTENCE_QUESTS, LISTENING_ITEMS, CHAPTERS } from '../data'
 
 const answer = { module: 'vocab' as const, wordId: 'atomic-word', correct: true, timeMs: 4000, medianMs: 4000 }
 beforeEach(async () => {
@@ -197,7 +198,46 @@ describe('atomic answer persistence', () => {
   })
 })
 
+describe('completion identity and session IDs', () => {
+  it('counts a sentence, listening item and reading chapter only once across replays', async () => {
+    const state = useProgress.getState()
+    await state.passSentence('p1')
+    await state.passSentence('p1')
+    await state.passSentence('p2')
+    await state.passListening('l1')
+    await state.passListening('l1')
+    await state.completeReading('ch1')
+    await state.completeReading('ch1')
+    expect(await db.progress.get(1)).toMatchObject({ sentencePassed: 2, listeningPassed: 1, readingDone: 1 })
+  })
+
+  it('persists two sessions finishing within the same millisecond', async () => {
+    vi.spyOn(Date, 'now').mockReturnValue(1790000000000)
+    const state = useProgress.getState()
+    await state.answer(answer)
+    await state.finishSession()
+    await state.startSession('vocab')
+    await state.answer(answer)
+    await state.finishSession()
+    expect(useProgress.getState().saveError).toBeNull()
+    expect(await db.sessions.count()).toBe(2)
+  })
+})
+
 describe('initialization concurrency', () => {
+  it('keeps writes paused until every concurrent transition lease is released', async () => {
+    const first = await pausePersistenceWrites()
+    const second = pausePersistenceWrites()
+    first()
+    const answerPromise = useProgress.getState().answer(answer)
+    await Promise.resolve()
+    expect((await db.userProfile.get(1))?.totalXp).toBe(0)
+    const releaseSecond = await second
+    releaseSecond()
+    await answerPromise
+    expect((await db.userProfile.get(1))?.totalXp).toBe(10)
+  })
+
   it('shares one in-flight initialization across concurrent callers', async () => {
     let release!: () => void
     const gate = new Promise<void>((resolve) => { release = resolve })
@@ -227,6 +267,24 @@ describe('initialization concurrency', () => {
     await answerPromise
     expect((await db.userProfile.get(1))?.totalXp).toBe(10)
   })
+})
+
+it('keeps legacy completion floors after first tracked replays and later initialization', async () => {
+  const legacy = { ...useProgress.getState().progress!, sentencePassed: SENTENCE_QUESTS.length, listeningPassed: LISTENING_ITEMS.length, readingDone: CHAPTERS.length, narrative: {} }
+  await db.progress.put(legacy)
+  useProgress.setState({ progress: legacy })
+  await useProgress.getState().passSentence(SENTENCE_QUESTS[0].id)
+  await useProgress.getState().passListening(LISTENING_ITEMS[0].id)
+  await useProgress.getState().completeReading(CHAPTERS[0].id)
+  await useProgress.getState().init()
+  expect(useProgress.getState().progress).toMatchObject({ sentencePassed: SENTENCE_QUESTS.length, listeningPassed: LISTENING_ITEMS.length, readingDone: CHAPTERS.length })
+})
+
+it('caps legacy replay counters at unique content totals during initialization', async () => {
+  const progress = { ...useProgress.getState().progress!, sentencePassed: 999, listeningPassed: 999, readingDone: 999, narrative: {} }
+  await db.progress.put(progress)
+  await useProgress.getState().init()
+  expect(useProgress.getState().progress).toMatchObject({ sentencePassed: 6, listeningPassed: 8, readingDone: 2 })
 })
 
 it('migrates v2 records without losing totals, reviews, settings, progress or sessions', async () => {
