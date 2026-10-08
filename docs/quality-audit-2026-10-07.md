@@ -35,10 +35,10 @@
 
 - 测试范围限定在 `src`，不会把仓库内 worktree 的第二份 React/测试误扫进来。
 - Vite、Vitest、ECharts 和相关依赖升级到已修复版本；官方 npm audit 结果为 0。
-- 首屏预算由“只检查入口文件”改为遍历同步 import 图；当前初始 JS 图为约 358 KB（gzip 122 KB），限制 400 KB。ECharts 保持 Dashboard 懒加载。
-- 单一 `npm run validate` 覆盖类型、静态检查、自动化的 Vitest 与 Python 测试、构建、预算、PWA 契约和 5,805 词内容验证。Python 依赖由 `requirements-dev.txt` 固定，CI 显式安装，避免“本机能过、干净环境装不上”。
-- 首屏预算现为约 359 KB（gzip 123 KB），限制 400 KB；升级 Vite 6.4.4 后构建时间与体积无回退。
-- PR 触发只读 CI；Pages artifact 和部署权限仅在 main 推送或手动 main 运行时启用。
+- 首屏预算由“只检查入口文件”改为遍历同步 import 图，当前初始 JS 图为约 359 KB（gzip 123 KB），限制 400 KB；ECharts 保持 Dashboard 懒加载。
+- 单一 `npm run validate` 覆盖类型、静态检查、自动化的 Vitest 与 Python 测试、构建、预算、PWA 契约和 5,805 词内容验证。Python 依赖由 `requirements-dev.txt` 固定，干净环境下同样可复现。
+- PR 触发只读 CI；Pages artifact 与部署权限仅在 main 推送或手动 main 运行时启用。
+- 发布结果：PR #1 的全部检查通过并合并到 main，Pages 工作流成功，线上入口与新构建产物哈希一致。
 
 ## 验证矩阵
 
