@@ -15,6 +15,10 @@ import GameHud from '../../game/GameHud'
 import FlowGuide, { type GuideState } from '../../game/FlowGuide'
 import AnswerHint from '../../game/AnswerHint'
 import RoundSummary, { type RoundResult } from '../../game/RoundSummary'
+import { useChapterResult } from '../../game/ChapterShell'
+import ErrorCard from '../../game/ErrorCard'
+import { inferErrorTag } from '../../../engine/errorRouting'
+import { formatMeaning } from '../../../engine/meaning'
 import '../../game/VocabMission.css'
 
 interface VocabGameProps { words?: Word[]; roundSize?: number; random?: () => number; loadLevels?: typeof ensureWordLevels }
@@ -44,6 +48,8 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
   const [empty, setEmpty] = useState(false)
   const [loadAttempt, setLoadAttempt] = useState(0)
   const [loadError, setLoadError] = useState('')
+  const [wrongAnswer, setWrongAnswer] = useState<{ tag: ReturnType<typeof inferErrorTag>; chosen: string } | null>(null)
+  const chapterResult = useChapterResult()
   const loadedPools = useRef<Awaited<ReturnType<typeof ensureWordLevels>> | null>(null)
   const heading = useRef<HTMLHeadingElement>(null)
   const continueButton = useRef<HTMLButtonElement>(null)
@@ -81,6 +87,7 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
     setPersisted(false)
     setGuide('idle')
     setSpeechMessage('')
+    setWrongAnswer(null)
     pending.current = null
     timer.current = performance.now()
   }
@@ -148,6 +155,8 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
     const correct = isVocabAnswerCorrect(question, value)
     pending.current = { wordId: question.word.id, total: (state.userWords.find(word => word.wordId === question.word.id)?.total ?? 0) + 1, correct, level: levelFromXp(state.profile?.totalXp ?? 0) }
     setPicked(value)
+    // 答错时叠加一层离线错因路由（规则引擎，无需网络）。
+    setWrongAnswer(correct ? null : { tag: inferErrorTag({ module: 'vocab', mode: question.mode, word: question.word.word, chosen: value, correctAnswer: question.mode === 'spelling' ? question.word.word : question.options.find(option => option.correct)?.text }), chosen: value })
     if (!correct && !requeued.current.has(question.word.id)) {
       requeued.current.add(question.word.id)
       requeueAt.current = reserveRetry(requeueAt.current, index, target, question.word.id, randomSource.current)
@@ -164,6 +173,8 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
       if ((current?.claimedQuestDates ?? []).some(claim => claim.includes(':') && !baseline.current.claims.includes(claim))) rewards.push('每日任务 XP 奖励')
       if (levelFromXp(current?.totalXp ?? 0) > levelFromXp(baseline.current.xp)) rewards.push('探索者等级提升')
       setResult({ ...stats, xp: (current?.totalXp ?? 0) - baseline.current.xp, rewards })
+      // 章节结算：stats 已包含最后一题。
+      chapterResult.report(stats.total, stats.correct)
     } else loadQuestion(index + 1)
   }
 
@@ -241,7 +252,8 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
           <label htmlFor="vocab-spelling">输入对应的英文单词</label><input ref={spellingInput} id="vocab-spelling" value={spelling} onChange={event => setSpelling(event.target.value)} disabled={answered || !!saveError} autoComplete="off" autoCapitalize="none" spellCheck={false} /><button className="btn btn-primary" disabled={answered || !!saveError || !spelling.trim()}>提交拼写</button>
         </form> : <div className="options" role="group" aria-label="答案选项">{question.options.map((option, i) => <button key={option.text} className={'option' + (answered && option.correct ? ' correct' : answered && picked === option.text ? ' wrong' : '')} disabled={answered || !!saveError} onClick={() => submit(option.text)}><kbd aria-hidden="true">{i + 1}</kbd><span>{option.text}</span>{answered && option.correct && <span aria-label="正确答案">✓</span>}{answered && !option.correct && picked === option.text && <span aria-label="本次答错">×</span>}</button>)}</div>}
         <AnswerHint key={index + ':' + question.word.id} question={question} disabled={answered} />
-        {answered && <div className="mission-feedback" role="status"><strong>{isVocabAnswerCorrect(question, picked!) ? '回答正确' : '记住这条新线索'} · {question.word.word}</strong><p>{question.word.meaning}</p><p>{question.word.example}</p><p className="muted">{question.word.exampleCn}</p></div>}
+        {answered && <div className="mission-feedback" role="status"><strong>{isVocabAnswerCorrect(question, picked!) ? '回答正确' : '记住这条新线索'} · {question.word.word}</strong><p>{formatMeaning(question.word.meaning)}</p><p>{question.word.example}</p><p className="muted">{question.word.exampleCn}</p></div>}
+        {answered && wrongAnswer && <ErrorCard tag={wrongAnswer.tag} word={question.word.word} chosen={wrongAnswer.chosen} correctAnswer={question.mode === 'spelling' ? question.word.word : question.options.find(option => option.correct)?.text} explain={question.word.phrases?.[0]?.translation} />}
         <div className="mission-actions"><small>{question.mode === 'spelling' ? 'Enter 提交拼写' : '数字键 1–4 选择答案'} · 答题后 Enter 继续</small>{answered && <button ref={continueButton} className="btn btn-primary" disabled={!persisted || !!saveError} onClick={advance}>{index + 1 >= target ? '查看战报' : '下一站'}{!persisted ? ' · 等待保存' : ' →'}</button>}</div>
       </section>
     </>}

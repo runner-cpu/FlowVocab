@@ -21,7 +21,7 @@ describe('first-run guide focus lifecycle', () => {
     fireEvent.click(opener)
 
     const close = await screen.findByRole('button', { name: /关闭新手指南/ })
-    const start = screen.getByRole('button', { name: /开始每日任务/ })
+    const start = screen.getByRole('button', { name: /前往航线地图/ })
     expect(close).toHaveFocus()
     expect(document.querySelector('.app-content')).toHaveAttribute('inert')
     expect(document.querySelector('.app-content')).toHaveAttribute('aria-hidden', 'true')

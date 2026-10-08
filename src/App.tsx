@@ -3,6 +3,7 @@ import { useProgress } from './store/progressStore'
 import { useUI, type PageKey } from './store/gameStore'
 import TopBar from './components/layout/TopBar'
 import FeedbackFx from './components/game/FeedbackFx'
+import HarborBackdrop from './components/game/HarborBackdrop'
 import Home from './pages/Home'
 const Dashboard = lazy(() => import('./pages/Dashboard'))
 const ModulePage = lazy(() => import('./pages/ModulePage'))
@@ -43,6 +44,7 @@ export default function App() {
   return (
     <div className="app">
       <a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); document.getElementById('main-content')?.focus() }}>跳到主要内容</a>
+      <HarborBackdrop />
       <TopBar />
       <main className="main" id="main-content" tabIndex={-1}>
         <SaveStatus />

@@ -1,0 +1,173 @@
+/* 错因规则卡 + 形近词对比块。
+ * 本文件只定义 .error-card-* 命名空间下的类，并只消费 global.css 已有的 token；
+ * 不重定义变量、不覆盖任何全局组件样式，可被任意模块独立引入。 */
+
+.error-card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 14px;
+  padding: 14px 16px;
+  border: 1px solid var(--line);
+  border-left: 4px solid var(--info);
+  border-radius: 12px;
+  background: var(--card);
+  box-shadow: var(--shadow);
+  font-size: 13.5px;
+  line-height: 1.7;
+}
+
+/* 每个标签一种左侧色条 + 徽标底色，颜色不是唯一信号：徽标始终带文字。 */
+
+.error-card-tag-tense { border-left-color: var(--gold); }
+.error-card-tag-agreement { border-left-color: var(--accent); }
+.error-card-tag-article { border-left-color: var(--info); }
+.error-card-tag-preposition { border-left-color: var(--focus-ring); }
+.error-card-tag-word-choice { border-left-color: var(--accent-ink); }
+.error-card-tag-word-form { border-left-color: var(--gold-ink); }
+.error-card-tag-clause { border-left-color: var(--ink2); }
+.error-card-tag-spelling { border-left-color: var(--err); }
+.error-card-tag-listening-detail { border-left-color: var(--control-line); }
+.error-card-tag-generic { border-left-color: var(--muted); }
+
+.error-card-announce {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip: rect(0, 0, 0, 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.error-card-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.error-card-title {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--ink);
+}
+
+.error-card-badge {
+  padding: 3px 10px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  background: var(--accent-bg);
+  color: var(--accent-ink);
+  font-size: 11.5px;
+  font-weight: 700;
+  letter-spacing: .06em;
+}
+
+.error-card-dismiss {
+  margin-left: auto;
+  padding: 6px 12px;
+  min-height: 44px;
+  border: 1px solid var(--control-line);
+  border-radius: 10px;
+  background: var(--surface-raised);
+  color: var(--ink2);
+  cursor: pointer;
+}
+
+.error-card-dismiss:hover { border-color: var(--accent-ink); color: var(--ink); }
+
+.error-card-dismiss:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+
+.error-card-body { color: var(--ink2); }
+
+.error-card-cue {
+  padding: 8px 12px;
+  border-left: 3px solid var(--accent);
+  background: var(--surface-soft);
+  border-radius: 8px;
+  color: var(--ink);
+}
+
+.error-card-answers {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 12px;
+  color: var(--ink2);
+}
+
+.error-card-answers dt { color: var(--muted); font-size: 12px; }
+
+.error-card-answers dd { margin: 0; color: var(--ink); font-weight: 600; overflow-wrap: anywhere; }
+
+.error-card-explain { color: var(--ink2); font-size: 13px; }
+
+.error-card-contrast {
+  margin-top: 4px;
+  padding: 12px;
+  border: 1px dashed var(--line);
+  border-radius: 10px;
+  background: var(--surface-soft);
+}
+
+.error-card-contrast-title { font-size: 14px; font-weight: 700; color: var(--ink); }
+
+.error-card-caption { caption-side: top; padding-bottom: 6px; color: var(--muted); font-size: 12px; text-align: left; }
+
+.error-card-contrast-table {
+  width: 100%;
+  margin-top: 6px;
+  border-collapse: collapse;
+  font-size: 13px;
+}
+
+.error-card-contrast-table th,
+.error-card-contrast-table td {
+  padding: 7px 9px;
+  border-bottom: 1px solid var(--line);
+  text-align: left;
+  vertical-align: top;
+}
+
+.error-card-contrast-table thead th { color: var(--muted); font-size: 11.5px; letter-spacing: .04em; }
+
+.error-card-contrast-table tbody tr.is-focus { background: var(--accent-bg); }
+
+.error-card-word { font-weight: 800; color: var(--ink); }
+
+.error-card-focus {
+  margin-left: 8px;
+  padding: 1px 7px;
+  border: 1px solid var(--accent);
+  border-radius: 999px;
+  color: var(--accent-ink);
+  font-size: 10.5px;
+  font-weight: 700;
+}
+
+.error-card-phonetic { color: var(--ink2); font-family: 'Roboto', 'Segoe UI', Arial, sans-serif; }
+
+.error-card-tip { margin-top: 10px; color: var(--ink); font-weight: 600; }
+
+.error-card-example { margin-top: 6px; color: var(--ink2); font-size: 12.5px; }
+
+.error-card-example span { display: block; }
+
+.error-card-example-cn { color: var(--muted); }
+
+@media (max-width: 600px) {
+  .error-card { padding: 12px; }
+  .error-card-dismiss { width: 100%; margin-left: 0; }
+  .error-card-contrast-table th,
+  .error-card-contrast-table td { padding: 6px; font-size: 12px; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .error-card,
+  .error-card * {
+    animation: none !important;
+    transition: none !important;
+  }
+}

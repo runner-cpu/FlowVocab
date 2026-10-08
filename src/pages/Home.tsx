@@ -10,6 +10,8 @@ import RevealOnScroll from '../components/ui/RevealOnScroll'
 import AnimatedNumber from '../components/ui/AnimatedNumber'
 import ProgressionPanel from '../components/dashboard/ProgressionPanel'
 import ResponsiveSceneImage from '../components/ui/ResponsiveSceneImage'
+import WorldMap from '../components/game/WorldMap'
+import { CHAPTERS, chapterView } from '../engine/chapters'
 import { useNow } from '../hooks/useNow'
 import { dayKey } from '../engine/forget'
 
@@ -38,10 +40,12 @@ export default function Home() {
   const dueWords = userWords.filter((word) => word.nextReview <= now).length
   const radar = progress?.radar
   const track = useUI((s) => s.track)
-  const weakest = MODULES.filter(key => isModuleAvailable(track, key)).reduce((low, key) => (radar?.[key] ?? 0) < (radar?.[low] ?? 0) ? key : low, 'vocab')
-  const journey = JOURNEY.map(item => isModuleAvailable(track, item.module) ? item : { module: 'grammar' as const, title: '完成 3 次语法作答', target: 3, icon: GitBranch })
   const setTrack = useUI((s) => s.setTrack)
   const trackMeta = LEARNING_TRACKS[track]
+  const weakest = MODULES.filter(key => isModuleAvailable(track, key)).reduce((low, key) => (radar?.[key] ?? 0) < (radar?.[low] ?? 0) ? key : low, 'vocab')
+  const journey = JOURNEY.map(item => isModuleAvailable(track, item.module) ? item : { module: 'grammar' as const, title: '完成 3 次语法作答', target: 3, icon: GitBranch })
+  const mapChapters = chapterView(CHAPTERS, progress?.chapterStars ?? {}, (module) => isModuleAvailable(track, module), track)
+  const stardust = progress?.stardust ?? 0
 
   return <div className="adventure-home">
     <header className="mission-heading">
@@ -64,9 +68,12 @@ export default function Home() {
     </section>
 
     <ProgressionPanel />
+    <div className="learning-section-heading"><div><h2>航线地图</h2><p>沿暮色海港依次点亮六座灯塔，每一站都会留下星级与星尘。</p></div><span>{mapChapters.filter(chapter => chapter.stars > 0).length}/6 已点亮 · 星尘 {stardust}</span></div>
+    <WorldMap chapters={mapChapters} onEnter={(chapter) => go(chapter.module)} />
+
     <RevealOnScroll><section className="journey-panel" aria-labelledby="journey-title"><div className="panel-heading"><div><Sparkles size={18} /><h2 id="journey-title">今日旅程</h2></div><p>完成三个短任务，留下比“三分钟热度”更可靠的轨迹。</p></div><div className="journey-track">{journey.map((item, index) => { const count = daily?.modules?.[item.module] ?? 0; const complete = count >= item.target; const Icon = item.icon; return <button key={item.module} className={`journey-step ${complete ? 'complete' : ''}`} onClick={() => go(item.module)}><span className="step-icon">{complete ? <Check size={20} /> : <Icon size={20} />}</span><span><strong>{item.title}</strong><small>{complete ? '已完成' : `${count}/${item.target} 次作答`}</small></span>{index < JOURNEY.length - 1 ? <i aria-hidden="true" /> : null}</button> })}</div></section></RevealOnScroll>
 
-    <div className="learning-section-heading"><div><h2>选择你的学习场景</h2><p>图像、声音和任务一起工作，难度会随表现自动调整。</p></div><span><AnimatedNumber value={completedModules} />/6 今日已探索</span></div>
+    <div className="learning-section-heading"><div><h2>快速进入训练模块</h2><p>不受章节解锁限制，直接进入任意模块练习；进度同样计入航线。</p></div><span><AnimatedNumber value={completedModules} />/6 今日已探索</span></div>
     <section className="learning-scenes" aria-label="英语学习模块">{MODULES.map((key, index) => { const meta = MODULE_META[key]; const mastery = radar?.[key] ?? 0; const scene = LEARNING_SCENES[index]; const Icon = SCENE_ICONS[key]; const available = isModuleAvailable(track, key); return <SpotlightCard key={key} as={available ? 'button' : 'div'} aria-disabled={available ? undefined : 'true'} className={`scene-card scene-${index + 1} ${available ? '' : 'scene-muted'}`} onClick={available ? () => go(key) : undefined}><ResponsiveSceneImage className="scene-visual" assetStem={scene.visual} sizes="(max-width: 640px) 100vw, (max-width: 900px) 50vw, 33vw" alt={`${scene.title}学习场景插画`} /><span className="scene-shade" /><span className="scene-index">0{index + 1}</span><span className="scene-icon" aria-hidden="true"><Icon size={19} /></span><span className="scene-copy"><small>{scene.eyebrow}</small><strong>{scene.title}</strong><em>{available ? scene.prompt : '此路线暂未开放'}</em></span><span className="scene-progress"><i style={{ width: `${mastery}%` }} /><small>{mastery}%</small></span><ArrowRight className="scene-arrow" size={18} /></SpotlightCard> })}</section>
 
     <section className="return-strip"><div className="return-mark"><Trophy size={22} /></div><div><h2>{dueWords > 0 ? `${dueWords} 张记忆卡正在等你` : '今天的复习卡已经清空'}</h2><p>{dueWords > 0 ? '先复习即将遗忘的内容，新知识才会真正留下。' : '可以探索新场景，明天我们会按记忆节奏再次相遇。'}</p></div><button className="btn btn-ghost" onClick={() => go('vocab')}>{dueWords > 0 ? '开始复习' : '继续探索'} <ArrowRight size={16} /></button></section>

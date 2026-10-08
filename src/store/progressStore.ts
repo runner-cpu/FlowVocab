@@ -13,6 +13,7 @@ import {
 import { qualityOf, nextInterval, normalizeSuccessfulReviews, updateReviewProgress, dayKey } from '../engine/forget'
 import { SoundBank } from '../engine/audio'
 import { updateStreak } from '../engine/streak'
+import { applyChapterResult, starsForResult, CHAPTERS as ROUTE_CHAPTERS } from '../engine/chapters'
 import { ACTIVE_VOCAB_TARGET, planetLevelFromEnergy, vocabMasteryScore } from '../engine/progression'
 import { deriveProfileProgress } from './progressModel'
 import {
@@ -154,14 +155,23 @@ function normalizedProgress(progress: Progress): Progress {
     ? Math.max(progress.legacyListeningFloor ?? 0, Math.min(progress.listeningPassed, LISTENING_ITEMS.length))
     : progress.legacyListeningFloor ?? 0
   const readingFloor = Math.min(progress.readingDone, CHAPTERS.length)
+  const chapterStars = Object.fromEntries(Object.entries(progress.chapterStars ?? {})
+    .filter((entry): entry is [string, number] => typeof entry[1] === 'number' && Number.isFinite(entry[1]))
+    .map(([id, value]) => [id, Math.max(0, Math.min(3, Math.floor(value)))]))
   return {
     ...progress,
+    chapterStars,
+    stardust: Math.max(0, Math.floor(progress.stardust ?? 0)),
     legacySentenceFloor: sentenceFloor,
     legacyListeningFloor: listeningFloor,
     sentencePassed: Math.min(SENTENCE_QUESTS.length, Math.max(sentenceFloor, progress.completedSentenceIds?.length ?? 0)),
     listeningPassed: Math.min(LISTENING_ITEMS.length, Math.max(listeningFloor, progress.completedListeningIds?.length ?? 0)),
     readingDone: Math.min(CHAPTERS.length, Math.max(readingFloor, new Set(Object.keys(progress.narrative ?? {})).size)),
   }
+}
+
+function isKnownChapter(chapterId: string): boolean {
+  return ROUTE_CHAPTERS.some((chapter) => chapter.id === chapterId)
 }
 
 function defaultRadar(): Radar {
@@ -221,6 +231,7 @@ interface ProgressStore {
   passListening: (itemId?: string) => Promise<void>
   submitWriting: (taskId: string, score: number) => Promise<void>
   completeReading: (chapterId: string) => Promise<void>
+  recordChapterResult: (chapterId: string, total: number, correct: number) => Promise<void>
   toggleZen: () => void
   updateSettings: (patch: Partial<UserProfile['settings']>) => Promise<void>
   clearFeedback: () => void
@@ -539,6 +550,23 @@ export const useProgress = create<ProgressStore>((set, get) => ({
       narrative: { ...s.progress.narrative, [chapterId]: 'done' }
     }
     progress.radar = computeRadar(progress, s.userWords)
+    await db.progress.put(progress)
+    set({ progress })
+  }),
+
+  /** 关卡结算：记录本章最好星级，返回本次获得的星尘。 */
+  recordChapterResult: (chapterId, total, correct) => serializeWrite(async () => {
+    const s = get()
+    // 只接受航线地图里真实存在的章节，避免错误调用者写入幽灵星尘。
+    if (!s.progress || !isKnownChapter(chapterId)) return
+    const stars = starsForResult(total, correct)
+    const result = applyChapterResult(s.progress.chapterStars ?? {}, chapterId, stars)
+    if (!result.improved) return
+    const progress: Progress = {
+      ...s.progress,
+      chapterStars: result.stars,
+      stardust: (s.progress.stardust ?? 0) + result.stardustGained
+    }
     await db.progress.put(progress)
     set({ progress })
   }),

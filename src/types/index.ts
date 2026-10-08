@@ -232,6 +232,10 @@ export interface Progress {
   /** Counts imported before per-content IDs existed; retained as a non-increasing floor. */
   legacySentenceFloor?: number
   legacyListeningFloor?: number
+  /** 已完成章节的星级（chapterId → 0..3），只保留最好成绩 */
+  chapterStars?: Record<string, number>
+  /** 关卡掉落的星尘总量 */
+  stardust?: number
   writingDone: number
   writingScoreSum: number
   readingDone: number

@@ -4,6 +4,11 @@ import vm from 'node:vm'
 import { test } from 'node:test'
 
 const source = readFileSync(new URL('../public/sw.js', import.meta.url), 'utf8')
+const generator = readFileSync(new URL('./build-service-worker.mjs', import.meta.url), 'utf8')
+
+test('precaches the locally bundled fonts the app loads offline', () => {
+  assert.match(generator, /woff2\?/)
+})
 function worker(workerSource = source) {
   const handlers = {}, removed = [], opened = []
   const cache = { match: async () => new Response('cached'), put: async () => {}, addAll: async () => {} }

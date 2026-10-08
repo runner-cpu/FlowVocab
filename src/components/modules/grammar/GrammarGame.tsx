@@ -6,6 +6,8 @@ import { itemsForTrack } from '../../../data/curriculum'
 import { useUI } from '../../../store/gameStore'
 import type { SkillNode } from '../../../types'
 import GameHud from '../../game/GameHud'
+import ErrorCard from '../../game/ErrorCard'
+import { inferErrorTag, type ErrorTag } from '../../../engine/errorRouting'
 
 export default function GrammarGame() {
   const track = useUI((state) => state.track)
@@ -18,6 +20,8 @@ export default function GrammarGame() {
   const [picked, setPicked] = useState<number | null>(null)
   const [answered, setAnswered] = useState(false)
   const [finished, setFinished] = useState(false)
+  // 答错后旁路渲染的离线错因卡；只在当前题目答错时存在，题目前进/重答/换节点/换路线即卸载。
+  const [errorCard, setErrorCard] = useState<{ tag: ErrorTag; chosen?: string; correctAnswer?: string; explain?: string } | null>(null)
   const startedAt = useRef(performance.now())
   const advanceTimer = useRef<number | null>(null)
   const skillTree = progress?.skillTree ?? {}
@@ -30,6 +34,7 @@ export default function GrammarGame() {
     setPicked(null)
     setAnswered(false)
     setFinished(false)
+    setErrorCard(null)
     startedAt.current = performance.now()
     return () => {
       if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current)
@@ -44,15 +49,19 @@ export default function GrammarGame() {
     return current?.id === rootId
   }
 
-  function startNode(node: SkillNode) { if (isLocked(node)) return; setActiveNode(node); setQIndex(0); setPicked(null); setAnswered(false); setFinished(false) }
+  function startNode(node: SkillNode) { if (isLocked(node)) return; setActiveNode(node); setQIndex(0); setPicked(null); setAnswered(false); setFinished(false); setErrorCard(null) }
   function onPick(index: number) {
     if (answered || !activeNode) return
-    const correct = index === activeNode.quizzes[qIndex].answer
-    setPicked(index); setAnswered(true); void answer({ module: 'grammar', correct, timeMs: elapsedSince(startedAt.current, performance.now()) })
+    const quiz = activeNode.quizzes[qIndex]
+    const correct = index === quiz.answer
+    setPicked(index); setAnswered(true)
+    // 答错时叠加离线错因路由；答对立即清空，保证同一时刻最多一张错因卡。
+    setErrorCard(correct ? null : { tag: inferErrorTag({ module: 'grammar', prompt: quiz.prompt, options: quiz.options, chosen: quiz.options[index], correctAnswer: quiz.options[quiz.answer], explain: quiz.explain }), chosen: quiz.options[index], correctAnswer: quiz.options[quiz.answer], explain: quiz.explain })
+    void answer({ module: 'grammar', correct, timeMs: elapsedSince(startedAt.current, performance.now()) })
     if (correct) advanceTimer.current = window.setTimeout(() => {
       advanceTimer.current = null
       if (qIndex + 1 >= activeNode.quizzes.length) { setFinished(true); void completeGrammarNode(activeNode.id) }
-      else { setQIndex((value) => value + 1); setPicked(null); setAnswered(false) }
+      else { setQIndex((value) => value + 1); setPicked(null); setAnswered(false); setErrorCard(null) }
     }, 1000)
   }
 
@@ -64,7 +73,7 @@ export default function GrammarGame() {
         return <button key={node.id} className={`skill-node ${lit ? 'lit' : ''} ${locked ? 'locked' : ''}`} disabled={locked} aria-label={locked ? `${node.name}，锁定，需要先完成 ${prerequisite}` : node.name} onClick={() => startNode(node)}><span>{lit ? '✓' : locked ? '🔒' : '◆'} {node.name}</span>{locked && <small>先完成 {prerequisite}</small>}</button>
       })}</div></div></section>
     })}</div></div>}
-    {activeNode && !finished && <div className="card"><div className="card-title">📌 {activeNode.name}<button className="btn btn-ghost" style={{ marginLeft: 'auto' }} onClick={() => setActiveNode(null)}>返回技能树</button></div><p className="muted">{activeNode.desc}</p>{activeNode.examples.map((example) => <div key={example} className="explain-box mt8">💬 {example}</div>)}<div className="mt14">第 {qIndex + 1} / {activeNode.quizzes.length} 题</div><div className="options mt8">{activeNode.quizzes[qIndex].options.map((option, index) => { let className = 'option'; if (answered) { if (index === activeNode.quizzes[qIndex].answer) className += ' correct'; else if (picked === index) className += ' wrong' } return <button key={option} className={className} disabled={answered} onClick={() => onPick(index)}>{option}</button> })}</div>{answered && <div className="explain-box">{activeNode.quizzes[qIndex].explain}{picked !== activeNode.quizzes[qIndex].answer && <div className="mt8"><button className="btn btn-ghost" onClick={() => { setPicked(null); setAnswered(false) }}>重新作答</button></div>}</div>}</div>}
+    {activeNode && !finished && <div className="card"><div className="card-title">📌 {activeNode.name}<button className="btn btn-ghost" style={{ marginLeft: 'auto' }} onClick={() => setActiveNode(null)}>返回技能树</button></div><p className="muted">{activeNode.desc}</p>{activeNode.examples.map((example) => <div key={example} className="explain-box mt8">💬 {example}</div>)}<div className="mt14">第 {qIndex + 1} / {activeNode.quizzes.length} 题</div><div className="options mt8">{activeNode.quizzes[qIndex].options.map((option, index) => { let className = 'option'; if (answered) { if (index === activeNode.quizzes[qIndex].answer) className += ' correct'; else if (picked === index) className += ' wrong' } return <button key={option} className={className} disabled={answered} onClick={() => onPick(index)}>{option}</button> })}</div>{answered && <div className="explain-box">{activeNode.quizzes[qIndex].explain}{picked !== activeNode.quizzes[qIndex].answer && <div className="mt8"><button className="btn btn-ghost" onClick={() => { setPicked(null); setAnswered(false); setErrorCard(null) }}>重新作答</button></div>}</div>}{errorCard && <ErrorCard tag={errorCard.tag} chosen={errorCard.chosen} correctAnswer={errorCard.correctAnswer} explain={errorCard.explain} onDismiss={() => setErrorCard(null)} />}</div>}
     {finished && <div className="card center"><div style={{ fontSize: 44 }}>✓</div><h2>技能点亮成功！</h2><p className="muted">{activeNode?.name} 已加入你的语法技能树。</p><button className="btn btn-primary mt14" onClick={() => setActiveNode(null)}>返回技能树</button></div>}
   </div>
 }

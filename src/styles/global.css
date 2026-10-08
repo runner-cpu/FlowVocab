@@ -28,6 +28,11 @@
   --info: #2368b0;
   --focus-ring: #0b526a;
   --page-glow: #e9f8fb;
+  --harbor-glow: rgba(84, 215, 176, .14);
+  --harbor-haze: rgba(22, 184, 138, .07);
+  --harbor-hill: rgba(18, 36, 61, .09);
+  --harbor-water: rgba(9, 35, 62, .05);
+  --harbor-reflection: rgba(84, 215, 176, .06);
   --nav-surface: rgba(255, 255, 255, .86);
   --mobile-nav-surface: rgba(255, 255, 255, .96);
   --control-surface: #ffffff;
@@ -69,6 +74,11 @@
   --info: #a8d0ff;
   --focus-ring: #8cf0d3;
   --page-glow: rgba(16, 57, 102, .68);
+  --harbor-glow: rgba(69, 214, 196, .18);
+  --harbor-haze: rgba(57, 217, 171, .08);
+  --harbor-hill: rgba(133, 188, 228, .10);
+  --harbor-water: rgba(4, 18, 34, .35);
+  --harbor-reflection: rgba(117, 243, 209, .08);
   --nav-surface: rgba(4, 18, 34, .88);
   --mobile-nav-surface: rgba(4, 18, 34, .96);
   --control-surface: rgba(10, 39, 64, .72);
@@ -92,7 +102,7 @@ html { height: 100%; scroll-padding-top: calc(var(--nav-h) + 16px); }
 
 body {
   height: 100%;
-  font-family: 'Roboto', 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', Arial, sans-serif;
+  font-family: 'Outfit Local', 'PingFang SC', 'Segoe UI', 'Microsoft YaHei', Arial, sans-serif;
   line-height: 1.6; font-size: 14px; -webkit-font-smoothing: antialiased; color: var(--ink);
   background: radial-gradient(circle at 72% -10%, var(--page-glow), transparent 34%), var(--bg);
 }
@@ -134,7 +144,7 @@ input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color:
 
 /* ===== 3. Layout — application frame and navigation ===== */
 
-.app { display: flex; flex-direction: column; min-height: 100dvh; }
+.app { display: flex; flex-direction: column; min-height: 100dvh; position: relative; z-index: 1; }
 
 .main { flex: 1; width: 100%; margin: 0 auto; max-width: 1240px; padding: 34px 28px 80px; min-width: 0; }
 

@@ -6,6 +6,8 @@ import { itemsForTrack } from '../../../data/curriculum'
 import { useUI } from '../../../store/gameStore'
 import type { SentenceQuest } from '../../../types'
 import GameHud from '../../game/GameHud'
+import ErrorCard from '../../game/ErrorCard'
+import { inferErrorTag, type ErrorTag } from '../../../engine/errorRouting'
 
 export type Bucket = 'main' | 'clause' | 'modifier'
 
@@ -32,6 +34,8 @@ export default function SentenceGame() {
   const [answerPicked, setAnswerPicked] = useState<number | null>(null)
   const [answered, setAnswered] = useState(false)
   const [done, setDone] = useState(false)
+  // 答错后旁路渲染的离线错因卡：错放桶或错选译文时出现，撤回/重置/下一题/换路线即卸载。
+  const [errorCard, setErrorCard] = useState<{ tag: ErrorTag; chosen?: string; correctAnswer?: string; explain?: string } | null>(null)
   const startedAt = useRef(performance.now())
   const puzzleMistake = useRef(false)
   const quest = quests[qIndex]
@@ -53,6 +57,7 @@ export default function SentenceGame() {
     setAnswerPicked(null)
     setAnswered(false)
     setDone(false)
+    setErrorCard(null)
     startedAt.current = performance.now()
     puzzleMistake.current = false
     return () => {
@@ -73,20 +78,23 @@ export default function SentenceGame() {
     return result
   }, [quest])
 
-  function resetPuzzle(message = '已重置本题') { setPlaced({}); setPreviousPlaced(null); setPicked(null); setDragged(null); setAnnouncement(message) }
+  function resetPuzzle(message = '已重置本题') { setPlaced({}); setPreviousPlaced(null); setPicked(null); setDragged(null); setAnnouncement(message); setErrorCard(null) }
   function nextQuestion() {
     if (qIndex + 1 >= quests.length) setDone(true)
-    else { setQIndex((index) => index + 1); resetPuzzle(''); setAnswerPicked(null); setAnswered(false) }
+    else { setQIndex((index) => index + 1); resetPuzzle(''); setAnswerPicked(null); setAnswered(false); setErrorCard(null) }
   }
   function placeSeg(index: number, bucket: Bucket) {
     if (!quest?.segments) return
     const result = placeSentenceSegment(quest.segments, placed, index, bucket)
     setPicked(null); setDragged(null)
     if (!result.correct) {
+      // 拼图题没有 explain 文本，只传可得字段；规则卡仍按同一离线规则渲染。
+      setErrorCard({ tag: inferErrorTag({ module: 'sentence', sentence: quest.sentence, options: quest.options, chosen: bucketNames[bucket], correctAnswer: bucketNames[quest.segments[index].bucket] }), chosen: bucketNames[bucket], correctAnswer: bucketNames[quest.segments[index].bucket] })
       setFlashWrong(index); setAnnouncement(`位置不对，${quest.segments[index].text} 仍在待选区`)
       puzzleMistake.current = true
       flashTimer.current = window.setTimeout(() => { flashTimer.current = null; setFlashWrong(null) }, 500); return
     }
+    setErrorCard(null)
     setPreviousPlaced(placed); setPlaced(result.placed); setAnnouncement(`${quest.segments[index].text} 已放入${bucketNames[bucket]}`)
     if (result.complete) { void answer({ module: 'sentence', correct: !puzzleMistake.current, timeMs: elapsedSince(startedAt.current, performance.now()) }); void passSentence(quest.id); advanceTimer.current = window.setTimeout(() => { advanceTimer.current = null; nextQuestion() }, 900) }
   }
@@ -94,10 +102,12 @@ export default function SentenceGame() {
     if (!quest || answered) return
     const correct = index === quest.answer
     setAnswerPicked(index); setAnswered(true)
+    // 答错时按同一离线规则给出错因卡；答对立即清空，保证最多一张。
+    setErrorCard(correct ? null : { tag: inferErrorTag({ module: 'sentence', sentence: quest.sentence, options: quest.options, chosen: quest.options?.[index], correctAnswer: quest.answer !== undefined ? quest.options?.[quest.answer] : undefined, explain: quest.explain }), chosen: quest.options?.[index], correctAnswer: quest.answer !== undefined ? quest.options?.[quest.answer] : undefined, explain: quest.explain })
     void answer({ module: 'sentence', correct, timeMs: elapsedSince(startedAt.current, performance.now()) })
     advanceTimer.current = window.setTimeout(() => {
       advanceTimer.current = null
-      if (correct) { void passSentence(quest.id); nextQuestion() } else { setAnswered(false); setAnswerPicked(null) }
+      if (correct) { void passSentence(quest.id); nextQuestion() } else { setAnswered(false); setAnswerPicked(null); setErrorCard(null) }
     }, correct ? 1300 : 1000)
   }
   const bucketCorrect = (bucket: Bucket) => quest?.type === 'puzzle' && quest.segments!.filter((segment) => segment.bucket === bucket).every((segment) => placed[quest.segments!.findIndex((candidate) => candidate === segment)] === bucket)
@@ -112,8 +122,8 @@ export default function SentenceGame() {
       <div className="chips segment-pool">{segments.map((segment) => <button type="button" key={segment.idx} draggable={placed[segment.idx] === undefined} disabled={placed[segment.idx] !== undefined} aria-pressed={picked === segment.idx} onDragStart={() => setDragged(segment.idx)} onDragEnd={() => setDragged(null)} onClick={() => setPicked(picked === segment.idx ? null : segment.idx)} className={`chip segment-chip ${picked === segment.idx ? 'picked' : ''} ${placed[segment.idx] !== undefined ? 'placed' : ''} ${flashWrong === segment.idx ? 'wrong-flash' : ''}`}>{segment.text}</button>)}</div>
       <p className="muted interaction-hint">拖动片段，或先点选片段再选择目标区域。</p>
       <div className="buckets mt14">{(['main', 'clause', 'modifier'] as Bucket[]).map((bucket) => <div key={bucket} className={`bucket ${bucketCorrect(bucket) ? 'correct' : ''}`} role="button" tabIndex={0} aria-label={`将选中片段放入${bucketNames[bucket]}`} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (dragged !== null) placeSeg(dragged, bucket) }} onClick={() => { if (picked !== null) placeSeg(picked, bucket) }} onKeyDown={(event) => { if ((event.key === 'Enter' || event.key === ' ') && picked !== null) { event.preventDefault(); placeSeg(picked, bucket) } }}><h5>{bucketNames[bucket]}</h5><div className="bucket-content">{quest.segments!.filter((_, index) => placed[index] === bucket).map((segment, index) => <span key={index} className="chip">{segment.text}</span>)}</div></div>)}</div>
-      <div className="interaction-actions"><button className="btn btn-ghost" disabled={previousPlaced === null} onClick={() => { if (previousPlaced !== null) { setPlaced(previousPlaced); setPreviousPlaced(null); setAnnouncement('已撤回上一步') } }}>撤回上一步</button><button className="btn btn-ghost" onClick={() => resetPuzzle()}>重置本题</button></div><p className="sr-only" aria-live="polite">{announcement}</p>
+      <div className="interaction-actions"><button className="btn btn-ghost" disabled={previousPlaced === null} onClick={() => { if (previousPlaced !== null) { setPlaced(previousPlaced); setPreviousPlaced(null); setAnnouncement('已撤回上一步'); setErrorCard(null) } }}>撤回上一步</button><button className="btn btn-ghost" onClick={() => resetPuzzle()}>重置本题</button></div>{errorCard && <ErrorCard tag={errorCard.tag} chosen={errorCard.chosen} correctAnswer={errorCard.correctAnswer} explain={errorCard.explain} onDismiss={() => setErrorCard(null)} />}<p className="sr-only" aria-live="polite">{announcement}</p>
     </>}
-    {quest.type === 'translate' && <><div className="options mt14">{quest.options!.map((option, index) => { let className = 'option'; if (answered) { if (index === quest.answer) className += ' correct'; else if (answerPicked === index) className += ' wrong' } return <button key={index} className={className} disabled={answered} onClick={() => onTranslate(index)}>{option}</button> })}</div>{answered && <div className="explain-box">{quest.explain}</div>}</>}
+    {quest.type === 'translate' && <><div className="options mt14">{quest.options!.map((option, index) => { let className = 'option'; if (answered) { if (index === quest.answer) className += ' correct'; else if (answerPicked === index) className += ' wrong' } return <button key={index} className={className} disabled={answered} onClick={() => onTranslate(index)}>{option}</button> })}</div>{answered && <div className="explain-box">{quest.explain}</div>}{errorCard && <ErrorCard tag={errorCard.tag} chosen={errorCard.chosen} correctAnswer={errorCard.correctAnswer} explain={errorCard.explain} onDismiss={() => setErrorCard(null)} />}</>}
   </div></div>
 }

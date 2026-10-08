@@ -3,6 +3,7 @@ import { useProgress } from '../store/progressStore'
 import { useUI } from '../store/gameStore'
 import { LEARNING_TRACKS, MODULE_META, TRACK_MODULE_FOCUS, type ModuleKey } from '../types'
 import { isModuleAvailable } from '../data/curriculum'
+import ChapterShell from '../components/game/ChapterShell'
 import VocabGame from '../components/modules/vocab/VocabGame'
 import GrammarGame from '../components/modules/grammar/GrammarGame'
 import SentenceGame from '../components/modules/sentence/SentenceGame'
@@ -41,10 +42,10 @@ export default function ModulePage({ module }: { module: ModuleKey }) {
   if (!available) return <div className="module-shell"><div className="module-context"><button className="back-link" onClick={() => go('home')}>← 返回学习舱</button></div><div className="card" role="status"><h2>此模块尚未对当前路线开放</h2><p>切换学习路线后可进入相应训练。</p><button className="btn btn-primary" onClick={() => go('home')}>切换路线</button></div></div>
   return <div className="module-shell">
     <div className="module-context">
-      <button className="back-link" onClick={() => go('home')}>← 返回学习舱</button>
+      <button className="back-link" onClick={() => go('home')}>← 返回航线地图</button>
       <div className="module-context-title"><span>{meta.icon}</span><div><strong>{meta.name}</strong><small>{LEARNING_TRACKS[track].shortLabel} · {TRACK_MODULE_FOCUS[track][module]} · 专注练习中</small></div></div>
       <div className="module-context-stats"><span>本轮 {session.total} 题</span><span>正确率 {session.total ? Math.round(session.correct / session.total * 100) : 0}%</span></div>
     </div>
-    {render()}
+    <ChapterShell module={module}>{render()}</ChapterShell>
   </div>
 }

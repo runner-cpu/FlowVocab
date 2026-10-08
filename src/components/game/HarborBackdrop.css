@@ -1,0 +1,59 @@
+/* 夜景港湾视差层：仅用 transform/opacity 动画，固定定位且不接收指针事件。 */
+.harbor-backdrop {
+  position: fixed; inset: 0; z-index: 0; overflow: hidden; pointer-events: none;
+}
+
+.harbor-layer { position: absolute; inset: 0; display: block; }
+
+.harbor-sky {
+  background:
+    radial-gradient(circle at 78% -8%, var(--harbor-glow, rgba(84, 215, 176, .16)), transparent 42%),
+    linear-gradient(180deg, transparent 0%, transparent 62%, var(--harbor-haze, rgba(22, 184, 138, .07)) 100%);
+}
+
+.harbor-hills {
+  inset: auto 0 46% 0; height: 26vh;
+  background:
+    radial-gradient(120% 100% at 12% 100%, var(--harbor-hill, rgba(18, 36, 61, .10)) 0 62%, transparent 63%),
+    radial-gradient(90% 100% at 38% 100%, var(--harbor-hill, rgba(18, 36, 61, .10)) 0 58%, transparent 59%),
+    radial-gradient(150% 100% at 82% 100%, var(--harbor-hill, rgba(18, 36, 61, .10)) 0 66%, transparent 67%);
+  animation: harbor-drift 26s ease-in-out infinite alternate;
+}
+
+.harbor-water {
+  inset: auto 0 0 0; height: 46%;
+  background:
+    repeating-linear-gradient(180deg, transparent 0 22px, var(--harbor-reflection, rgba(84, 215, 176, .06)) 22px 23px),
+    linear-gradient(180deg, transparent, var(--harbor-water, rgba(9, 35, 62, .05)));
+  animation: harbor-tide 18s ease-in-out infinite alternate;
+}
+
+.harbor-lights { inset: auto 0 0 0; height: 46%; }
+
+.harbor-lights i {
+  position: absolute; bottom: 6%;
+  width: 4px; height: 4px; border-radius: 50%;
+  background: var(--gold, #ffb648); opacity: .6;
+  box-shadow: 0 0 10px 2px rgba(255, 182, 72, .35);
+  animation: harbor-blink 6s ease-in-out infinite;
+}
+
+.harbor-lights i:nth-child(1) { left: 12%; animation-delay: 0s; }
+.harbor-lights i:nth-child(2) { left: 27%; bottom: 14%; animation-delay: 1.4s; }
+.harbor-lights i:nth-child(3) { left: 46%; bottom: 9%; animation-delay: 2.6s; }
+.harbor-lights i:nth-child(4) { left: 61%; bottom: 17%; animation-delay: 3.4s; }
+.harbor-lights i:nth-child(5) { left: 78%; bottom: 8%; animation-delay: 4.2s; }
+.harbor-lights i:nth-child(6) { left: 90%; bottom: 15%; animation-delay: 5s; }
+
+@keyframes harbor-drift { from { transform: translate3d(-1.2%, 0, 0); } to { transform: translate3d(1.2%, 0, 0); } }
+@keyframes harbor-tide { from { transform: translate3d(0, 6px, 0); opacity: .82; } to { transform: translate3d(0, -4px, 0); opacity: 1; } }
+@keyframes harbor-blink { 0%, 100% { opacity: .35; } 45% { opacity: .85; } }
+
+@media (max-width: 640px) {
+  .harbor-hills { height: 18vh; }
+  .harbor-lights i:nth-child(n + 5) { display: none; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .harbor-hills, .harbor-water, .harbor-lights i { animation: none; }
+}

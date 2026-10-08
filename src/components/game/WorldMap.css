@@ -1,0 +1,64 @@
+/* 航线地图与关卡壳：只定义 chapter-* / world-map / map-node-* 类，令牌沿用全局。 */
+.world-map { position: relative; padding: 8px 0 4px; }
+
+.world-map-route {
+  position: absolute; inset: 0 auto 0 50%; width: 46px; height: 100%; transform: translateX(-50%);
+  overflow: visible; pointer-events: none;
+}
+
+.world-map-route path {
+  fill: none; stroke: var(--line); stroke-width: 2; stroke-dasharray: 7 7; vector-effect: non-scaling-stroke;
+}
+
+.world-map-list { list-style: none; display: grid; gap: 14px; margin: 0; padding: 0; }
+
+.map-node { display: flex; }
+.map-node-left { justify-content: flex-start; }
+.map-node-right { justify-content: flex-end; }
+.map-node { padding-inline: 6px; }
+
+.map-node-button {
+  display: grid; grid-template-columns: 120px minmax(0, 1fr); gap: 14px; align-items: center;
+  width: min(100%, 460px); text-align: left; font: inherit; cursor: pointer;
+  padding: 12px 14px; border-radius: 18px; border: 1px solid var(--line);
+  background: var(--card); color: var(--ink); box-shadow: var(--shadow);
+  transition: transform .18s, border-color .18s, box-shadow .18s;
+}
+
+.map-node-button:hover:not(:disabled), .map-node-button:focus-visible { transform: translateY(-2px); border-color: var(--accent-light); }
+.map-node-button:disabled { cursor: not-allowed; opacity: .72; }
+
+.map-node-visual { position: relative; display: block; border-radius: 14px; overflow: hidden; background: var(--accent-bg); aspect-ratio: 4 / 3; }
+.map-node-visual img { width: 100%; height: 100%; object-fit: cover; display: block; }
+.map-node-mark { position: absolute; right: 8px; bottom: 8px; display: grid; place-items: center; width: 30px; height: 30px; border-radius: 10px; background: var(--card); color: var(--accent-ink); box-shadow: 0 4px 12px rgba(0, 0, 0, .18); }
+
+.map-node-copy { display: grid; gap: 3px; min-width: 0; }
+.map-node-copy small { color: var(--muted); font-size: 11px; }
+.map-node-copy strong { font-size: 18px; letter-spacing: -.02em; }
+.map-node-copy em { font-style: normal; color: var(--ink2); font-size: 12px; line-height: 1.6; }
+.map-node-dust { color: var(--gold-ink); font-weight: 700; }
+
+.chapter-stars { color: var(--gold); font-size: 15px; letter-spacing: 2px; }
+
+.map-node.node-current .map-node-button { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg), var(--shadow); }
+.map-node.node-locked .map-node-visual { filter: saturate(.4) brightness(.92); }
+.map-node.node-cleared .map-node-mark { color: var(--gold-ink); }
+
+/* 关卡壳 */
+.chapter-shell { display: grid; gap: 12px; }
+.chapter-strip { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 14px; border-radius: 16px; border: 1px solid var(--line); background: var(--card); box-shadow: var(--shadow); }
+.chapter-strip .chapter-strip-copy { display: grid; gap: 2px; min-width: 0; flex: 1; }
+.chapter-strip small { color: var(--muted); font-size: 11px; }
+.chapter-strip strong { font-size: 15px; }
+.chapter-strip-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+
+.chapter-summary { text-align: center; }
+.chapter-summary .chapter-summary-stars { font-size: 34px; color: var(--gold); letter-spacing: 6px; }
+.chapter-summary .chapter-dust { margin-top: 6px; color: var(--gold-ink); font-weight: 700; }
+
+@media (max-width: 640px) {
+  .world-map-route { display: none; }
+  .map-node, .map-node-left, .map-node-right { justify-content: center; padding-inline: 0; }
+  .map-node-button { grid-template-columns: 92px minmax(0, 1fr); gap: 10px; width: 100%; }
+  .map-node-copy strong { font-size: 16px; }
+}

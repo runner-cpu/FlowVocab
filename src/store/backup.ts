@@ -65,6 +65,10 @@ function normalizeProgress(value: unknown): Progress {
     const ids = value[key]
     if (ids !== undefined && (!Array.isArray(ids) || !ids.every(id => typeof id === 'string' && id.length > 0) || new Set(ids).size !== ids.length)) fail(key)
   }
+  if (value.stardust !== undefined && !count(value.stardust)) fail('stardust')
+  if (value.chapterStars !== undefined) {
+    if (!object(value.chapterStars) || !Object.entries(value.chapterStars).every(([id, stars]) => id.length > 0 && count(stars) && stars <= 3)) fail('chapterStars')
+  }
   return value as unknown as Progress
 }
 function normalizePlanet(value: unknown): Planet {

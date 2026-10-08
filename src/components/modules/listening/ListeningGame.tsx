@@ -1,9 +1,12 @@
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useProgress } from '../../../store/progressStore'
 import { LISTENING_ITEMS } from '../../../data/listening'
 import { itemsForTrack } from '../../../data/curriculum'
+import { DIALOGUE_SCENES, type DialogueScene } from '../../../data/dialogue'
+import type { DialogueMatchResult } from '../../../engine/dialogue'
 import { useUI } from '../../../store/gameStore'
-import type { ListeningItem } from '../../../types'
+import type { LearningTrack, ListeningItem } from '../../../types'
+import DialogueMode from './DialogueMode'
 import GameHud from '../../game/GameHud'
 import { elapsedSince } from '../../../engine/sessionTiming'
 
@@ -29,6 +32,29 @@ function alignWords(target: string[], spoken: string[]): boolean[] {
   })
 }
 
+/** 听力模块的两种练习模式：默认仍是听写，语音陪练为增量能力。 */
+const LISTENING_MODES = [
+  { id: 'dictation', label: '听写工坊' },
+  { id: 'dialogue', label: '语音陪练' }
+] as const
+type ListeningMode = (typeof LISTENING_MODES)[number]['id']
+
+/**
+ * 学习路线 → 与其听力侧重最贴近的离线对话场景。
+ * 听力模块在四条路线上的学习场景都是「星际电台」（听力码头），
+ * 因此默认场景统一指向 radio-station；没有映射时回退到第一个场景。
+ */
+const TRACK_DIALOGUE_SCENE: Partial<Record<LearningTrack, string>> = {
+  primary: 'radio-station',
+  'middle-high': 'radio-station',
+  advanced: 'radio-station',
+  cet: 'radio-station'
+}
+function defaultDialogueSceneId(track: LearningTrack): string {
+  const mapped = DIALOGUE_SCENES.find((candidate) => candidate.id === TRACK_DIALOGUE_SCENE[track])
+  return (mapped ?? DIALOGUE_SCENES[0]).id
+}
+
 export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: ListeningItem[] }) {
   const track = useUI(state => state.track)
   const selectedItems = items === LISTENING_ITEMS ? itemsForTrack(track, 'listening', items) : items
@@ -46,6 +72,10 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
   const [answered, setAnswered] = useState(false)
   const [speechError, setSpeechError] = useState('')
   const [selectionMode, setSelectionMode] = useState(false)
+  const [mode, setMode] = useState<ListeningMode>('dictation')
+  const [dialogueSceneId, setDialogueSceneId] = useState(() => defaultDialogueSceneId(track))
+  const [passedDialogueIds, setPassedDialogueIds] = useState<Set<string>>(() => new Set())
+  const tabRefs = useRef<Partial<Record<ListeningMode, HTMLButtonElement | null>>>({})
   const t0 = useRef(performance.now())
   const submitted = useRef(false)
   const generation = useRef(0)
@@ -86,6 +116,8 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
     resetQuestion()
     setQIndex(0)
     setDone(false)
+    setDialogueSceneId(defaultDialogueSceneId(track))
+    setPassedDialogueIds(new Set())
     return stopMedia
     // The route content owns the practice lifecycle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -168,9 +200,65 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
     }
   }
   const allCorrect = !!item && item.blanks.every(blank => blank.options[picked[blank.index]] === blank.answer)
-  if (done) return <div className="quiz-panel"><div className="card center"><h2>听写工坊本轮完成</h2><p className="muted mt8">完成 {selectedItems.length} 句练习。跟读匹配只是练习参考，不是发音能力评分。</p><button className="btn btn-primary mt14" onClick={() => { resetQuestion(); setQIndex(0); setDone(false) }}>再来一轮</button></div></div>
-  if (!item) return <div className="quiz-panel"><div className="card" role="status"><h2>当前路线暂无听力内容</h2><p>请选择其他学习路线。</p></div></div>
-  return <div className="quiz-panel"><GameHud module="listening" /><div className="card audio-panel">
+
+  function selectMode(next: ListeningMode) {
+    setMode(next)
+    // 切换标签时停掉听写侧的朗读与识别；DialogueMode 卸载时清理自己的麦克风会话。
+    stopMedia()
+  }
+  function onTabKeyDown(event: ReactKeyboardEvent<HTMLButtonElement>) {
+    const current = LISTENING_MODES.findIndex(candidate => candidate.id === mode)
+    let next = -1
+    if (event.key === 'ArrowRight' || event.key === 'ArrowDown') next = (current + 1) % LISTENING_MODES.length
+    else if (event.key === 'ArrowLeft' || event.key === 'ArrowUp') next = (current - 1 + LISTENING_MODES.length) % LISTENING_MODES.length
+    else if (event.key === 'Home') next = 0
+    else if (event.key === 'End') next = LISTENING_MODES.length - 1
+    if (next < 0) return
+    event.preventDefault()
+    const target = LISTENING_MODES[next]
+    selectMode(target.id)
+    tabRefs.current[target.id]?.focus()
+  }
+  function openScene(questionId: string, result: DialogueMatchResult) {
+    // 只记录本轮已通过的题目 id，不触发任何数据库写入。
+    if (result.stars <= 0) return
+    setPassedDialogueIds(current => (current.has(questionId) ? current : new Set(current).add(questionId)))
+  }
+  const dialogueScene: DialogueScene = DIALOGUE_SCENES.find(candidate => candidate.id === dialogueSceneId) ?? DIALOGUE_SCENES[0]
+  const tablist = <div className="task-tabs" role="tablist" aria-label="听力练习模式">
+    {LISTENING_MODES.map(candidate => <button
+      key={candidate.id}
+      type="button"
+      role="tab"
+      id={`listening-tab-${candidate.id}`}
+      aria-selected={mode === candidate.id}
+      aria-controls={`listening-panel-${candidate.id}`}
+      tabIndex={mode === candidate.id ? 0 : -1}
+      className={`btn ${mode === candidate.id ? 'btn-primary' : 'btn-ghost'}`}
+      ref={node => { tabRefs.current[candidate.id] = node }}
+      onClick={() => selectMode(candidate.id)}
+      onKeyDown={onTabKeyDown}
+    >{candidate.label}</button>)}
+  </div>
+  if (mode === 'dialogue') return <div className="quiz-panel">
+    {tablist}
+    <div id="listening-panel-dialogue" role="tabpanel" aria-labelledby="listening-tab-dialogue">
+      {saveError && <p role="alert" className="explain-box">{saveError}</p>}
+      <div className="dialogue-scene-field">
+        <label className="muted" htmlFor="dialogue-scene-select">选择场景</label>
+        <select id="dialogue-scene-select" className="dialogue-input mt8" value={dialogueScene.id} onChange={event => setDialogueSceneId(event.target.value)}>
+          {DIALOGUE_SCENES.map(candidate => <option key={candidate.id} value={candidate.id}>{candidate.title} · {candidate.place}</option>)}
+        </select>
+      </div>
+      <DialogueMode scene={dialogueScene} passedIds={passedDialogueIds} onScored={openScene} />
+    </div>
+  </div>
+  const dictationDone = <div className="card center"><h2>听写工坊本轮完成</h2><p className="muted mt8">完成 {selectedItems.length} 句练习。跟读匹配只是练习参考，不是发音能力评分。</p><button className="btn btn-primary mt14" onClick={() => { resetQuestion(); setQIndex(0); setDone(false) }}>再来一轮</button></div>
+  const dictationEmpty = <div className="card" role="status"><h2>当前路线暂无听力内容</h2><p>请选择其他学习路线。</p></div>
+  return <div className="quiz-panel">{tablist}
+    <div id="listening-panel-dictation" role="tabpanel" aria-labelledby="listening-tab-dictation">
+      {done ? dictationDone : !item ? dictationEmpty : <>
+        <GameHud module="listening" /><div className="card audio-panel">
     {speechError && <p role="alert" className="explain-box">{speechError}</p>}
     <div className="hero-actions">
       <button className="btn btn-primary" onClick={speak} disabled={speaking || !ttsSupport}>{speaking ? '正在播放…' : '播放原句'}</button>
@@ -192,5 +280,7 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
       {answered && <div className="score-report" role="status"><strong>{allCorrect ? '回答正确' : '本题有错误，请继续练习。'}</strong>{!allCorrect && <button className="btn btn-primary mt8" onClick={resetQuestion} disabled={!!saveError}>再试一次</button>}<button className="btn btn-ghost mt8" onClick={next} disabled={!!saveError}>{allCorrect ? '下一句' : '跳过本题'}</button></div>}
     </>}
     <p className="muted mt14">第 {qIndex + 1} / {selectedItems.length} 句</p>
-  </div></div>
+  </div></>}
+    </div>
+  </div>
 }
