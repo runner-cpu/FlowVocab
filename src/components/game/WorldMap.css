@@ -40,6 +40,18 @@
 
 .chapter-stars { color: var(--gold); font-size: 15px; letter-spacing: 2px; }
 
+/* 星尘工坊：把星尘灌注成星球能量，形成“点亮灯塔 → 星球生长”的闭环。 */
+.stardust-workshop {
+  display: flex; align-items: center; gap: 12px; flex-wrap: wrap;
+  padding: 12px 16px; margin-bottom: 14px; border-radius: 16px;
+  border: 1px solid var(--line); background: var(--insight-surface); box-shadow: var(--shadow);
+}
+.stardust-workshop > svg { color: var(--gold-ink); flex: 0 0 auto; }
+.stardust-workshop-copy { display: grid; gap: 2px; flex: 1; min-width: 200px; }
+.stardust-workshop-copy strong { font-size: 14px; }
+.stardust-workshop-copy small { color: var(--ink2); font-size: 11px; line-height: 1.6; }
+.stardust-workshop .btn { white-space: nowrap; }
+
 .map-node.node-current .map-node-button { border-color: var(--accent); box-shadow: 0 0 0 3px var(--accent-bg), var(--shadow); }
 .map-node.node-locked .map-node-visual { filter: saturate(.4) brightness(.92); }
 .map-node.node-cleared .map-node-mark { color: var(--gold-ink); }

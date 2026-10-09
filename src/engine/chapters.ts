@@ -43,16 +43,23 @@ export const MAX_STARS = 3
 export const STARDUST_BY_STARS = [0, 10, 20, 30] as const
 
 /**
- * 轮次星级：按正确率给星，短轮次有封顶，避免两道题全对就直接拿三星。
- * ≥90% 且至少 3 题 → 3 星；≥70% 且至少 2 题 → 2 星；≥40% → 1 星。
+ * 轮次星级：按正确率给星，并要求一定的题量，避免一题侥幸。
+ * - 3 星：≥2 题且正确率 ≥90%，或 ≥2 题、正确率 ≥80% 且本轮连击 ≥5（连击补偿）
+ * - 2 星：≥1 题且正确率 ≥70%
+ * - 1 星：正确率 ≥40%
+ * 门槛只需 2 题，因为小学路线的听力只有 2 句、写作只有 2 题，
+ * 若要求 3 题会让这些路线永远拿不到 3 星（与「低内容路线可结算」冲突）。
  */
-export function starsForResult(total: number, correct: number): number {
+export const COMBO_BONUS_THRESHOLD = 5
+
+export function starsForResult(total: number, correct: number, maxCombo = 0): number {
   if (!Number.isFinite(total) || total <= 0) return 0
   const answered = Math.floor(total)
   const hits = Math.max(0, Math.min(answered, Math.floor(Number.isFinite(correct) ? correct : 0)))
+  const combo = Number.isFinite(maxCombo) ? Math.max(0, Math.floor(maxCombo)) : 0
   const accuracy = hits / answered
-  if (accuracy >= 0.9 && answered >= 3) return 3
-  if (accuracy >= 0.7 && answered >= 2) return 2
+  if (answered >= 2 && (accuracy >= 0.9 || (accuracy >= 0.8 && combo >= COMBO_BONUS_THRESHOLD))) return 3
+  if (answered >= 1 && accuracy >= 0.7) return 2
   return accuracy >= 0.4 ? 1 : 0
 }
 
@@ -63,6 +70,21 @@ export function stardustForStars(stars: number): number {
 
 export function totalStardust(stars: Record<string, number>): number {
   return Object.values(stars).reduce((sum, value) => sum + stardustForStars(value), 0)
+}
+
+/** 星尘的唯一用途：在「星尘工坊」灌注成星球能量，形成“点亮灯塔 → 星球生长”的闭环。 */
+export const STARDUST_PER_CONVERSION = 20
+export const ENERGY_PER_CONVERSION = 50
+
+export function convertStardustToEnergy(stardust: number, requested = STARDUST_PER_CONVERSION): { spent: number; energy: number; remaining: number } {
+  const available = Number.isFinite(stardust) ? Math.max(0, Math.floor(stardust)) : 0
+  const batch = Math.max(1, Math.floor(Number.isFinite(requested) ? requested : STARDUST_PER_CONVERSION))
+  const spent = Math.floor(available / batch) * batch
+  return {
+    spent,
+    energy: (spent / batch) * ENERGY_PER_CONVERSION,
+    remaining: available - spent
+  }
 }
 
 /** 章节解锁：路线开放且上一章已有星星（不可用章节视为已跨过）。 */

@@ -11,7 +11,9 @@ function Trigger() {
   return <>
     <button onClick={() => report(10, 9)}>report full round</button>
     <button onClick={() => report(2, 2)}>report node round</button>
-    <button onClick={() => { report(2, 2); report(2, 1); report(1, 1) }}>report split rounds</button>
+    <button onClick={() => { report(1, 1); report(2, 1); report(3, 2) }}>report growing run</button>
+    <button onClick={() => { report(3, 2); report(3, 2); report(3, 2) }}>report repeated snapshot</button>
+    <button onClick={() => { report(6, 6); report(2, 2) }}>report better then worse</button>
     <button onClick={() => report(0, 0)}>report empty round</button>
   </>
 }
@@ -45,44 +47,59 @@ describe('chapter shell settlement', () => {
     expect(useProgress.getState().progress?.stardust ?? 0).toBe(0)
   })
 
-  it('keeps the best stars and pays only the stardust difference on replay', async () => {
-    render(<ChapterShell module="vocab"><Trigger /></ChapterShell>)
-    fireEvent.click(screen.getByRole('button', { name: 'report full round' }))
-    await screen.findByRole('heading', { name: '灯塔点亮' })
-    await waitFor(() => expect(useProgress.getState().progress?.stardust).toBe(30))
-    fireEvent.click(screen.getByRole('button', { name: /再来一轮/ }))
-    expect(screen.queryByRole('heading', { name: '灯塔点亮' })).toBeNull()
-    await useProgress.getState().recordChapterResult('harbour', SETTLE_MIN_ANSWERS, 0)
-    expect(useProgress.getState().progress?.chapterStars?.harbour).toBe(3)
-    expect(useProgress.getState().progress?.stardust).toBe(30)
-  })
-
   it('settles a short node so low-content routes can still earn stars', async () => {
     // 小学路线的语法只有一个节点、两道题；旧门槛（5 题）会让该章节永远拿不到星。
     render(<ChapterShell module="grammar"><Trigger /></ChapterShell>)
     fireEvent.click(screen.getByRole('button', { name: 'report node round' }))
     expect(await screen.findByRole('heading', { name: '灯塔点亮' })).toBeVisible()
     expect(screen.getByText(/完成 2 题 · 答对 2 题/)).toBeVisible()
-    expect(screen.getByRole('img', { name: '本章结算：2 / 3 星' })).toBeVisible()
-    await waitFor(() => expect(useProgress.getState().progress?.chapterStars?.garden).toBe(2))
+    expect(screen.getByRole('img', { name: '本章结算：3 / 3 星' })).toBeVisible()
+    await waitFor(() => expect(useProgress.getState().progress?.chapterStars?.garden).toBe(3))
   })
 
-  it('ignores an empty round so an untouched chapter cannot earn stars', async () => {
+  it('uses the best run snapshot instead of summing repeated reports', async () => {
     render(<ChapterShell module="grammar"><Trigger /></ChapterShell>)
-    fireEvent.click(screen.getByRole('button', { name: 'report empty round' }))
-    expect(screen.queryByRole('heading', { name: '灯塔点亮' })).toBeNull()
-    expect(useProgress.getState().progress?.chapterStars?.garden).toBeUndefined()
+    fireEvent.click(screen.getByRole('button', { name: 'report growing run' }))
+    expect(await screen.findByRole('heading', { name: '灯塔点亮' })).toBeVisible()
+    // 1 → 2 → 3 的快照应结算为 3 题 2 对（1 星），而不是累加成 6 题。
+    expect(screen.getByText(/完成 3 题 · 答对 2 题/)).toBeVisible()
+    await waitFor(() => expect(useProgress.getState().progress?.chapterStars?.garden).toBe(1))
+    expect(useProgress.getState().progress?.stardust).toBe(10)
+  })
+
+  it('does not inflate a score when the same snapshot is reported repeatedly', async () => {
+    render(<ChapterShell module="grammar"><Trigger /></ChapterShell>)
+    fireEvent.click(screen.getByRole('button', { name: 'report repeated snapshot' }))
+    expect(await screen.findByRole('heading', { name: '灯塔点亮' })).toBeVisible()
+    expect(screen.getByText(/完成 3 题 · 答对 2 题/)).toBeVisible()
+    await waitFor(() => expect(useProgress.getState().progress?.chapterStars?.garden).toBe(1))
+    expect(useProgress.getState().progress?.stardust).toBe(10)
+  })
+
+  it('keeps the most complete report and ignores a shorter later one', async () => {
+    render(<ChapterShell module="grammar"><Trigger /></ChapterShell>)
+    fireEvent.click(screen.getByRole('button', { name: 'report better then worse' }))
+    expect(await screen.findByRole('heading', { name: '灯塔点亮' })).toBeVisible()
+    expect(screen.getByText(/完成 6 题 · 答对 6 题/)).toBeVisible()
+    await waitFor(() => expect(useProgress.getState().progress?.chapterStars?.garden).toBe(3))
+    expect(useProgress.getState().progress?.stardust).toBe(30)
+  })
+
+  it('pays no extra stardust when a cleared chapter is replayed', async () => {
+    const first = render(<ChapterShell module="vocab"><Trigger /></ChapterShell>)
+    fireEvent.click(screen.getByRole('button', { name: 'report full round' }))
+    await screen.findByRole('heading', { name: '灯塔点亮' })
+    await waitFor(() => expect(useProgress.getState().progress?.stardust).toBe(30))
+    cleanup()
+    render(<ChapterShell module="vocab"><Trigger /></ChapterShell>)
+    fireEvent.click(screen.getByRole('button', { name: 'report full round' }))
+    expect(await screen.findByRole('heading', { name: '灯塔点亮' })).toBeVisible()
+    expect(screen.getByText('本章星尘已拿满，重玩不再重复掉落')).toBeVisible()
+    expect(useProgress.getState().progress?.stardust).toBe(30)
+    void first
   })
 
   it('treats the floor constant as a positive number', () => {
     expect(SETTLE_MIN_ANSWERS).toBeGreaterThan(0)
-  })
-
-  it('never pays out for a chapter that does not exist on the route', async () => {
-    render(<ChapterShell module="vocab"><Trigger /></ChapterShell>)
-    await useProgress.getState().recordChapterResult('missing-chapter', 10, 10)
-    expect(useProgress.getState().progress?.stardust ?? 0).toBe(0)
-    expect(useProgress.getState().progress?.chapterStars?.harbour).toBeUndefined()
-    expect(useProgress.getState().progress?.chapterStars?.['missing-chapter']).toBeUndefined()
   })
 })

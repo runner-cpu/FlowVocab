@@ -1,7 +1,7 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
 import { ArrowRight, RotateCcw } from 'lucide-react'
 import FlowGuide from './FlowGuide'
-import { CHAPTERS, MAX_STARS, chapterView, nextChapterId, starsForResult, stardustForStars } from '../../engine/chapters'
+import { CHAPTERS, MAX_STARS, applyChapterResult, chapterView, nextChapterId, starsForResult } from '../../engine/chapters'
 import { isModuleAvailable } from '../../data/curriculum'
 import { useProgress } from '../../store/progressStore'
 import { useUI } from '../../store/gameStore'
@@ -16,8 +16,12 @@ import './WorldMap.css'
 export const SETTLE_MIN_ANSWERS = 2
 
 interface ChapterResultContextValue {
-  /** 模块完成一轮后上报成绩，用于章节星级与星尘结算。 */
-  report: (total: number, correct: number) => void
+  /**
+   * 上报**本次进入模块后的累计作答**（已答题数、其中答对数），而不是单轮增量。
+   * 例如语法练完 2 个节点后报 (4, 3)。章节壳只取各项的单调最大值：
+   * 重复上报不会翻倍计分，较差的后续上报也不会覆盖已经拿到的好成绩。
+   */
+  report: (answered: number, correct: number) => void
 }
 
 const ChapterResultContext = createContext<ChapterResultContextValue>({ report: () => {} })
@@ -32,10 +36,11 @@ export default function ChapterShell({ module, children }: { module: ModuleKey; 
   const go = useUI((state) => state.go)
   const progress = useProgress((state) => state.progress)
   const recordChapterResult = useProgress((state) => state.recordChapterResult)
+  /** 本轮会话最高连击：用于「高正确率 + 高连击」的 3 星补偿。 */
+  const sessionCombo = useProgress((state) => state.session.comboMax)
   const [result, setResult] = useState<{ stars: number; total: number; correct: number; stardust: number } | null>(null)
-  /** 本次进入模块的累计成绩：够结算门槛才上报，避免短节点永远拿不到星。 */
+  /** 本次进入模块的“最好成绩快照”；模块上报快照，这里负责择优与结算。 */
   const tally = useRef({ total: 0, correct: 0 })
-  const reported = useRef(false)
   const heading = useRef<HTMLHeadingElement>(null)
 
   const chapter = useMemo(() => CHAPTERS.find((entry) => entry.module === module) ?? null, [module])
@@ -48,26 +53,35 @@ export default function ChapterShell({ module, children }: { module: ModuleKey; 
   const resetRun = useCallback(() => {
     setResult(null)
     tally.current = { total: 0, correct: 0 }
-    reported.current = false
   }, [])
 
   useEffect(() => { resetRun() }, [module, track, resetRun])
 
-  const report = useCallback((total: number, correct: number) => {
-    if (!chapter || reported.current) return
-    const safeTotal = Number.isFinite(total) ? Math.max(0, Math.floor(total)) : 0
-    const safeCorrect = Number.isFinite(correct) ? Math.max(0, Math.min(safeTotal, Math.floor(correct))) : 0
-    if (safeTotal <= 0) return
-    // 模块可以分多次上报（例如语法逐个节点）；按本次进入模块的累计量结算。
-    // 用 ref 累计、在事件处理器里判断，避免在 state updater 内产生副作用。
-    tally.current = { total: tally.current.total + safeTotal, correct: tally.current.correct + safeCorrect }
-    if (tally.current.total < SETTLE_MIN_ANSWERS) return
-    reported.current = true
-    const { total: settledTotal, correct: settledCorrect } = tally.current
-    const stars = starsForResult(settledTotal, settledCorrect)
-    void recordChapterResult(chapter.id, settledTotal, settledCorrect)
-    setResult({ stars, total: settledTotal, correct: settledCorrect, stardust: stardustForStars(stars) })
-  }, [chapter, recordChapterResult])
+  const report = useCallback((answered: number, correct: number) => {
+    if (!chapter) return
+    const safeAnswered = Number.isFinite(answered) ? Math.max(0, Math.floor(answered)) : 0
+    const safeCorrect = Number.isFinite(correct) ? Math.max(0, Math.min(safeAnswered, Math.floor(correct))) : 0
+    if (safeAnswered <= 0) return
+    // 模块上报的是“本次进入模块后的累计成绩”，因此更晚的上报一定覆盖更多题目。
+    // 只保留题数最多的一次（题数相同则取答对数更多的一次）：
+    // 重复上报不会翻倍计分，也不会有更短的一轮覆盖更完整的一轮。
+    const current = tally.current
+    const moreComplete = safeAnswered > current.total
+    const sameLengthButBetter = safeAnswered === current.total && safeCorrect > current.correct
+    if (current.total > 0 && !moreComplete && !sameLengthButBetter) return
+    tally.current = { total: safeAnswered, correct: safeCorrect }
+    if (safeAnswered < SETTLE_MIN_ANSWERS) return
+    const stars = starsForResult(safeAnswered, safeCorrect, sessionCombo)
+    // 星尘只补差额：这个 star 数没有超过该章节已记录的成绩时不会重复掉落。
+    const settlement = applyChapterResult(progress?.chapterStars ?? {}, chapter.id, stars)
+    void recordChapterResult(chapter.id, safeAnswered, safeCorrect, stars)
+    setResult({
+      stars,
+      total: safeAnswered,
+      correct: safeCorrect,
+      stardust: settlement.improved ? settlement.stardustGained : 0
+    })
+  }, [chapter, progress?.chapterStars, recordChapterResult, sessionCombo])
 
   useEffect(() => {
     if (result) heading.current?.focus()
@@ -104,7 +118,7 @@ export default function ChapterShell({ module, children }: { module: ModuleKey; 
           <div className="chapter-summary-stars" role="img" aria-label={`本章结算：${result.stars} / 3 星`}>
             <span aria-hidden="true">{'★'.repeat(result.stars)}{'☆'.repeat(3 - result.stars)}</span>
           </div>
-          <p className="chapter-dust">获得星尘 +{result.stardust}</p>
+          <p className="chapter-dust">{result.stardust > 0 ? `获得星尘 +${result.stardust}` : '本章星尘已拿满，重玩不再重复掉落'}</p>
           <div className="chapter-strip-actions" style={{ justifyContent: 'center' }}>
             <button className="btn btn-ghost" onClick={resetRun}><RotateCcw size={15} /> 再来一轮</button>
             {next && <button className="btn btn-primary" onClick={() => go(next.module)}>前往下一站 <ArrowRight size={15} /></button>}

@@ -60,6 +60,8 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
   const pending = useRef<{ wordId: string; total: number; correct: boolean; level: number } | null>(null)
   const timer = useRef(performance.now())
   const requeued = useRef(new Set<string>())
+  /** 当前题目是否用过提示：用过则本题经验减半（避免提示变成免费答案）。 */
+  const hintUsed = useRef(false)
   const requeueAt = useRef(new Map<number, string>())
   const randomSource = useRef(random)
   const baseline = useRef({ xp: profile?.totalXp ?? 0, achievements: profile?.unlockedAchievements ?? [], claims: profile?.claimedQuestDates ?? [] })
@@ -88,6 +90,7 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
     setGuide('idle')
     setSpeechMessage('')
     setWrongAnswer(null)
+    hintUsed.current = false
     pending.current = null
     timer.current = performance.now()
   }
@@ -106,6 +109,7 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
     setEmpty(false)
     setLoadError('')
     setSpeechMessage('')
+    hintUsed.current = false
     setBank({ phase: 'download', loaded: 0, total: 0 })
     used.current.clear()
     requeued.current.clear()
@@ -161,7 +165,7 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
       requeued.current.add(question.word.id)
       requeueAt.current = reserveRetry(requeueAt.current, index, target, question.word.id, randomSource.current)
     }
-    void state.answer({ module: 'vocab', wordId: question.word.id, correct, timeMs: elapsedSince(timer.current, performance.now()) })
+    void state.answer({ module: 'vocab', wordId: question.word.id, correct, timeMs: elapsedSince(timer.current, performance.now()), hintUsed: hintUsed.current })
   }
 
   function advance() {
@@ -251,7 +255,7 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
         {question.mode === 'spelling' ? <form className="spelling-form" onSubmit={event => { event.preventDefault(); submit(spelling) }}>
           <label htmlFor="vocab-spelling">输入对应的英文单词</label><input ref={spellingInput} id="vocab-spelling" value={spelling} onChange={event => setSpelling(event.target.value)} disabled={answered || !!saveError} autoComplete="off" autoCapitalize="none" spellCheck={false} /><button className="btn btn-primary" disabled={answered || !!saveError || !spelling.trim()}>提交拼写</button>
         </form> : <div className="options" role="group" aria-label="答案选项">{question.options.map((option, i) => <button key={option.text} className={'option' + (answered && option.correct ? ' correct' : answered && picked === option.text ? ' wrong' : '')} disabled={answered || !!saveError} onClick={() => submit(option.text)}><kbd aria-hidden="true">{i + 1}</kbd><span>{option.text}</span>{answered && option.correct && <span aria-label="正确答案">✓</span>}{answered && !option.correct && picked === option.text && <span aria-label="本次答错">×</span>}</button>)}</div>}
-        <AnswerHint key={index + ':' + question.word.id} question={question} disabled={answered} />
+        <AnswerHint key={index + ':' + question.word.id} question={question} disabled={answered} onUse={() => { hintUsed.current = true }} />
         {answered && <div className="mission-feedback" role="status"><strong>{isVocabAnswerCorrect(question, picked!) ? '回答正确' : '记住这条新线索'} · {question.word.word}</strong><p>{formatMeaning(question.word.meaning)}</p>{question.word.example && <p lang="en">{question.word.example}</p>}{question.word.exampleCn && <p className="muted">{question.word.exampleCn}</p>}{!question.word.example && <p className="muted">这个词暂未收录例句，可以先记住释义与搭配。</p>}</div>}
         {answered && wrongAnswer && <ErrorCard tag={wrongAnswer.tag} word={question.word.word} chosen={wrongAnswer.chosen} correctAnswer={question.mode === 'spelling' ? question.word.word : question.options.find(option => option.correct)?.text} explain={question.word.phrases?.[0]?.translation} />}
         <div className="mission-actions"><small>{question.mode === 'spelling' ? 'Enter 提交拼写' : '数字键 1–4 选择答案'} · 答题后 Enter 继续</small>{answered && <button ref={continueButton} className="btn btn-primary" disabled={!persisted || !!saveError} onClick={advance}>{index + 1 >= target ? '查看战报' : '下一站'}{!persisted ? ' · 等待保存' : ' →'}</button>}</div>

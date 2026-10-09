@@ -24,8 +24,8 @@ export default function GrammarGame() {
   // 答错后旁路渲染的离线错因卡；只在当前题目答错时存在，题目前进/重答/换节点/换路线即卸载。
   const [errorCard, setErrorCard] = useState<{ tag: ErrorTag; chosen?: string; correctAnswer?: string; explain?: string } | null>(null)
   const chapterResult = useChapterResult()
-  /** 当前节点的作答累计，节点完成时一次性上报给章节壳。 */
-  const nodeTally = useRef({ total: 0, correct: 0 })
+  /** 本次进入模块后的累计作答（不随节点重置），每次节点结束把累计快照交给章节壳。 */
+  const runTally = useRef({ total: 0, correct: 0 })
   const startedAt = useRef(performance.now())
   const advanceTimer = useRef<number | null>(null)
   const skillTree = progress?.skillTree ?? {}
@@ -39,7 +39,7 @@ export default function GrammarGame() {
     setAnswered(false)
     setFinished(false)
     setErrorCard(null)
-    nodeTally.current = { total: 0, correct: 0 }
+    runTally.current = { total: 0, correct: 0 }
     startedAt.current = performance.now()
     return () => {
       if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current)
@@ -63,7 +63,7 @@ export default function GrammarGame() {
     [nodesForTrack]
   )
 
-  function startNode(node: SkillNode) { if (isLocked(node)) return; setActiveNode(node); setQIndex(0); setPicked(null); setAnswered(false); setFinished(false); setErrorCard(null); nodeTally.current = { total: 0, correct: 0 } }
+  function startNode(node: SkillNode) { if (isLocked(node)) return; setActiveNode(node); setQIndex(0); setPicked(null); setAnswered(false); setFinished(false); setErrorCard(null) }
   function onPick(index: number) {
     if (answered || !activeNode) return
     const quiz = activeNode.quizzes[qIndex]
@@ -72,14 +72,14 @@ export default function GrammarGame() {
     // 答错时叠加离线错因路由；答对立即清空，保证同一时刻最多一张错因卡。
     setErrorCard(correct ? null : { tag: inferErrorTag({ module: 'grammar', prompt: quiz.prompt, options: quiz.options, chosen: quiz.options[index], correctAnswer: quiz.options[quiz.answer], explain: quiz.explain }), chosen: quiz.options[index], correctAnswer: quiz.options[quiz.answer], explain: quiz.explain })
     void answer({ module: 'grammar', correct, timeMs: elapsedSince(startedAt.current, performance.now()) })
-    nodeTally.current = { total: nodeTally.current.total + 1, correct: nodeTally.current.correct + (correct ? 1 : 0) }
+    runTally.current = { total: runTally.current.total + 1, correct: runTally.current.correct + (correct ? 1 : 0) }
     if (correct) advanceTimer.current = window.setTimeout(() => {
       advanceTimer.current = null
       if (qIndex + 1 >= activeNode.quizzes.length) {
         setFinished(true)
         void completeGrammarNode(activeNode.id)
         // 节点完成时把本节点成绩交给章节壳；章节壳按门槛累计，短节点不会白拿星也不会白答。
-        chapterResult.report(nodeTally.current.total, nodeTally.current.correct)
+        chapterResult.report(runTally.current.total, runTally.current.correct)
       }
       else { setQIndex((value) => value + 1); setPicked(null); setAnswered(false); setErrorCard(null) }
     }, 1000)

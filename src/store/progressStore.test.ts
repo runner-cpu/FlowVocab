@@ -224,7 +224,40 @@ describe('completion identity and session IDs', () => {
   })
 })
 
-describe('initialization concurrency', () => {
+describe('star dust and hint costs', () => {
+  it('halves the XP for a hinted answer without touching combo or energy', async () => {
+    const state = useProgress.getState()
+    await state.answer({ ...answer, hintUsed: true })
+    const hinted = useProgress.getState()
+    expect(hinted.profile?.totalXp).toBe(5)
+    expect(hinted.daily?.xp).toBe(5)
+    expect(hinted.combo.combo).toBe(1)
+    expect(hinted.planet?.energy).toBeGreaterThan(0)
+  })
+
+  it('converts stardust into planet energy in batches and persists both tables', async () => {
+    const progress = { ...useProgress.getState().progress!, stardust: 45 }
+    await db.progress.put(progress)
+    useProgress.setState({ progress })
+    await useProgress.getState().convertStardust()
+    const after = useProgress.getState()
+    // 45 星尘 → 花掉 2 批（40），换成 100 能量，余 5。
+    expect(after.progress?.stardust).toBe(5)
+    expect(after.planet?.energy).toBe(100)
+    expect(await db.progress.get(1)).toMatchObject({ stardust: 5 })
+    expect(await db.planet.get(1)).toMatchObject({ energy: 100 })
+  })
+
+  it('does nothing when there is not enough stardust for one batch', async () => {
+    const progress = { ...useProgress.getState().progress!, stardust: 5 }
+    useProgress.setState({ progress })
+    await useProgress.getState().convertStardust()
+    expect(useProgress.getState().progress?.stardust).toBe(5)
+    expect(useProgress.getState().planet?.energy).toBe(0)
+  })
+})
+
+describe('chapter settlement persistence', () => {
   it('keeps writes paused until every concurrent transition lease is released', async () => {
     const first = await pausePersistenceWrites()
     const second = pausePersistenceWrites()

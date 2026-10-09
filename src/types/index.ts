@@ -176,13 +176,17 @@ export const TRACK_MODULE_FOCUS: Record<LearningTrack, Record<ModuleKey, string>
   cet: { vocab: '考纲词汇与题型模拟', grammar: '考纲语法辨析', sentence: '考纲长句重构', listening: '新闻与讲座听力', writing: '四级/六级写作模板', reading: '题型模拟速读与定位' }
 }
 
+/**
+ * 模块元数据。name 的“模块名”部分与航线地图的灯塔名保持一致，
+ * desc 描述真实玩法（而不是早期设计阶段的旧玩法）。
+ */
 export const MODULE_META: Record<ModuleKey, { name: string; icon: string; color: string; desc: string }> = {
-  vocab: { name: '词汇·词魂战场', icon: '⚔️', color: '#5B8DEF', desc: '节奏打击背词' },
-  grammar: { name: '语法·技能树', icon: '🌳', color: '#34A853', desc: '点亮语法技能' },
-  sentence: { name: '句子·拆解工坊', icon: '🧩', color: '#F4B400', desc: '长难句拆解拼图' },
-  listening: { name: '听力·ASMR听写', icon: '🎧', color: '#EA4335', desc: '听音辨词闯关' },
-  writing: { name: '写作·卡牌对战', icon: '🃏', color: '#9334E6', desc: '句型卡组牌写作' },
-  reading: { name: '阅读·叙事副本', icon: '📖', color: '#00ACC1', desc: '剧情推进读考点' }
+  vocab: { name: '词汇·微光港', icon: '⚔️', color: '#5B8DEF', desc: '连击节奏背词' },
+  grammar: { name: '语法·语法花园', icon: '🌳', color: '#34A853', desc: '技能树点亮规则' },
+  sentence: { name: '句子·桥梁工坊', icon: '🧩', color: '#F4B400', desc: '长难句拆解与翻译' },
+  listening: { name: '听力·星际电台', icon: '🎧', color: '#EA4335', desc: '听写与语音陪练' },
+  writing: { name: '写作·灵感工作室', icon: '🃏', color: '#9334E6', desc: '句型排序与改错' },
+  reading: { name: '阅读·故事图书馆', icon: '📖', color: '#00ACC1', desc: '剧情推进读考点' }
 }
 
 // ---------- 雷达 ----------

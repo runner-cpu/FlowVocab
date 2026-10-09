@@ -4,6 +4,7 @@ import {
   MAX_STARS,
   applyChapterResult,
   chapterView,
+  convertStardustToEnergy,
   currentChapterOrder,
   nextChapterId,
   starsForResult,
@@ -24,10 +25,15 @@ describe('chapter stars and stardust', () => {
     expect(starsForResult(10, 3)).toBe(0)
   })
 
-  it('caps short rounds so two lucky answers cannot earn three stars', () => {
-    expect(starsForResult(2, 2)).toBe(2)
-    expect(starsForResult(1, 1)).toBe(1)
+  it('requires at least two answers for three stars and rewards a long combo', () => {
+    // 两道全对可以拿 3 星（小学路线的听力/写作只有两题），但一题全对只能 2 星。
+    expect(starsForResult(2, 2)).toBe(3)
+    expect(starsForResult(1, 1)).toBe(2)
     expect(starsForResult(3, 3)).toBe(3)
+    // 高正确率 + 本轮连击 ≥5 也可拿 3 星。
+    expect(starsForResult(10, 8, 6)).toBe(3)
+    expect(starsForResult(10, 8, 2)).toBe(2)
+    expect(starsForResult(10, 7, 9)).toBe(2)
   })
 
   it('never awards stars for an empty or invalid round', () => {
@@ -49,6 +55,14 @@ describe('chapter stars and stardust', () => {
   it('sums stardust across cleared chapters only', () => {
     expect(totalStardust({ harbour: 3, garden: 1, bridge: 0 })).toBe(40)
     expect(totalStardust({})).toBe(0)
+  })
+
+  it('converts stardust into planet energy in fixed batches', () => {
+    expect(convertStardustToEnergy(0)).toEqual({ spent: 0, energy: 0, remaining: 0 })
+    expect(convertStardustToEnergy(19)).toEqual({ spent: 0, energy: 0, remaining: 19 })
+    expect(convertStardustToEnergy(20)).toEqual({ spent: 20, energy: 50, remaining: 0 })
+    expect(convertStardustToEnergy(95)).toEqual({ spent: 80, energy: 200, remaining: 15 })
+    expect(convertStardustToEnergy(Number.NaN)).toEqual({ spent: 0, energy: 0, remaining: 0 })
   })
 })
 

@@ -100,7 +100,15 @@ export default function SentenceGame() {
     }
     setErrorCard(null)
     setPreviousPlaced(placed); setPlaced(result.placed); setAnnouncement(`${quest.segments[index].text} 已放入${bucketNames[bucket]}`)
-    if (result.complete) { const correct = !puzzleMistake.current; void answer({ module: 'sentence', correct, timeMs: elapsedSince(startedAt.current, performance.now()) }); void passSentence(quest.id); tally.current = { total: tally.current.total + 1, correct: tally.current.correct + (correct ? 1 : 0) }; advanceTimer.current = window.setTimeout(() => { advanceTimer.current = null; nextQuestion() }, 900) }
+    if (result.complete) {
+      const correct = !puzzleMistake.current
+      void answer({ module: 'sentence', correct, timeMs: elapsedSince(startedAt.current, performance.now()) })
+      void passSentence(quest.id)
+      tally.current = { total: tally.current.total + 1, correct: tally.current.correct + (correct ? 1 : 0) }
+      // 拼图题没有“下一题”按钮，必须在这里就把成绩交给章节壳，否则拼图路线永远不结算。
+      chapterResult.report(tally.current.total, tally.current.correct)
+      advanceTimer.current = window.setTimeout(() => { advanceTimer.current = null; nextQuestion() }, 900)
+    }
   }
   function onTranslate(index: number) {
     if (!quest || answered) return

@@ -13,7 +13,7 @@ import {
 import { qualityOf, nextInterval, normalizeSuccessfulReviews, updateReviewProgress, dayKey } from '../engine/forget'
 import { SoundBank } from '../engine/audio'
 import { updateStreak } from '../engine/streak'
-import { applyChapterResult, starsForResult, CHAPTERS as ROUTE_CHAPTERS } from '../engine/chapters'
+import { applyChapterResult, starsForResult, convertStardustToEnergy, CHAPTERS as ROUTE_CHAPTERS } from '../engine/chapters'
 import { ACTIVE_VOCAB_TARGET, planetLevelFromEnergy, vocabMasteryScore } from '../engine/progression'
 import { deriveProfileProgress } from './progressModel'
 import {
@@ -225,13 +225,15 @@ interface ProgressStore {
   retryInit: () => Promise<void>
   startSession: (module: ModuleKey) => Promise<void>
   finishSession: () => Promise<void>
-  answer: (opts: { module: ModuleKey; wordId?: string; correct: boolean; timeMs: number; medianMs?: number }) => Promise<void>
+  answer: (opts: { module: ModuleKey; wordId?: string; correct: boolean; timeMs: number; medianMs?: number; hintUsed?: boolean }) => Promise<void>
   completeGrammarNode: (nodeId: string) => Promise<void>
   passSentence: (questId?: string) => Promise<void>
   passListening: (itemId?: string) => Promise<void>
   submitWriting: (taskId: string, score: number) => Promise<void>
   completeReading: (chapterId: string) => Promise<void>
-  recordChapterResult: (chapterId: string, total: number, correct: number) => Promise<void>
+  recordChapterResult: (chapterId: string, total: number, correct: number, stars?: number) => Promise<void>
+  /** 星尘工坊：把星尘灌注成星球能量（每批 20 星尘 → 50 能量）。 */
+  convertStardust: () => Promise<void>
   toggleZen: () => void
   updateSettings: (patch: Partial<UserProfile['settings']>) => Promise<void>
   clearFeedback: () => void
@@ -355,7 +357,7 @@ export const useProgress = create<ProgressStore>((set, get) => ({
     set({ session: { ...emptySession } })
   }),
 
-  answer: ({ module, wordId, correct, timeMs, medianMs }) => serializeWrite(async (now) => {
+  answer: ({ module, wordId, correct, timeMs, medianMs, hintUsed }) => serializeWrite(async (now) => {
     const s = get()
     if (!s.profile || !s.planet || !s.progress) return
     const med = medianMs ?? median(rollingTimes)
@@ -366,6 +368,8 @@ export const useProgress = create<ProgressStore>((set, get) => ({
     const combo = s.daily?.date === today ? s.combo : createComboState()
     const comboRes = evaluateAnswer({ correct, timeMs, medianMs: med }, combo)
     const diffRes = updateDifficulty(get().difficulty, correct, timeMs, med)
+    // 用过提示的题目经验减半（连击/怒气/难度的其它状态不变，避免惩罚扩散到后续题目）。
+    const earnedXp = hintUsed ? Math.round(comboRes.xp / 2) : comboRes.xp
 
     // 会话更新
     const newSession: SessionState = {
@@ -382,7 +386,7 @@ export const useProgress = create<ProgressStore>((set, get) => ({
     const planet = { ...s.planet }
     const daily = s.daily?.date === today ? { ...s.daily, modules: { ...s.daily.modules } } : emptyDaily(today)
     if (profile) {
-      profile.totalXp += comboRes.xp
+      profile.totalXp += earnedXp
       profile.bestCombo = Math.max(profile.bestCombo, comboRes.state.maxCombo)
       Object.assign(profile, updateStreak(profile.lastStudyDate, profile.streakDays, today))
     }
@@ -392,7 +396,7 @@ export const useProgress = create<ProgressStore>((set, get) => ({
       planet.lastActive = now
     }
     if (daily) {
-      daily.xp += comboRes.xp
+      daily.xp += earnedXp
       daily.energy = Math.round((daily.energy + comboRes.energy) * 10) / 10
       daily.modules[module] += 1
       daily.comboMax = Math.max(daily.comboMax, comboRes.state.combo)
@@ -554,13 +558,18 @@ export const useProgress = create<ProgressStore>((set, get) => ({
     set({ progress })
   }),
 
-  /** 关卡结算：记录本章最好星级，返回本次获得的星尘。 */
-  recordChapterResult: (chapterId, total, correct) => serializeWrite(async () => {
+  /**
+   * 关卡结算：记录本章最好星级并累加星尘差额。
+   * `stars` 由调用方（章节壳）按本轮连击算出，避免这里用不到连击信息而重复结算。
+   */
+  recordChapterResult: (chapterId, total, correct, stars) => serializeWrite(async () => {
     const s = get()
     // 只接受航线地图里真实存在的章节，避免错误调用者写入幽灵星尘。
     if (!s.progress || !isKnownChapter(chapterId)) return
-    const stars = starsForResult(total, correct)
-    const result = applyChapterResult(s.progress.chapterStars ?? {}, chapterId, stars)
+    const earned = typeof stars === 'number' && Number.isFinite(stars)
+      ? Math.max(0, Math.min(3, Math.floor(stars)))
+      : starsForResult(total, correct)
+    const result = applyChapterResult(s.progress.chapterStars ?? {}, chapterId, earned)
     if (!result.improved) return
     const progress: Progress = {
       ...s.progress,
@@ -569,6 +578,21 @@ export const useProgress = create<ProgressStore>((set, get) => ({
     }
     await db.progress.put(progress)
     set({ progress })
+  }),
+
+  convertStardust: () => serializeWrite(async () => {
+    const s = get()
+    if (!s.progress || !s.planet) return
+    const { spent, energy, remaining } = convertStardustToEnergy(s.progress.stardust ?? 0)
+    if (spent <= 0) return
+    const nextEnergy = Math.round((s.planet.energy + energy) * 10) / 10
+    const progress: Progress = { ...s.progress, stardust: remaining }
+    const planet = { ...s.planet, energy: nextEnergy, level: planetLevelFromEnergy(nextEnergy), lastActive: Date.now() }
+    await db.transaction('rw', [db.progress, db.planet], async () => {
+      await db.progress.put(progress)
+      await db.planet.put(planet)
+    })
+    set({ progress, planet })
   }),
 
   toggleZen: () => serializeWrite(async () => {
