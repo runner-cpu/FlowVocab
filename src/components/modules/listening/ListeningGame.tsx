@@ -7,6 +7,7 @@ import type { DialogueMatchResult } from '../../../engine/dialogue'
 import { useUI } from '../../../store/gameStore'
 import type { LearningTrack, ListeningItem } from '../../../types'
 import DialogueMode from './DialogueMode'
+import { useChapterResult } from '../../game/ChapterShell'
 import GameHud from '../../game/GameHud'
 import { elapsedSince } from '../../../engine/sessionTiming'
 
@@ -75,6 +76,9 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
   const [mode, setMode] = useState<ListeningMode>('dictation')
   const [dialogueSceneId, setDialogueSceneId] = useState(() => defaultDialogueSceneId(track))
   const [passedDialogueIds, setPassedDialogueIds] = useState<Set<string>>(() => new Set())
+  const chapterResult = useChapterResult()
+  /** 本次进入模块的累计成绩，够章节门槛才结算。 */
+  const tally = useRef({ total: 0, correct: 0 })
   const tabRefs = useRef<Partial<Record<ListeningMode, HTMLButtonElement | null>>>({})
   const t0 = useRef(performance.now())
   const submitted = useRef(false)
@@ -118,6 +122,7 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
     setDone(false)
     setDialogueSceneId(defaultDialogueSceneId(track))
     setPassedDialogueIds(new Set())
+    tally.current = { total: 0, correct: 0 }
     return stopMedia
     // The route content owns the practice lifecycle.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -146,6 +151,7 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
     setRecognized(transcript)
     setResult({ hits, ratio })
     void answer({ module: 'listening', correct: ratio >= .6, timeMs: elapsedSince(t0.current, performance.now()) })
+    tally.current = { total: tally.current.total + 1, correct: tally.current.correct + (ratio >= .6 ? 1 : 0) }
     if (ratio >= .6) void passListening(item.id)
   }
   function startListen() {
@@ -178,6 +184,8 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
   function next() {
     if (saveError) return
     resetQuestion()
+    // 完成一侧练习（跟读或选词）时把本轮累计成绩交给章节壳。
+    chapterResult.report(tally.current.total, tally.current.correct)
     if (qIndex + 1 >= selectedItems.length) setDone(true)
     else setQIndex(qIndex + 1)
   }
@@ -192,16 +200,17 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
     submitted.current = true
     setAnswered(true)
     void answer({ module: 'listening', correct, timeMs: elapsedSince(t0.current, performance.now()) })
+    tally.current = { total: tally.current.total + 1, correct: tally.current.correct + (correct ? 1 : 0) }
     if (correct) {
       void passListening(item.id)
       advanceTimer.current = window.setTimeout(() => {
         if (!useProgress.getState().saveError) next()
-      }, 1100)
-    }
+      }, 1100)    }
   }
   const allCorrect = !!item && item.blanks.every(blank => blank.options[picked[blank.index]] === blank.answer)
 
   function selectMode(next: ListeningMode) {
+    if (next !== mode) chapterResult.report(tally.current.total, tally.current.correct)
     setMode(next)
     // 切换标签时停掉听写侧的朗读与识别；DialogueMode 卸载时清理自己的麦克风会话。
     stopMedia()
@@ -223,6 +232,9 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
     // 只记录本轮已通过的题目 id，不触发任何数据库写入。
     if (result.stars <= 0) return
     setPassedDialogueIds(current => (current.has(questionId) ? current : new Set(current).add(questionId)))
+    // 语音陪练同样计入听力章节：每题一次作答，够门槛后由章节壳统一结算。
+    tally.current = { total: tally.current.total + 1, correct: tally.current.correct + (result.stars >= 2 ? 1 : 0) }
+    chapterResult.report(tally.current.total, tally.current.correct)
   }
   const dialogueScene: DialogueScene = DIALOGUE_SCENES.find(candidate => candidate.id === dialogueSceneId) ?? DIALOGUE_SCENES[0]
   const tablist = <div className="task-tabs" role="tablist" aria-label="听力练习模式">

@@ -24,6 +24,12 @@ describe('chapter stars and stardust', () => {
     expect(starsForResult(10, 3)).toBe(0)
   })
 
+  it('caps short rounds so two lucky answers cannot earn three stars', () => {
+    expect(starsForResult(2, 2)).toBe(2)
+    expect(starsForResult(1, 1)).toBe(1)
+    expect(starsForResult(3, 3)).toBe(3)
+  })
+
   it('never awards stars for an empty or invalid round', () => {
     expect(starsForResult(0, 0)).toBe(0)
     expect(starsForResult(Number.NaN, 3)).toBe(0)

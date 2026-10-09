@@ -20,11 +20,15 @@ export default function WorldMap({ chapters, onEnter }: { chapters: ChapterView[
         const scene = LEARNING_SCENES[chapter.sceneIndex]
         const meta = MODULE_META[chapter.module]
         const locked = chapter.status === 'locked'
-        const description = locked
-          ? `${chapter.prerequisite ?? '前置章节'}完成后点亮`
-          : chapter.available ? chapter.subtitle : '此路线暂未开放'
+        // 路线未开放的章节与「前置未完成」是两回事，文案要分开，避免出现“前置章节完成后点亮”这种空指引。
+        const description = !chapter.available
+          ? '此路线暂未开放'
+          : locked
+            ? `${chapter.prerequisite ?? '前置章节'}完成后点亮`
+            : chapter.subtitle
+        const stateLabel = !chapter.available ? '当前路线未开放' : locked ? '未解锁' : `${chapter.stars} 星`
         return <li key={chapter.id} className={`map-node node-${chapter.status} ${chapter.order % 2 === 0 ? 'node-right' : 'node-left'}`}>
-          <button type="button" className="map-node-button" disabled={locked || !chapter.available} aria-current={chapter.status === 'current' ? 'step' : undefined} aria-label={`第 ${chapter.order} 站，${chapter.place}，${locked ? '未解锁' : meta.desc}，${chapter.stars} 星`} onClick={() => onEnter(chapter)}>
+          <button type="button" className="map-node-button" disabled={locked || !chapter.available} aria-current={chapter.status === 'current' ? 'step' : undefined} aria-label={`第 ${chapter.order} 站，${chapter.place}，${stateLabel}，${meta.desc}`} onClick={() => onEnter(chapter)}>
             <span className="map-node-visual">
               {chapter.available && scene ? <ResponsiveSceneImage assetStem={scene.visual} sizes="(max-width: 640px) 40vw, 180px" alt="" /> : null}
               <span className="map-node-mark" aria-hidden="true">{locked ? <Lock size={18} /> : <Star size={18} />}</span>

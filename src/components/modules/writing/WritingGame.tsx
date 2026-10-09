@@ -7,6 +7,7 @@ import { useUI } from '../../../store/gameStore'
 import type { WritingTask } from '../../../types'
 import GameHud from '../../game/GameHud'
 import ErrorCard from '../../game/ErrorCard'
+import { useChapterResult } from '../../game/ChapterShell'
 import { inferErrorTag, type ErrorTag } from '../../../engine/errorRouting'
 
 function shuffle<T>(values: T[]): T[] {
@@ -39,6 +40,9 @@ export default function WritingGame() {
   const [result, setResult] = useState<{ pass: boolean } | null>(null)
   // 判定失败后旁路渲染的离线错因卡；换题、换路线、重新提交前即卸载。
   const [errorCard, setErrorCard] = useState<{ tag: ErrorTag; chosen?: string; correctAnswer?: string; explain?: string } | null>(null)
+  const chapterResult = useChapterResult()
+  /** 本次进入模块的累计成绩，够门槛才交给章节壳结算。 */
+  const tally = useRef({ total: 0, correct: 0 })
   const startedAt = useRef(performance.now())
 
   useEffect(() => {
@@ -50,6 +54,7 @@ export default function WritingGame() {
     setResult(null)
     setErrorCard(null)
     setAnnouncement('')
+    tally.current = { total: 0, correct: 0 }
     startedAt.current = performance.now()
   }, [track])
   useEffect(() => { setOrder(initialOrder); setPreviousOrder(null); setPickErr(null); setResult(null); setErrorCard(null); setAnnouncement(''); startedAt.current = performance.now() }, [initialOrder])
@@ -76,6 +81,8 @@ export default function WritingGame() {
     const correctAnswer = task.answer !== undefined ? task.options?.[task.answer] : undefined
     setErrorCard(pass ? null : { tag: inferErrorTag({ module: 'writing', prompt: task.prompt, sentence: task.sentence, options: task.options, chosen, correctAnswer, explain: task.explain }), chosen, correctAnswer, explain: task.explain })
     void answer({ module: 'writing', correct: pass, timeMs: elapsedSince(startedAt.current, performance.now()) }); void submitWriting(task.id, pass ? 5 : 1)
+    tally.current = { total: tally.current.total + 1, correct: tally.current.correct + (pass ? 1 : 0) }
+    chapterResult.report(tally.current.total, tally.current.correct)
   }
 
   if (!task) return <div className="quiz-panel"><GameHud module="writing" /><div className="card center"><h2>当前路线暂无写作练习</h2><p className="muted">请切换学习路线后重试。</p></div></div>

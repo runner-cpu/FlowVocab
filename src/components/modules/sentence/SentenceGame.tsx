@@ -7,6 +7,7 @@ import { useUI } from '../../../store/gameStore'
 import type { SentenceQuest } from '../../../types'
 import GameHud from '../../game/GameHud'
 import ErrorCard from '../../game/ErrorCard'
+import { useChapterResult } from '../../game/ChapterShell'
 import { inferErrorTag, type ErrorTag } from '../../../engine/errorRouting'
 
 export type Bucket = 'main' | 'clause' | 'modifier'
@@ -36,6 +37,9 @@ export default function SentenceGame() {
   const [done, setDone] = useState(false)
   // 答错后旁路渲染的离线错因卡：错放桶或错选译文时出现，撤回/重置/下一题/换路线即卸载。
   const [errorCard, setErrorCard] = useState<{ tag: ErrorTag; chosen?: string; correctAnswer?: string; explain?: string } | null>(null)
+  const chapterResult = useChapterResult()
+  /** 本次进入模块的累计成绩，够门槛才交给章节壳结算。 */
+  const tally = useRef({ total: 0, correct: 0 })
   const startedAt = useRef(performance.now())
   const puzzleMistake = useRef(false)
   const quest = quests[qIndex]
@@ -96,7 +100,7 @@ export default function SentenceGame() {
     }
     setErrorCard(null)
     setPreviousPlaced(placed); setPlaced(result.placed); setAnnouncement(`${quest.segments[index].text} 已放入${bucketNames[bucket]}`)
-    if (result.complete) { void answer({ module: 'sentence', correct: !puzzleMistake.current, timeMs: elapsedSince(startedAt.current, performance.now()) }); void passSentence(quest.id); advanceTimer.current = window.setTimeout(() => { advanceTimer.current = null; nextQuestion() }, 900) }
+    if (result.complete) { const correct = !puzzleMistake.current; void answer({ module: 'sentence', correct, timeMs: elapsedSince(startedAt.current, performance.now()) }); void passSentence(quest.id); tally.current = { total: tally.current.total + 1, correct: tally.current.correct + (correct ? 1 : 0) }; advanceTimer.current = window.setTimeout(() => { advanceTimer.current = null; nextQuestion() }, 900) }
   }
   function onTranslate(index: number) {
     if (!quest || answered) return
@@ -105,9 +109,10 @@ export default function SentenceGame() {
     // 答错时按同一离线规则给出错因卡；答对立即清空，保证最多一张。
     setErrorCard(correct ? null : { tag: inferErrorTag({ module: 'sentence', sentence: quest.sentence, options: quest.options, chosen: quest.options?.[index], correctAnswer: quest.answer !== undefined ? quest.options?.[quest.answer] : undefined, explain: quest.explain }), chosen: quest.options?.[index], correctAnswer: quest.answer !== undefined ? quest.options?.[quest.answer] : undefined, explain: quest.explain })
     void answer({ module: 'sentence', correct, timeMs: elapsedSince(startedAt.current, performance.now()) })
+    tally.current = { total: tally.current.total + 1, correct: tally.current.correct + (correct ? 1 : 0) }
     advanceTimer.current = window.setTimeout(() => {
       advanceTimer.current = null
-      if (correct) { void passSentence(quest.id); nextQuestion() } else { setAnswered(false); setAnswerPicked(null); setErrorCard(null) }
+      if (correct) { void passSentence(quest.id); chapterResult.report(tally.current.total, tally.current.correct); nextQuestion() } else { setAnswered(false); setAnswerPicked(null); setErrorCard(null) }
     }, correct ? 1300 : 1000)
   }
   const bucketCorrect = (bucket: Bucket) => quest?.type === 'puzzle' && quest.segments!.filter((segment) => segment.bucket === bucket).every((segment) => placed[quest.segments!.findIndex((candidate) => candidate === segment)] === bucket)

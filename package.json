@@ -12,7 +12,7 @@
     "test:run": "vitest run",
     "test:python": "node scripts/run-python-tests.mjs",
     "check:bundle": "node scripts/check-bundle-size.mjs",
-    "check:release": "node scripts/release_quality_test.mjs && node scripts/pwa-assets-contract.mjs && node --test scripts/service-worker.test.mjs scripts/bundle-size.test.mjs",
+    "check:release": "node scripts/release_quality_test.mjs && node scripts/pwa-assets-contract.mjs && node --test scripts/service-worker.test.mjs scripts/bundle-size.test.mjs scripts/offline-contract.test.mjs",
     "typecheck": "tsc --noEmit",
     "validate": "npm run typecheck && npm run lint && npm run test:run && npm run test:python && npm run build && npm run check:bundle && npm run check:release && node scripts/validate-content.mjs",
     "lint": "node scripts/lint.mjs"

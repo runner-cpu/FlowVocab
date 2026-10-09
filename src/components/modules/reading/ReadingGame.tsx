@@ -6,6 +6,7 @@ import { itemsForTrack } from '../../../data/curriculum'
 import { useUI } from '../../../store/gameStore'
 import type { Chapter, NarrativeChoice } from '../../../types'
 import GameHud from '../../game/GameHud'
+import { useChapterResult } from '../../game/ChapterShell'
 
 export default function ReadingGame() {
   const track = useUI((state) => state.track)
@@ -20,6 +21,9 @@ export default function ReadingGame() {
   const [quizPicked, setQuizPicked] = useState<number | null>(null)
   const [quizAnswered, setQuizAnswered] = useState(false)
   const [finished, setFinished] = useState(false)
+  const chapterResult = useChapterResult()
+  /** 本次进入模块的累计成绩，够门槛才交给章节壳结算。 */
+  const tally = useRef({ total: 0, correct: 0 })
   const startedAt = useRef(performance.now())
   const advanceTimer = useRef<number | null>(null)
   const narrative = progress?.narrative ?? {}
@@ -34,6 +38,7 @@ export default function ReadingGame() {
     setQuizPicked(null)
     setQuizAnswered(false)
     setFinished(false)
+    tally.current = { total: 0, correct: 0 }
     startedAt.current = performance.now()
     return () => {
       if (advanceTimer.current !== null) window.clearTimeout(advanceTimer.current)
@@ -45,13 +50,14 @@ export default function ReadingGame() {
   function goTo(next: string) {
     if (!chapter) return
     setTrail((current) => [...current, next])
-    if (next.startsWith('end')) { void completeReading(chapter.id); setFinished(true) } else setNodeId(next)
+    if (next.startsWith('end')) { void completeReading(chapter.id); setFinished(true); chapterResult.report(tally.current.total, tally.current.correct) } else setNodeId(next)
   }
   function choose(choice: NarrativeChoice) { if (choice.quiz) { setQuizChoice(choice); setQuizPicked(null); setQuizAnswered(false) } else goTo(choice.next) }
   function answerQuiz(index: number) {
     if (!quizChoice?.quiz || quizAnswered) return
     const correct = index === quizChoice.quiz.answer
     setQuizPicked(index); setQuizAnswered(true); void answer({ module: 'reading', correct, timeMs: elapsedSince(startedAt.current, performance.now()) })
+    tally.current = { total: tally.current.total + 1, correct: tally.current.correct + (correct ? 1 : 0) }
     if (correct) {
       advanceTimer.current = window.setTimeout(() => {
         advanceTimer.current = null

@@ -42,10 +42,18 @@ export const MAX_STARS = 3
 /** 星尘掉落：0★ 不给，1★ 10，2★ 20，3★ 30。 */
 export const STARDUST_BY_STARS = [0, 10, 20, 30] as const
 
+/**
+ * 轮次星级：按正确率给星，短轮次有封顶，避免两道题全对就直接拿三星。
+ * ≥90% 且至少 3 题 → 3 星；≥70% 且至少 2 题 → 2 星；≥40% → 1 星。
+ */
 export function starsForResult(total: number, correct: number): number {
   if (!Number.isFinite(total) || total <= 0) return 0
-  const accuracy = correct / total
-  return accuracy >= 0.9 ? 3 : accuracy >= 0.7 ? 2 : accuracy >= 0.4 ? 1 : 0
+  const answered = Math.floor(total)
+  const hits = Math.max(0, Math.min(answered, Math.floor(Number.isFinite(correct) ? correct : 0)))
+  const accuracy = hits / answered
+  if (accuracy >= 0.9 && answered >= 3) return 3
+  if (accuracy >= 0.7 && answered >= 2) return 2
+  return accuracy >= 0.4 ? 1 : 0
 }
 
 export function stardustForStars(stars: number): number {
@@ -78,6 +86,7 @@ export function chapterView(
       stars: recorded,
       status,
       available,
+      // 只有“路线开放但前置未完成”才需要提示前置；路线未开放时给出更贴切的说明。
       prerequisite: gated ? previousPlace : null,
       stardust: stardustForStars(recorded)
     }

@@ -10,7 +10,9 @@ function Trigger() {
   const { report } = useChapterResult()
   return <>
     <button onClick={() => report(10, 9)}>report full round</button>
-    <button onClick={() => report(SETTLE_MIN_ANSWERS - 1, SETTLE_MIN_ANSWERS - 1)}>report short round</button>
+    <button onClick={() => report(2, 2)}>report node round</button>
+    <button onClick={() => { report(2, 2); report(2, 1); report(1, 1) }}>report split rounds</button>
+    <button onClick={() => report(0, 0)}>report empty round</button>
   </>
 }
 
@@ -35,9 +37,9 @@ describe('chapter shell settlement', () => {
     expect(await db.progress.get(1)).toMatchObject({ chapterStars: { harbour: 3 }, stardust: 30 })
   })
 
-  it('ignores a round shorter than the settlement minimum', async () => {
+  it('rejects a zero-question report instead of settling an untouched chapter', async () => {
     render(<ChapterShell module="vocab"><Trigger /></ChapterShell>)
-    fireEvent.click(screen.getByRole('button', { name: 'report short round' }))
+    fireEvent.click(screen.getByRole('button', { name: 'report empty round' }))
     expect(screen.queryByRole('heading', { name: '灯塔点亮' })).toBeNull()
     expect(useProgress.getState().progress?.chapterStars?.harbour).toBeUndefined()
     expect(useProgress.getState().progress?.stardust ?? 0).toBe(0)
@@ -53,6 +55,27 @@ describe('chapter shell settlement', () => {
     await useProgress.getState().recordChapterResult('harbour', SETTLE_MIN_ANSWERS, 0)
     expect(useProgress.getState().progress?.chapterStars?.harbour).toBe(3)
     expect(useProgress.getState().progress?.stardust).toBe(30)
+  })
+
+  it('settles a short node so low-content routes can still earn stars', async () => {
+    // 小学路线的语法只有一个节点、两道题；旧门槛（5 题）会让该章节永远拿不到星。
+    render(<ChapterShell module="grammar"><Trigger /></ChapterShell>)
+    fireEvent.click(screen.getByRole('button', { name: 'report node round' }))
+    expect(await screen.findByRole('heading', { name: '灯塔点亮' })).toBeVisible()
+    expect(screen.getByText(/完成 2 题 · 答对 2 题/)).toBeVisible()
+    expect(screen.getByRole('img', { name: '本章结算：2 / 3 星' })).toBeVisible()
+    await waitFor(() => expect(useProgress.getState().progress?.chapterStars?.garden).toBe(2))
+  })
+
+  it('ignores an empty round so an untouched chapter cannot earn stars', async () => {
+    render(<ChapterShell module="grammar"><Trigger /></ChapterShell>)
+    fireEvent.click(screen.getByRole('button', { name: 'report empty round' }))
+    expect(screen.queryByRole('heading', { name: '灯塔点亮' })).toBeNull()
+    expect(useProgress.getState().progress?.chapterStars?.garden).toBeUndefined()
+  })
+
+  it('treats the floor constant as a positive number', () => {
+    expect(SETTLE_MIN_ANSWERS).toBeGreaterThan(0)
   })
 
   it('never pays out for a chapter that does not exist on the route', async () => {

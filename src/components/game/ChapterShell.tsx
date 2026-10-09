@@ -8,8 +8,12 @@ import { useUI } from '../../store/gameStore'
 import type { ModuleKey } from '../../types'
 import './WorldMap.css'
 
-/** 至少完成这么多题才允许结算本章，避免空会话也能拿星。 */
-export const SETTLE_MIN_ANSWERS = 5
+/**
+ * 结算门槛：模块在“一轮/一个节点”结束时上报该轮成绩。
+ * 门槛设为 2 题，既能挡住单题侥幸（还叠加了短轮次星级封顶），
+ * 又不会让小学路线这种只有 2 道语法题的章节永远拿不到星。
+ */
+export const SETTLE_MIN_ANSWERS = 2
 
 interface ChapterResultContextValue {
   /** 模块完成一轮后上报成绩，用于章节星级与星尘结算。 */
@@ -29,6 +33,8 @@ export default function ChapterShell({ module, children }: { module: ModuleKey; 
   const progress = useProgress((state) => state.progress)
   const recordChapterResult = useProgress((state) => state.recordChapterResult)
   const [result, setResult] = useState<{ stars: number; total: number; correct: number; stardust: number } | null>(null)
+  /** 本次进入模块的累计成绩：够结算门槛才上报，避免短节点永远拿不到星。 */
+  const tally = useRef({ total: 0, correct: 0 })
   const reported = useRef(false)
   const heading = useRef<HTMLHeadingElement>(null)
 
@@ -39,17 +45,28 @@ export default function ChapterShell({ module, children }: { module: ModuleKey; 
   )
   const view = chapter ? views.find((entry) => entry.id === chapter.id) ?? null : null
 
-  useEffect(() => {
+  const resetRun = useCallback(() => {
     setResult(null)
+    tally.current = { total: 0, correct: 0 }
     reported.current = false
-  }, [module, track])
+  }, [])
+
+  useEffect(() => { resetRun() }, [module, track, resetRun])
 
   const report = useCallback((total: number, correct: number) => {
-    if (!chapter || reported.current || total < SETTLE_MIN_ANSWERS) return
+    if (!chapter || reported.current) return
+    const safeTotal = Number.isFinite(total) ? Math.max(0, Math.floor(total)) : 0
+    const safeCorrect = Number.isFinite(correct) ? Math.max(0, Math.min(safeTotal, Math.floor(correct))) : 0
+    if (safeTotal <= 0) return
+    // 模块可以分多次上报（例如语法逐个节点）；按本次进入模块的累计量结算。
+    // 用 ref 累计、在事件处理器里判断，避免在 state updater 内产生副作用。
+    tally.current = { total: tally.current.total + safeTotal, correct: tally.current.correct + safeCorrect }
+    if (tally.current.total < SETTLE_MIN_ANSWERS) return
     reported.current = true
-    const stars = starsForResult(total, correct)
-    void recordChapterResult(chapter.id, total, correct)
-    setResult({ stars, total, correct, stardust: stardustForStars(stars) })
+    const { total: settledTotal, correct: settledCorrect } = tally.current
+    const stars = starsForResult(settledTotal, settledCorrect)
+    void recordChapterResult(chapter.id, settledTotal, settledCorrect)
+    setResult({ stars, total: settledTotal, correct: settledCorrect, stardust: stardustForStars(stars) })
   }, [chapter, recordChapterResult])
 
   useEffect(() => {
@@ -89,7 +106,7 @@ export default function ChapterShell({ module, children }: { module: ModuleKey; 
           </div>
           <p className="chapter-dust">获得星尘 +{result.stardust}</p>
           <div className="chapter-strip-actions" style={{ justifyContent: 'center' }}>
-            <button className="btn btn-ghost" onClick={() => { setResult(null); reported.current = false }}><RotateCcw size={15} /> 再来一轮</button>
+            <button className="btn btn-ghost" onClick={resetRun}><RotateCcw size={15} /> 再来一轮</button>
             {next && <button className="btn btn-primary" onClick={() => go(next.module)}>前往下一站 <ArrowRight size={15} /></button>}
           </div>
         </section>
