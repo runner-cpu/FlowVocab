@@ -6,7 +6,7 @@ import { useProgress } from '../../store/progressStore'
 import { useUI } from '../../store/gameStore'
 import type { UserWord, Word } from '../../types'
 import VocabGame from '../modules/vocab/VocabGame'
-import WordForest, { classifyWordTree } from './WordForest'
+import WordForest, { classifyWordTree, reviewLabel } from './WordForest'
 
 const selectedWord: Word = { id: 'ecdict-abandon', word: 'abandon', meaning: '放弃', phonetic: '', example: 'Never abandon the mission.', exampleCn: '永远不要放弃任务。', level: 0, pos: 'v.', source: 'ecdict', tags: ['cet4'], legacyIds: ['cet4-000000'] }
 const base: UserWord = { id: selectedWord.id, wordId: selectedWord.id, status: 'learning', correct: 1, total: 5, lastReview: 1, nextReview: 10_000, interval: 2, quality: 2, successfulReviews: 1 }
@@ -18,6 +18,39 @@ beforeEach(async () => {
   useProgress.setState({ userWords: [base] })
 })
 afterEach(async () => { cleanup(); await db.delete() })
+
+describe('word forest guidance', () => {
+  it('labels the review horizon for each tree instead of exposing raw timestamps', () => {
+    expect(reviewLabel(1_000, 5_000)).toBe('已到期')
+    expect(reviewLabel(5_000 + 3_600_000, 5_000)).toBe('今天稍后')
+    expect(reviewLabel(5_000 + 86_400_000, 5_000)).toBe('明天')
+    expect(reviewLabel(5_000 + 5 * 86_400_000, 5_000)).toBe('5 天后')
+    expect(reviewLabel(Number.NaN, 5_000)).toBe('待安排')
+  })
+
+  it('summarizes the forest and starts from the earliest due tree', async () => {
+    await db.wordBank.put(selectedWord)
+    await db.wordBankMeta.put({ id: 1, version: 3, total: 1, updatedAt: Date.now(), loadedLevels: [0] })
+    const onReview = vi.fn()
+    render(<WordForest words={[base]} onReview={onReview} />)
+    expect(await screen.findByText(/待复习 1/)).toBeVisible()
+    expect(screen.getByText(/最近一棵：abandon/)).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: '从最早到期开始复习' }))
+    expect(onReview).toHaveBeenCalledWith(selectedWord.id)
+  })
+
+  it('explains when a healthy tree is not yet due instead of doing nothing', async () => {
+    await db.wordBank.put(selectedWord)
+    await db.wordBankMeta.put({ id: 1, version: 3, total: 1, updatedAt: Date.now(), loadedLevels: [0] })
+    const later = { ...base, correct: 5, total: 5, nextReview: Date.now() + 3 * 86_400_000 }
+    render(<WordForest words={[later]} onReview={vi.fn()} />)
+    const tree = await screen.findByRole('button', { name: /abandon.*生长中/ })
+    fireEvent.click(tree)
+    expect(await screen.findByText(/先处理脆弱与到期的树更划算/)).toBeVisible()
+    fireEvent.click(screen.getByRole('button', { name: '知道了' }))
+    expect(screen.queryByText(/先处理脆弱与到期的树更划算/)).toBeNull()
+  })
+})
 
 describe('word forest health', () => {
   it('classifies fragile, due, learning, and mastered trees', () => {

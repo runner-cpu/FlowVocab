@@ -1181,6 +1181,24 @@ textarea.essay:focus { border-color: var(--accent-ink); }
 
 .planet-core.stale { filter: grayscale(0.85) brightness(0.9); animation: none; }
 
+/* 星球成长进度：告诉玩家「还差多少能量能进入下一阶段」。 */
+.planet-copy { align-items: flex-start; display: flex; flex-direction: column; }
+
+.planet-progress { display: grid; gap: 5px; margin-top: 10px; width: 100%; min-width: 150px; }
+
+.planet-progress-track {
+  height: 7px; border-radius: 999px; background: var(--progress-track); overflow: hidden;
+}
+
+.planet-progress-track i {
+  display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--accent-light), var(--accent));
+  transition: width .45s ease;
+}
+
+.planet-stage-toggle { margin-top: 8px; padding: 6px 10px; font-size: 11px; min-height: 32px; }
+
+.planet-stage-note { margin-top: 8px; color: var(--ink2); font-size: 11px; line-height: 1.7; text-align: left; max-width: 320px; }
+
 .planet-ring {
   position: absolute; left: 50%; top: 50%; width: 150px; height: 150px;
   transform: translate(-50%, -50%) rotateX(70deg); border-radius: 50%;
@@ -1319,6 +1337,12 @@ textarea.essay:focus { border-color: var(--accent-ink); }
 
 .review-load-item.coral { border-color: rgba(242,140,92,.34); background: rgba(242,140,92,.08); }
 
+/* 可点的复习负担卡片：给出明确的可交互反馈，禁用态保持安静。 */
+button.review-load-item { text-align: left; cursor: pointer; font: inherit; transition: transform .18s, border-color .18s, box-shadow .18s; }
+button.review-load-item:hover:not(:disabled) { transform: translateY(-2px); border-color: var(--accent-light); }
+button.review-load-item:focus-visible { outline: 3px solid rgba(22,184,138,.3); outline-offset: 2px; }
+button.review-load-item:disabled { cursor: default; }
+
 .review-load-item.blue { border-color: rgba(59,130,246,.22); background: rgba(59,130,246,.06); }
 
 .review-load-item.mint { border-color: rgba(22,184,138,.24); background: rgba(22,184,138,.07); }
@@ -1354,6 +1378,14 @@ textarea.essay:focus { border-color: var(--accent-ink); }
 
 .forest-grid { display: grid; grid-template-columns: repeat(6, 1fr); gap: 9px; }
 
+/* 错词森林小结：先回答「现在该复习哪一棵」。 */
+.forest-summary {
+  display: flex; align-items: center; gap: 10px 16px; flex-wrap: wrap;
+  padding: 10px 12px; margin: 4px 0 12px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--surface-soft); color: var(--ink2); font-size: 12px;
+}
+.forest-summary .btn { padding: 6px 10px; font-size: 11px; }
+
 .forest-tree {
   min-width: 0; border: 1px solid var(--line); border-radius: 13px; padding: 11px 7px;
   background: var(--surface-soft); color: var(--ink); cursor: pointer; font: inherit;
@@ -1385,6 +1417,18 @@ textarea.essay:focus { border-color: var(--accent-ink); }
   display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 12px;
   min-height: 120px; padding: 24px 16px; color: var(--ink2); text-align: center;
 }
+
+/* 图表下方的实时读数：悬停/点击后给出口头与视觉反馈，键盘与读屏都能用。 */
+.radar-readout { margin-top: 8px; color: var(--ink2); font-size: 12px; min-height: 18px; }
+
+/* 热力图点击某天后的当日明细。 */
+.heatmap-detail {
+  margin-top: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px;
+  background: var(--surface-soft); display: grid; gap: 6px; justify-items: start;
+}
+.heatmap-detail strong { font-size: 13px; }
+.heatmap-detail p { color: var(--ink2); font-size: 12px; }
+.heatmap-detail-modules { display: flex; flex-wrap: wrap; gap: 6px 14px; list-style: none; padding: 0; margin: 0; color: var(--ink2); font-size: 12px; }
 
 .chart-data { margin-top: 12px; border-top: 1px solid var(--line); color: var(--ink2); }
 

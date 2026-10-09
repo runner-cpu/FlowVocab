@@ -110,6 +110,36 @@ describe('Heatmap rendering', () => {
     expect(option.series[0].data.map((item: { value: number[] }) => item.value)).toEqual([[0, 3, 11], [0, 4, 22]])
   })
 
+  it('drills into a single day when its heatmap cell is clicked', async () => {
+    await db.dailyStats.bulkPut([
+      { ...stat('2026-10-01', 42), energy: 12, comboMax: 7, modules: { vocab: 5, grammar: 2, sentence: 0, listening: 0, writing: 0, reading: 0 } },
+      stat('2026-10-02', 0)
+    ])
+    render(<Heatmap days={2} today="2026-10-02" />)
+    await waitFor(() => expect(chart.setOption).toHaveBeenCalled())
+    const option = chart.setOption.mock.lastCall![0]
+    const handler = chart.on.mock.calls.find(([event]: unknown[]) => event === 'click')?.[1] as ((params: unknown) => void) | undefined
+    expect(handler).toBeTypeOf('function')
+    act(() => handler?.({ data: option.series[0].data[0] }))
+    const detail = await screen.findByRole('status')
+    expect(detail).toHaveTextContent('2026-10-01')
+    expect(detail).toHaveTextContent('42 XP')
+    expect(detail).toHaveTextContent('最高连击 7')
+    expect(detail).toHaveTextContent('词汇 · 5 题')
+    expect(detail).toHaveTextContent('语法 · 2 题')
+    fireEvent.click(screen.getByRole('button', { name: '收起当日明细' }))
+    expect(screen.queryByText(/最高连击 7/)).toBeNull()
+  })
+
+  it('reports a day without a record instead of showing an empty panel', async () => {
+    await db.dailyStats.put(stat('2026-10-02', 5))
+    render(<Heatmap days={2} today="2026-10-02" />)
+    await waitFor(() => expect(chart.setOption).toHaveBeenCalled())
+    const handler = chart.on.mock.calls.find(([event]: unknown[]) => event === 'click')?.[1] as ((params: unknown) => void) | undefined
+    act(() => handler?.({ data: { name: '2026-10-01', value: [0, 3, 0] } }))
+    expect(await screen.findByRole('status')).toHaveTextContent('这一天没有学习记录')
+  })
+
   it('uses calendar positions over spring DST instead of losing or shifting XP', async () => {
     vi.stubEnv('TZ', 'America/New_York')
     expect(new Date(2026, 2, 8).getTimezoneOffset()).toBe(300)

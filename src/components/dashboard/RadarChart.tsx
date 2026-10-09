@@ -3,7 +3,7 @@ import type echarts from '../../charts/echarts'
 import { ChartDataDetails, ChartError } from '../../charts/ChartDataDetails'
 import { useChartAppearance, useDashboardChart } from '../../charts/useDashboardChart'
 import { useProgress } from '../../store/progressStore'
-import type { ModuleKey } from '../../types'
+import { MODULE_META, type ModuleKey } from '../../types'
 
 export const RADAR_LABELS = ['词汇', '语法', '句子', '听力', '写作', '阅读'] as const
 const RADAR_MODULES: ModuleKey[] = ['vocab', 'grammar', 'sentence', 'listening', 'writing', 'reading']
@@ -25,6 +25,7 @@ export default function RadarChart({ onModuleSelect }: { onModuleSelect?: (modul
   const loading = retrying || (!ready && !initError && !retryError)
   const error = retryError || initError
   const hasData = ready && !error && !loading && values !== null
+  const [hovered, setHovered] = useState<ModuleKey | null>(null)
 
   const option = useMemo(() => {
     if (!hasData || !values) return null
@@ -45,16 +46,22 @@ export default function RadarChart({ onModuleSelect }: { onModuleSelect?: (modul
         data: [{ value: [70, 70, 70, 70, 70, 70], name: '目标 70%', lineStyle: { type: 'dashed', color: palette.secondary }, itemStyle: { opacity: 0 } }],
       }, {
         type: 'radar',
-        data: [{ value: values, name: '六维掌握度', areaStyle: { color: palette.accent, opacity: 0.25 }, lineStyle: { color: palette.accent, width: 2 }, itemStyle: { color: palette.accent } }],
+        // 悬停某条维度轴时加深填充，给出「这里可以点」的指针反馈。
+        data: [{ value: values, name: '六维掌握度', areaStyle: { color: palette.accent, opacity: hovered ? 0.34 : 0.25 }, lineStyle: { color: palette.accent, width: 2 }, itemStyle: { color: palette.accent } }],
       }],
     }
-  }, [hasData, values, appearance])
+  }, [hasData, values, appearance, hovered])
   const onClick = useCallback((params: echarts.ECElementEvent) => {
     const label = typeof params.name === 'string' ? params.name : ''
     const module = moduleForRadarLabel(label)
     if (module) onModuleSelect?.(module)
   }, [onModuleSelect])
-  const chart = useDashboardChart(option, onClick)
+  const onHover = useCallback((params: echarts.ECElementEvent) => {
+    const label = typeof params.name === 'string' ? params.name : ''
+    setHovered(moduleForRadarLabel(label))
+  }, [])
+  const onLeave = useCallback(() => setHovered(null), [])
+  const chart = useDashboardChart(option, { click: onClick, hover: onHover, leave: onLeave })
 
   const retry = async () => {
     setRetrying(true)
@@ -75,6 +82,13 @@ export default function RadarChart({ onModuleSelect }: { onModuleSelect?: (modul
       {!loading && !error && !values && <p className="chart-status" role="status">暂无掌握度数据，完成练习后可查看。</p>}
       {chart.error && <ChartError message={chart.error} onRetry={chart.retry} />}
       <div ref={chart.ref} aria-hidden="true" hidden={!option || !!chart.error} style={{ width: '100%', height: 280 }} />
+      {hasData && values && (
+        <div className="radar-readout" role="status" aria-live="polite">
+          {hovered
+            ? <>悬停：{MODULE_META[hovered].name.split('·')[0]} {radar?.[hovered] ?? 0}% · 点击进入该模块</>
+            : <>点击雷达上的维度名，或使用下方按钮进入对应训练。</>}
+        </div>
+      )}
       {hasData && values && (
         <ChartDataDetails caption="六维掌握度" headers={['学习模块', '当前掌握度', '目标']}>
           {RADAR_LABELS.map((label, index) => (

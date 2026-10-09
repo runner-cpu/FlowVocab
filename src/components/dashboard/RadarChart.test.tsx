@@ -26,6 +26,24 @@ describe('radar dimension navigation', () => {
   })
 })
 
+describe('radar pointer feedback', () => {
+  it('binds hover and leave handlers, updates the readout, and unbinds on unmount', () => {
+    const view = render(<RadarChart onModuleSelect={vi.fn()} />)
+    const hover = chart.on.mock.calls.find(([event]) => event === 'mouseover')?.[1] as ((params: unknown) => void) | undefined
+    const leave = chart.on.mock.calls.find(([event]) => event === 'mouseout')?.[1] as (() => void) | undefined
+    expect(hover).toBeTypeOf('function')
+    expect(leave).toBeTypeOf('function')
+    expect(screen.getByRole('status')).toHaveTextContent('点击雷达上的维度名')
+    act(() => hover?.({ name: '写作' }))
+    expect(screen.getByRole('status')).toHaveTextContent('写作 60%')
+    act(() => leave?.())
+    expect(screen.getByRole('status')).toHaveTextContent('点击雷达上的维度名')
+    view.unmount()
+    expect(chart.off).toHaveBeenCalledWith('mouseover', hover)
+    expect(chart.off).toHaveBeenCalledWith('mouseout', leave)
+  })
+})
+
 describe('RadarChart accessible states', () => {
   it('offers all six real mastery values, the target, and native module buttons', () => {
     const select = vi.fn()

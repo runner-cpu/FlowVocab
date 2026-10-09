@@ -52,8 +52,23 @@ export function useChartAppearance() {
   }), [palette, reducedMotion])
 }
 
-/** Keep one renderer across data/theme updates; every observer and listener has an owner. */
-export function useDashboardChart(option: echarts.EChartsCoreOption | null, onClick?: (event: echarts.ECElementEvent) => void) {
+export type ChartEventHandler = (event: echarts.ECElementEvent) => void
+/** 允许绑定的图表事件：覆盖点击与指针悬停反馈。 */
+export type ChartEventName = 'click' | 'mouseover' | 'mousemove' | 'mouseout'
+export interface ChartHandlers {
+  click?: ChartEventHandler
+  hover?: ChartEventHandler
+  leave?: ChartEventHandler
+}
+
+/**
+ * Keep one renderer across data/theme updates; every observer and listener has an owner.
+ *
+ * `handlers` accepts either a single click handler (legacy call style) or an object with
+ * click/hover/leave so charts can offer pointer feedback without a second hook.
+ */
+export function useDashboardChart(option: echarts.EChartsCoreOption | null, handlers: ChartEventHandler | ChartHandlers = {}) {
+  const { click, hover, leave } = typeof handlers === 'function' ? { click: handlers, hover: undefined, leave: undefined } : handlers
   const ref = useRef<HTMLDivElement>(null)
   const chartRef = useRef<echarts.ECharts | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -106,10 +121,18 @@ export function useDashboardChart(option: echarts.EChartsCoreOption | null, onCl
 
   useEffect(() => {
     const chart = chartRef.current
-    if (!chart || !onClick) return
-    chart.on('click', onClick)
-    return () => { chart.off('click', onClick) }
-  }, [enabled, onClick, attempt])
+    if (!chart || (!click && !hover && !leave)) return
+    type Binding = { event: ChartEventName; handler: ChartEventHandler }
+    const bindings: Binding[] = []
+    if (click) bindings.push({ event: 'click', handler: click })
+    if (hover) { bindings.push({ event: 'mouseover', handler: hover }); bindings.push({ event: 'mousemove', handler: hover }) }
+    if (leave) bindings.push({ event: 'mouseout', handler: leave })
+    const bind = ({ event, handler }: Binding) => { chart.on(event, handler as (params: unknown) => void) }
+    const unbind = ({ event, handler }: Binding) => { chart.off(event, handler as (params: unknown) => void) }
+    // 图表初始化晚于本 effect 时（首次渲染顺序），下一次 render 会重新绑定。
+    bindings.forEach(bind)
+    return () => { bindings.forEach(unbind) }
+  }, [enabled, click, hover, leave, attempt])
 
   return { ref, error, retry: () => { setError(null); setAttempt((value) => value + 1) } }
 }

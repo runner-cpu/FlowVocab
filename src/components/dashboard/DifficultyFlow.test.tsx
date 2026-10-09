@@ -33,6 +33,20 @@ describe('DifficultyFlow accessible data', () => {
     expect(chart.setOption.mock.lastCall![0].series[0].data).toEqual([...Array.from({ length: 58 }, () => 1), 2, 4])
   })
 
+  it('explains the hovered point, then falls back to the guidance line', async () => {
+    await db.sessions.put(session(1, [2, 4]))
+    render(<DifficultyFlow />)
+    await waitFor(() => expect(chart.setOption).toHaveBeenCalled())
+    const hover = chart.on.mock.calls.find(([event]: unknown[]) => event === 'mouseover')?.[1] as ((params: unknown) => void) | undefined
+    expect(hover).toBeTypeOf('function')
+    expect(screen.getByRole('status')).toHaveTextContent('把指针移到曲线上')
+    act(() => hover?.({ dataIndex: 1, value: 4 }))
+    expect(screen.getByRole('status')).toHaveTextContent('第 2 题 · 考研超纲')
+    const leave = chart.on.mock.calls.find(([event]: unknown[]) => event === 'mouseout')?.[1] as (() => void) | undefined
+    act(() => leave?.())
+    expect(screen.getByRole('status')).toHaveTextContent('把指针移到曲线上')
+  })
+
   it('renders a React-owned accessible empty state without HTML injection', async () => {
     // Mount first: Testing Library itself clears containers via innerHTML.
     let resolve!: (sessions: Session[]) => void
