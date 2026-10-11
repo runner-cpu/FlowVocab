@@ -38,6 +38,12 @@ describe('hash navigation', () => {
     expect(useUI.getState().page).toBe('listening')
   })
 
+  it('treats the root hash as the home route', async () => {
+    const useUI = await loadStore('#/')
+
+    expect(useUI.getState().page).toBe('home')
+  })
+
   it('follows browser back and forward hash changes', async () => {
     const useUI = await loadStore('#/home')
 

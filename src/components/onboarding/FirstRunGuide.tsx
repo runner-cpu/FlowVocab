@@ -22,6 +22,8 @@ export default function FirstRunGuide() {
       ? document.activeElement
       : nodes[0]?.querySelector<HTMLElement>(FOCUSABLE) ?? null
     nodes.forEach((node) => { node.setAttribute('inert', ''); node.setAttribute('aria-hidden', 'true') })
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
     closeButton.current?.focus()
     const onKeyDown = (event: KeyboardEvent) => {
       if (event.key === 'Escape') { event.preventDefault(); close(); return }
@@ -37,6 +39,7 @@ export default function FirstRunGuide() {
     window.addEventListener('keydown', onKeyDown)
     return () => {
       window.removeEventListener('keydown', onKeyDown)
+      document.body.style.overflow = previousOverflow
       inertNodes.current.forEach(({ node, inert, ariaHidden }) => {
         if (inert === null) node.removeAttribute('inert')
         else node.setAttribute('inert', inert)

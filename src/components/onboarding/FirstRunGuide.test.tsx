@@ -23,6 +23,7 @@ describe('first-run guide focus lifecycle', () => {
     const close = await screen.findByRole('button', { name: /关闭新手指南/ })
     const start = screen.getByRole('button', { name: /前往航线地图/ })
     expect(close).toHaveFocus()
+    expect(document.body.style.overflow).toBe('hidden')
     expect(document.querySelector('.app-content')).toHaveAttribute('inert')
     expect(document.querySelector('.app-content')).toHaveAttribute('aria-hidden', 'true')
 
@@ -37,5 +38,6 @@ describe('first-run guide focus lifecycle', () => {
     expect(opener).toHaveFocus()
     expect(document.querySelector('.app-content')).not.toHaveAttribute('inert')
     expect(document.querySelector('.app-content')).not.toHaveAttribute('aria-hidden')
+    expect(document.body.style.overflow).toBe('')
   })
 })

@@ -17,6 +17,11 @@ export default function SettingsPanel({ onClose, opener }: { onClose: () => void
   const close = () => { onClose(); opener?.focus() }
 
   useEffect(() => { dialog.current?.querySelector<HTMLElement>('button, input:not([hidden])')?.focus() }, [])
+  useEffect(() => {
+    const previousOverflow = document.body.style.overflow
+    document.body.style.overflow = 'hidden'
+    return () => { document.body.style.overflow = previousOverflow }
+  }, [])
   if (!profile) return null
   const settings = profile.settings
   const download = async () => {
@@ -61,7 +66,7 @@ export default function SettingsPanel({ onClose, opener }: { onClose: () => void
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
   }
-  return <div className="settings-backdrop" role="presentation">
+  return <div className="settings-backdrop" role="presentation" onMouseDown={(event) => { if (event.target === event.currentTarget) close() }}>
     <section ref={dialog} className="settings-panel" role="dialog" aria-modal="true" aria-labelledby="settings-title" onKeyDown={trapFocus}>
       <header><div><p>本地优先</p><h2 id="settings-title">学习设置</h2></div><button className="settings-close" onClick={close} aria-label="关闭设置"><X size={18} /></button></header>
       <div className="settings-range"><label htmlFor="settings-volume">音效音量</label> <output>{Math.round(settings.volume * 100)}%</output><input id="settings-volume" type="range" min="0" max="1" step=".05" value={settings.volume} onChange={(event) => void updateSettings({ volume: Number(event.target.value) })} /></div>

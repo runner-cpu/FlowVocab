@@ -66,3 +66,13 @@ it('traps focus, closes on Escape, and restores the settings opener', () => {
   expect(close).toHaveBeenCalledTimes(1); expect(document.activeElement).toBe(opener)
   opener.remove()
 })
+
+it('locks background scrolling and closes when the backdrop is clicked', () => {
+  const close = vi.fn()
+  render(<SettingsPanel onClose={close} />)
+  expect(document.body.style.overflow).toBe('hidden')
+  fireEvent.mouseDown(document.querySelector('.settings-backdrop')!)
+  expect(close).toHaveBeenCalledTimes(1)
+  cleanup()
+  expect(document.body.style.overflow).toBe('')
+})

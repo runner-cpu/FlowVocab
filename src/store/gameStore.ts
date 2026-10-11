@@ -51,7 +51,7 @@ function applyTheme(theme: 'light' | 'dark') {
 
 function pageFromHash(hash: string): PageKey {
   const path = hash.replace(/^#/, '') || '/home'
-  if (path === '/home' || path === 'main-content') return 'home'
+  if (path === '/' || path === '/home' || path === 'main-content') return 'home'
   if (path === '/dashboard') return 'dashboard'
   const match = path.match(/^\/module\/([^/]+)$/)
   if (match && MODULE_KEYS.includes(match[1] as (typeof MODULE_KEYS)[number])) {

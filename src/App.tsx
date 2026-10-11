@@ -13,6 +13,10 @@ import type { ModuleKey } from './types'
 
 const MODULE_KEYS: readonly ModuleKey[] = ['vocab', 'grammar', 'sentence', 'listening', 'writing', 'reading']
 const isModulePage = (page: PageKey): page is ModuleKey => MODULE_KEYS.includes(page as ModuleKey)
+const PAGE_LABELS: Record<PageKey, string> = {
+  home: '首页', dashboard: '学习数据', vocab: '词汇训练', grammar: '语法训练',
+  sentence: '句子训练', listening: '听力训练', writing: '写作训练', reading: '阅读训练', 'not-found': '未找到页面'
+}
 
 export default function App() {
   const ready = useProgress((s) => s.ready)
@@ -32,11 +36,11 @@ export default function App() {
   }, [init])
 
   if (!ready && initError) {
-    return <div className="loading" role="alert"><p>{initError}</p><button className="btn btn-primary" onClick={() => void retryInit()}>重试</button></div>
+    return <div className="loading" role="alert" aria-live="assertive"><p>{initError}</p><button className="btn btn-primary" onClick={() => void retryInit()}>重试</button></div>
   }
 
   if (!ready) {
-    return <div className="loading">🌱 正在唤醒心流词境……</div>
+    return <div className="loading" role="status" aria-live="polite">🌱 正在唤醒心流词境……</div>
   }
 
   const isModule = isModulePage(page)
@@ -47,6 +51,7 @@ export default function App() {
       <HarborBackdrop />
       <TopBar />
       <main className="main" id="main-content" tabIndex={-1}>
+        <p className="sr-only" role="status" aria-live="polite">已进入{PAGE_LABELS[page]}</p>
         <SaveStatus />
         <Suspense fallback={<div className="loading route-loading" role="status">正在加载航线…</div>}>
           {page === 'home' && <Home />}
