@@ -12,6 +12,7 @@ import SpotlightCard from '../components/ui/SpotlightCard'
 import ProgressionPanel from '../components/dashboard/ProgressionPanel'
 import { planetLevelFromEnergy } from '../engine/progression'
 import WordForest from '../components/dashboard/WordForest'
+import LearningEnginePanel from '../components/dashboard/LearningEnginePanel'
 import { findStoredWordLevel } from '../store/wordBank'
 import { useNow } from '../hooks/useNow'
 import { dayKey } from '../engine/forget'
@@ -66,6 +67,8 @@ export default function Dashboard() {
         <div className="insight-copy"><strong>成长提示</strong>{isFirstStudy ? <p>完成第一轮练习后，这里会显示你的能力变化</p> : <p>{strongest ? MODULE_META[strongest[0]].name.split('·')[0] : '词汇'} 的练习进度为 {strongest?.[1] ?? 0}%。建议继续练习 {weakest ? MODULE_META[weakest[0]].name.split('·')[0] : '词汇'}。这些数值反映本站练习记录，不代表考试能力评分。</p>}</div>
         <button className="btn btn-ghost" onClick={() => go(isFirstStudy ? 'vocab' : weakest?.[0] ?? 'vocab')}>{isFirstStudy ? '开始第一轮练习' : '去补强 →'}</button>
       </div>
+
+      <LearningEnginePanel />
 
       <div className="grid mt20" style={{ alignItems: 'stretch' }}>
         <div className="card chart-interactive">

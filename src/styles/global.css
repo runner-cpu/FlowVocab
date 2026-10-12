@@ -1421,6 +1421,15 @@ button.review-load-item:disabled { cursor: default; }
 /* 图表下方的实时读数：悬停/点击后给出口头与视觉反馈，键盘与读屏都能用。 */
 .radar-readout { margin-top: 8px; color: var(--ink2); font-size: 12px; min-height: 18px; }
 
+/* 学习引擎 · 教学设计说明面板。 */
+.learning-engine { margin-top: 20px; }
+.engine-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.engine-item { display: flex; gap: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 14px; background: var(--surface-soft); }
+.engine-item-icon { display: grid; place-items: center; width: 30px; height: 30px; flex: none; border-radius: 10px; background: var(--accent-bg); color: var(--accent-ink); }
+.engine-item strong { display: block; font-size: 13px; color: var(--ink); }
+.engine-item p { margin: 3px 0 0; font-size: 12px; line-height: 1.55; color: var(--ink2); }
+.engine-footnote { display: flex; align-items: center; gap: 6px; margin: 12px 0 0; font-size: 12px; color: var(--muted); }
+
 /* 热力图点击某天后的当日明细。 */
 .heatmap-detail {
   margin-top: 10px; padding: 12px 14px; border: 1px solid var(--line); border-radius: 12px;
@@ -1808,6 +1817,8 @@ button.review-load-item:disabled { cursor: default; }
   .radar-links, .review-load-grid { grid-template-columns: 1fr 1fr; }
 
   .review-load-item:last-child { grid-column: 1 / -1; }
+
+  .engine-grid { grid-template-columns: 1fr; }
 
   .range-switcher { width: 100%; }
 
