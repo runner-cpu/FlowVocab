@@ -8,6 +8,7 @@ import type { SkillNode } from '../../../types'
 import GameHud from '../../game/GameHud'
 import ErrorCard from '../../game/ErrorCard'
 import { useChapterResult } from '../../game/ChapterShell'
+import RoadmapNote from '../../game/RoadmapNote'
 import { inferErrorTag, type ErrorTag } from '../../../engine/errorRouting'
 
 export default function GrammarGame() {
@@ -97,6 +98,7 @@ export default function GrammarGame() {
             })}</div></div></section>
           ))}</div>
           {activeBranches.length < GRAMMAR_BRANCHES.length && <p className="muted mt14" role="note">当前路线开放 {activeBranches.length} / {GRAMMAR_BRANCHES.length} 个语法分支；切换学习路线可以看到更多节点。</p>}
+          <RoadmapNote module="grammar" />
         </>}
     </div>}
     {activeNode && !finished && <div className="card"><div className="card-title">📌 {activeNode.name}<button className="btn btn-ghost" style={{ marginLeft: 'auto' }} onClick={() => setActiveNode(null)}>返回技能树</button></div><p className="muted">{activeNode.desc}</p>{activeNode.examples.map((example) => <div key={example} className="explain-box mt8">💬 {example}</div>)}<div className="mt14">第 {qIndex + 1} / {activeNode.quizzes.length} 题</div><div className="options mt8">{activeNode.quizzes[qIndex].options.map((option, index) => { let className = 'option'; if (answered) { if (index === activeNode.quizzes[qIndex].answer) className += ' correct'; else if (picked === index) className += ' wrong' } return <button key={option} className={className} disabled={answered} onClick={() => onPick(index)}>{option}</button> })}</div>{answered && <div className="explain-box">{activeNode.quizzes[qIndex].explain}{picked !== activeNode.quizzes[qIndex].answer && <div className="mt8"><button className="btn btn-ghost" onClick={() => { setPicked(null); setAnswered(false); setErrorCard(null) }}>重新作答</button></div>}</div>}{errorCard && <ErrorCard tag={errorCard.tag} chosen={errorCard.chosen} correctAnswer={errorCard.correctAnswer} explain={errorCard.explain} onDismiss={() => setErrorCard(null)} />}</div>}

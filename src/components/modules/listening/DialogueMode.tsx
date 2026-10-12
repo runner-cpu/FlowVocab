@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DialogueQuestion, DialogueScene } from '../../../data/dialogue'
+import { DIALOGUE_RULE_LABELS } from '../../../data/dialogue'
 import { dialogueStars, matchDialogueAnswer, referenceFlags, type DialogueMatchResult } from '../../../engine/dialogue'
 import './DialogueMode.css'
 
@@ -247,7 +248,7 @@ export default function DialogueMode({ scene, passedIds, onScored, onSceneComple
           </span>
         ))}
       </p>
-      <p className="dialogue-hint">规则提示：{question.rule}</p>
+      <p className="dialogue-hint">规则提示：{DIALOGUE_RULE_LABELS[question.rule] ?? question.rule}</p>
     </section>
 
     <div className="dialogue-actions">

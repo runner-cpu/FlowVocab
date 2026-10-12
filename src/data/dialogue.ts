@@ -1,11 +1,20 @@
 /**
- * 离线语音对话内容：六个学习场景各有一段狐狸引导语与 4-6 道口语题。
+ * 离线语音对话内容：十个学习场景各有一段狐狸引导语与 4-6 道口语题。
  * 纯前端数据，无网络、无模型调用；spoken 即学习者需要说出的英文参考句。
  */
 
 export const DIALOGUE_RULES = ['past-tense', 'plural', 'preposition', 'modal', 'article'] as const
 
 export type DialogueRule = (typeof DIALOGUE_RULES)[number]
+
+/** 规则 id → 展示用中文名（口语题在作答前给出提示，避免直接把答案抄给学习者）。 */
+export const DIALOGUE_RULE_LABELS: Record<DialogueRule, string> = {
+  'past-tense': '过去式',
+  plural: '名词复数',
+  preposition: '介词搭配',
+  modal: '情态动词',
+  article: '冠词'
+}
 
 export interface DialogueQuestion {
   id: string
@@ -210,7 +219,7 @@ export const DIALOGUE_SCENES: DialogueScene[] = [
         prompt: '你能再说一遍最后一句吗？',
         spoken: 'Could you repeat the last sentence?',
         keywords: ['could', 'repeat'],
-        distractors: ['can', 'remind'],
+        distractors: ['reply', 'repair'],
         rule: 'modal'
       },
       {
@@ -324,6 +333,198 @@ export const DIALOGUE_SCENES: DialogueScene[] = [
         keywords: ['clocks', 'story'],
         distractors: ['clerk', 'history'],
         rule: 'plural'
+      }
+    ]
+  },
+  {
+    id: 'market-street',
+    title: '月光市集',
+    place: '港口集市',
+    heroLine: 'The night market is open! Tell me what you want to buy and how much it costs.',
+    questions: [
+      {
+        id: 'market-street-q1',
+        prompt: '市场上有许多新鲜的鱼。',
+        spoken: 'There are many fresh fish at the market.',
+        keywords: ['fresh', 'fish'],
+        distractors: ['freshly', 'fishes'],
+        rule: 'plural'
+      },
+      {
+        id: 'market-street-q2',
+        prompt: '我昨天在市场买了一个篮子。',
+        spoken: 'I bought a basket at the market yesterday.',
+        keywords: ['bought', 'basket'],
+        distractors: ['brings', 'buckets'],
+        rule: 'past-tense'
+      },
+      {
+        id: 'market-street-q3',
+        prompt: '这家店的面包只要两块钱。',
+        spoken: 'The bread in this shop costs only two yuan.',
+        keywords: ['bread', 'costs'],
+        distractors: ['beard', 'counts'],
+        rule: 'plural'
+      },
+      {
+        id: 'market-street-q4',
+        prompt: '请把蔬菜放在我的自行车上。',
+        spoken: 'Please put the vegetables on my bicycle.',
+        keywords: ['vegetables', 'on'],
+        distractors: ['vehicles', 'over'],
+        rule: 'preposition'
+      },
+      {
+        id: 'market-street-q5',
+        prompt: '摊主说明天会带更多水果来。',
+        spoken: 'The seller says he will bring more fruit tomorrow.',
+        keywords: ['seller', 'will'],
+        distractors: ['silver', 'would'],
+        rule: 'modal'
+      }
+    ]
+  },
+  {
+    id: 'lighthouse-clinic',
+    title: '灯塔诊所',
+    place: '灯塔诊所',
+    heroLine: 'You look tired, sailor. Tell me how you feel and what you need.',
+    questions: [
+      {
+        id: 'lighthouse-clinic-q1',
+        prompt: '你应该早点上床休息。',
+        spoken: 'You should go to bed earlier.',
+        keywords: ['should', 'bed'],
+        distractors: ['would', 'boat'],
+        rule: 'modal'
+      },
+      {
+        id: 'lighthouse-clinic-q2',
+        prompt: '我有点头疼，需要一些药。',
+        spoken: 'I have a headache and need some medicine.',
+        keywords: ['headache', 'medicine'],
+        distractors: ['medical', 'stomach'],
+        rule: 'article'
+      },
+      {
+        id: 'lighthouse-clinic-q3',
+        prompt: '我昨晚睡得很不好。',
+        spoken: 'I slept very badly last night.',
+        keywords: ['slept', 'night'],
+        distractors: ['sleeps', 'slight'],
+        rule: 'past-tense'
+      },
+      {
+        id: 'lighthouse-clinic-q4',
+        prompt: '请给我一杯温水。',
+        spoken: 'Please give me a glass of warm water.',
+        keywords: ['glass', 'water'],
+        distractors: ['glasses', 'weather'],
+        rule: 'article'
+      },
+      {
+        id: 'lighthouse-clinic-q5',
+        prompt: '医生仔细检查了我的眼睛。',
+        spoken: 'The doctor checked my eyes carefully.',
+        keywords: ['doctor', 'eyes'],
+        distractors: ['daughter', 'ice'],
+        rule: 'past-tense'
+      }
+    ]
+  },
+  {
+    id: 'weather-tower',
+    title: '气象塔',
+    place: '气象观测塔',
+    heroLine: 'Wind, rain, and stars — I read them all. Ask me about the weather before you sail.',
+    questions: [
+      {
+        id: 'weather-tower-q1',
+        prompt: '傍晚可能会下雨。',
+        spoken: 'It might rain in the evening.',
+        keywords: ['might', 'evening'],
+        distractors: ['must', 'morning'],
+        rule: 'modal'
+      },
+      {
+        id: 'weather-tower-q2',
+        prompt: '起风的时候我们就留在港口。',
+        spoken: 'We will stay in the harbour when it is windy.',
+        keywords: ['stay', 'harbour'],
+        distractors: ['stayed', 'harmful'],
+        rule: 'preposition'
+      },
+      {
+        id: 'weather-tower-q3',
+        prompt: '昨晚的暴风雨弄坏了船帆。',
+        spoken: 'The storm broke our sail last night.',
+        keywords: ['storm', 'sail'],
+        distractors: ['stories', 'sold'],
+        rule: 'past-tense'
+      },
+      {
+        id: 'weather-tower-q4',
+        prompt: '天上有一道彩虹。',
+        spoken: 'There is a rainbow in the sky.',
+        keywords: ['rainbow', 'sky'],
+        distractors: ['raincoat', 'sight'],
+        rule: 'article'
+      },
+      {
+        id: 'weather-tower-q5',
+        prompt: '云在天空中移动得很快。',
+        spoken: 'The clouds move quickly across the sky.',
+        keywords: ['clouds', 'quickly'],
+        distractors: ['clowns', 'quietly'],
+        rule: 'plural'
+      }
+    ]
+  },
+  {
+    id: 'cafe-corner',
+    title: '港口咖啡馆',
+    place: '港口咖啡馆',
+    heroLine: 'Take a seat, sailor. Tell me your order and how your day is going.',
+    questions: [
+      {
+        id: 'cafe-corner-q1',
+        prompt: '我可以要一杯热咖啡吗？',
+        spoken: 'Could I have a hot coffee please?',
+        keywords: ['could', 'coffee'],
+        distractors: ['will', 'cocoa'],
+        rule: 'modal'
+      },
+      {
+        id: 'cafe-corner-q2',
+        prompt: '我们昨天在这家咖啡馆见到了朋友。',
+        spoken: 'We met our friends at this cafe yesterday.',
+        keywords: ['met', 'cafe'],
+        distractors: ['meets', 'cabin'],
+        rule: 'past-tense'
+      },
+      {
+        id: 'cafe-corner-q3',
+        prompt: '桌上有三个杯子。',
+        spoken: 'There are three cups on the table.',
+        keywords: ['three', 'cups'],
+        distractors: ['third', 'cubes'],
+        rule: 'plural'
+      },
+      {
+        id: 'cafe-corner-q4',
+        prompt: '我的背包在椅子下面。',
+        spoken: 'My backpack is under the chair.',
+        keywords: ['backpack', 'under'],
+        distractors: ['packet', 'upper'],
+        rule: 'preposition'
+      },
+      {
+        id: 'cafe-corner-q5',
+        prompt: '这家咖啡馆的蛋糕非常好吃。',
+        spoken: 'The cake in this cafe is delicious.',
+        keywords: ['cake', 'delicious'],
+        distractors: ['deliciously', 'dessert'],
+        rule: 'article'
       }
     ]
   }

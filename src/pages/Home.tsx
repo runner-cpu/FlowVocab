@@ -11,6 +11,7 @@ import AnimatedNumber from '../components/ui/AnimatedNumber'
 import ProgressionPanel from '../components/dashboard/ProgressionPanel'
 import ResponsiveSceneImage from '../components/ui/ResponsiveSceneImage'
 import WorldMap from '../components/game/WorldMap'
+import CurriculumMap from '../components/dashboard/CurriculumMap'
 import { CHAPTERS, chapterView } from '../engine/chapters'
 import { useNow } from '../hooks/useNow'
 import { dayKey } from '../engine/forget'
@@ -57,6 +58,8 @@ export default function Home() {
       <div className="track-switcher-copy"><span>学习路线</span><strong>{trackMeta.label}</strong><small>{trackMeta.description}</small></div>
       <div className="track-options">{TRACK_ORDER.map((key) => <button key={key} aria-pressed={track === key} className={`track-option ${track === key ? 'active' : ''}`} style={{ '--track-accent': LEARNING_TRACKS[key].accent } as CSSProperties} onClick={() => setTrack(key)}>{LEARNING_TRACKS[key].shortLabel}<small>{key === 'primary' ? '图像启蒙' : key === 'cet' ? '目标冲刺' : '能力进阶'}</small></button>)}</div>
     </section>
+
+    <CurriculumMap />
 
     <section className="mission-layout" aria-label="今日核心任务">
       <article className="quest-card"><ResponsiveSceneImage assetStem="neon-harbor-quest" eager sizes="(max-width: 640px) 100vw, 65vw" alt="戴耳机的小狐狸站在夜色港湾，准备展开英语词汇探险" /><div className="quest-copy"><span className="quest-type">词汇探险</span><h2>微光港 · 记忆航线</h2><p>在真实语境里认出新词，让每一次选择都推动故事向前。</p><button className="btn quest-start" onClick={() => go('vocab')}><Play size={17} fill="currentColor" /> 开始任务</button></div></article>

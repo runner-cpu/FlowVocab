@@ -317,7 +317,11 @@ it('caps legacy replay counters at unique content totals during initialization',
   const progress = { ...useProgress.getState().progress!, sentencePassed: 999, listeningPassed: 999, readingDone: 999, narrative: {} }
   await db.progress.put(progress)
   await useProgress.getState().init()
-  expect(useProgress.getState().progress).toMatchObject({ sentencePassed: 6, listeningPassed: 8, readingDone: 2 })
+  expect(useProgress.getState().progress).toMatchObject({
+    sentencePassed: SENTENCE_QUESTS.length,
+    listeningPassed: LISTENING_ITEMS.length,
+    readingDone: CHAPTERS.length
+  })
 })
 
 it('migrates v2 records without losing totals, reviews, settings, progress or sessions', async () => {

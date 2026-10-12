@@ -19,14 +19,18 @@ const normalize = (word: string) => word.toLowerCase().replace(/[^a-z0-9']/g, ''
 const tokensOf = (sentence: string) => sentence.split(/[^a-zA-Z0-9']+/).map(normalize).filter(Boolean)
 
 describe('dialogue scene content', () => {
-  it('covers the six learning scenes with stable ids', () => {
+  it('covers the ten learning scenes with stable ids', () => {
     expect(DIALOGUE_SCENES.map((scene) => scene.id)).toEqual([
       'harbour-arrival',
       'grammar-garden',
       'bridge-workshop',
       'radio-station',
       'studio',
-      'story-library'
+      'story-library',
+      'market-street',
+      'lighthouse-clinic',
+      'weather-tower',
+      'cafe-corner'
     ])
     for (const scene of DIALOGUE_SCENES) {
       expect(scene.title.length, scene.id).toBeGreaterThan(0)
@@ -79,6 +83,24 @@ describe('dialogue scene content', () => {
         }
       }
     }
+  })
+
+  it('gives every question at least one distractor the offline hint engine can reach', () => {
+    // engine/dialogue.ts 的 distractorFeedback 只在编辑距离 <= 3 时给出「听到的是 X，本题需要 Y」；
+    // 若整道题的干扰词都在这个半径之外，学习者说错时不会收到任何提示。
+    const unreachable: string[] = []
+    for (const scene of DIALOGUE_SCENES) {
+      for (const question of scene.questions) {
+        const reachable = question.distractors.some((distractor) =>
+          question.keywords.some((keyword) => {
+            const gap = distance(normalize(distractor), normalize(keyword))
+            return gap > 1 && gap <= 3
+          })
+        )
+        if (!reachable) unreachable.push(`${question.id}: ${question.distractors.join('/')} vs ${question.keywords.join('/')}`)
+      }
+    }
+    expect(unreachable).toEqual([])
   })
 
   it('uses A2-B1 sized English sentences', () => {

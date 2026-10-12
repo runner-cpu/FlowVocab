@@ -32,3 +32,10 @@ it('offers an available journey on the primary route and includes due mastered w
   expect(within(screen.getByRole('region', { name: '今日旅程' })).queryByRole('button', { name: /句子/ })).toBeNull()
   expect(screen.getByText('1 张记忆卡正在等你')).toBeVisible()
 })
+
+it('shows the knowledge-structure map on the home page for the active route', () => {
+  useUI.setState({ track: 'primary' })
+  render(<Home />)
+  const table = screen.getByRole('table')
+  expect(within(table).getByText(/小学启蒙：开放 4 个模块/)).toBeInTheDocument()
+})

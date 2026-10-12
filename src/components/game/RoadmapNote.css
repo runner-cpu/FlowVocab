@@ -1,0 +1,49 @@
+.roadmap-note {
+  margin-top: 16px;
+  border: 1px dashed var(--line);
+  border-radius: 14px;
+  padding: 12px 14px;
+  background: var(--surface-soft);
+}
+
+.roadmap-head { display: flex; align-items: flex-start; gap: 10px; }
+
+.roadmap-mark {
+  display: grid;
+  place-items: center;
+  width: 28px;
+  height: 28px;
+  flex: none;
+  border-radius: 9px;
+  background: var(--insight-mark);
+  color: var(--info);
+}
+
+.roadmap-head h4 { margin: 0; font-size: 13px; color: var(--ink); }
+.roadmap-head p { margin: 3px 0 0; font-size: 12px; line-height: 1.55; color: var(--ink2); }
+
+.roadmap-toggle { margin-left: auto; flex: none; }
+
+.roadmap-body { margin-top: 10px; display: grid; gap: 10px; }
+
+.roadmap-group strong { display: block; font-size: 12px; color: var(--accent-ink); margin-bottom: 4px; }
+
+.roadmap-group ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+
+.roadmap-group li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--ink2);
+}
+
+.roadmap-group li span { color: var(--ink); }
+
+.roadmap-group li em { font-style: normal; font-size: 10px; color: var(--muted); }
+
+@media (max-width: 640px) {
+  .roadmap-head { flex-wrap: wrap; }
+  .roadmap-toggle { margin-left: 38px; }
+}

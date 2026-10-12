@@ -7,6 +7,7 @@ import { useUI } from '../../../store/gameStore'
 import type { Chapter, NarrativeChoice } from '../../../types'
 import GameHud from '../../game/GameHud'
 import { useChapterResult } from '../../game/ChapterShell'
+import RoadmapNote from '../../game/RoadmapNote'
 
 export default function ReadingGame() {
   const track = useUI((state) => state.track)
@@ -67,7 +68,7 @@ export default function ReadingGame() {
     }
   }
 
-  if (!chapter) return <div className="quiz-panel"><GameHud module="reading" /><div className="card"><div className="card-title">📖 叙事剧本 · 章节地图</div><p className="muted">阅读原故事，在考点处作答；地图会保留你的章节通关轨迹。</p>{chapters.length === 0 ? <p className="muted mt14">当前路线暂无阅读章节，请切换学习路线后重试。</p> : <div className="chapter-map mt14">{chapters.map((candidate, index) => { const done = !!narrative[candidate.id]; return <button key={candidate.id} className={`chapter-stop ${done ? 'done' : ''}`} onClick={() => startChapter(candidate)}><span>{done ? '✓' : index + 1}</span><strong>{candidate.title}</strong><small>{done ? '已通关 · 可重玩' : candidate.intro.slice(0, 36) + '…'}</small></button> })}</div>}</div></div>
+  if (!chapter) return <div className="quiz-panel"><GameHud module="reading" /><div className="card"><div className="card-title">📖 叙事剧本 · 章节地图</div><p className="muted">阅读原故事，在考点处作答；地图会保留你的章节通关轨迹。</p>{chapters.length === 0 ? <p className="muted mt14">当前路线暂无阅读章节，请切换学习路线后重试。</p> : <div className="chapter-map mt14">{chapters.map((candidate, index) => { const done = !!narrative[candidate.id]; return <button key={candidate.id} className={`chapter-stop ${done ? 'done' : ''}`} onClick={() => startChapter(candidate)}><span>{done ? '✓' : index + 1}</span><strong>{candidate.title}</strong><small>{done ? '已通关 · 可重玩' : candidate.intro.slice(0, 36) + '…'}</small></button> })}</div>}<RoadmapNote module="reading" /></div></div>
 
   if (finished) return <div className="quiz-panel"><div className="card center"><div style={{ fontSize: 44 }}>🏆</div><h2>本章完成！</h2><div className="reading-trail compact">{trail.map((step, index) => <span key={`${step}-${index}`}>{index + 1}</span>)}</div><div className="guide-actions mt14"><button className="btn btn-primary" onClick={() => setChapter(null)}>返回章节地图</button><button className="btn btn-ghost" onClick={() => startChapter(chapter)}>重新探索</button></div></div></div>
 
