@@ -1,7 +1,7 @@
 .roadmap-note {
   margin-top: 16px;
   border: 1px dashed var(--line);
-  border-radius: 14px;
+  border-radius: var(--r-xl);
   padding: 12px 14px;
   background: var(--surface-soft);
 }
@@ -14,19 +14,19 @@
   width: 28px;
   height: 28px;
   flex: none;
-  border-radius: 9px;
+  border-radius: var(--r-sm);
   background: var(--insight-mark);
   color: var(--info);
 }
 
-.roadmap-head h4 { margin: 0; font-size: 13px; color: var(--ink); }
-.roadmap-head p { margin: 3px 0 0; font-size: 12px; line-height: 1.55; color: var(--ink2); }
+.roadmap-head h4 { margin: 0; font-size: var(--fs-base); color: var(--ink); }
+.roadmap-head p { margin: 3px 0 0; font-size: var(--fs-sm); line-height: 1.55; color: var(--ink2); }
 
 .roadmap-toggle { margin-left: auto; flex: none; }
 
 .roadmap-body { margin-top: 10px; display: grid; gap: 10px; }
 
-.roadmap-group strong { display: block; font-size: 12px; color: var(--accent-ink); margin-bottom: 4px; }
+.roadmap-group strong { display: block; font-size: var(--fs-sm); color: var(--accent-ink); margin-bottom: 4px; }
 
 .roadmap-group ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
 
@@ -35,13 +35,13 @@
   flex-wrap: wrap;
   align-items: baseline;
   gap: 8px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   color: var(--ink2);
 }
 
 .roadmap-group li span { color: var(--ink); }
 
-.roadmap-group li em { font-style: normal; font-size: 10px; color: var(--muted); }
+.roadmap-group li em { font-style: normal; font-size: var(--fs-2xs); color: var(--muted); }
 
 @media (max-width: 640px) {
   .roadmap-head { flex-wrap: wrap; }

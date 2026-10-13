@@ -22,21 +22,21 @@
 
 .dialogue-eyebrow {
   margin: 0;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   letter-spacing: .08em;
   color: var(--muted);
 }
 
 .dialogue-title {
   margin: 4px 0 0;
-  font-size: 20px;
+  font-size: var(--fs-2xl);
   color: var(--ink);
 }
 
 .dialogue-stars {
   display: inline-flex;
   gap: 4px;
-  font-size: 20px;
+  font-size: var(--fs-2xl);
   line-height: 1;
 }
 
@@ -50,28 +50,28 @@
 
 .dialogue-hero {
   border: 1px solid var(--line);
-  border-radius: calc(var(--radius) - 4px);
+  border-radius: var(--r-lg);
   background: var(--surface-soft);
   padding: 12px 14px;
 }
 
 .dialogue-hero-label {
   margin: 0 0 6px;
-  font-size: 12px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--accent-ink);
 }
 
 .dialogue-hero-line {
   margin: 0 0 10px;
-  font-size: 15.5px;
+  font-size: var(--fs-md);
   line-height: 1.7;
   color: var(--ink);
 }
 
 .dialogue-note {
   margin: 0 0 8px;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--muted);
 }
 
@@ -81,19 +81,19 @@
 }
 
 .dialogue-progress {
-  font-size: 13px;
+  font-size: var(--fs-base);
   color: var(--muted);
 }
 
 .dialogue-question {
   border: 1px dashed var(--control-line);
-  border-radius: calc(var(--radius) - 4px);
+  border-radius: var(--r-lg);
   padding: 12px 14px;
 }
 
 .dialogue-prompt {
   margin: 0 0 8px;
-  font-size: 15.5px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--ink);
 }
@@ -103,7 +103,7 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px 6px;
-  font-size: 17px;
+  font-size: var(--fs-xl);
   font-weight: 600;
   line-height: 1.7;
 }
@@ -111,7 +111,7 @@
 .dialogue-token {
   display: inline-block;
   padding: 2px 8px;
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   background: var(--surface-soft);
   color: var(--ink);
 }
@@ -129,7 +129,7 @@
 
 .dialogue-hint {
   margin: 8px 0 0;
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--muted);
 }
 
@@ -146,16 +146,16 @@
 }
 
 .dialogue-typing-label {
-  font-size: 12.5px;
+  font-size: var(--fs-sm);
   color: var(--muted);
 }
 
 .dialogue-input {
   min-height: 44px;
   border: 2px solid var(--control-line);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   padding: 10px 12px;
-  font-size: 14px;
+  font-size: var(--fs-base);
   font-family: inherit;
   background: var(--control-surface);
   color: var(--ink);
@@ -169,15 +169,15 @@
 .dialogue-notice {
   margin: 0;
   padding: 10px 12px;
-  border-radius: 10px;
+  border-radius: var(--r-md);
   border-left: 3px solid var(--info);
   background: var(--surface-soft);
   color: var(--ink);
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 .dialogue-score {
-  border-radius: calc(var(--radius) - 4px);
+  border-radius: var(--r-lg);
   padding: 12px 14px;
   background: var(--surface-soft);
   color: var(--ink);
@@ -185,14 +185,14 @@
 
 .dialogue-score-line {
   margin: 0 0 6px;
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 700;
   color: var(--accent-ink);
 }
 
 .dialogue-transcript {
   margin: 0 0 8px;
-  font-size: 13px;
+  font-size: var(--fs-base);
   color: var(--muted);
   overflow-wrap: anywhere;
 }
@@ -200,7 +200,7 @@
 .dialogue-feedback {
   margin: 0 0 12px;
   padding-left: 18px;
-  font-size: 13px;
+  font-size: var(--fs-base);
   line-height: 1.7;
   color: var(--ink);
 }

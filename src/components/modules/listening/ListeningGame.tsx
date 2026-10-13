@@ -1,4 +1,5 @@
 import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { Check } from 'lucide-react'
 import { useProgress } from '../../../store/progressStore'
 import { LISTENING_ITEMS } from '../../../data/listening'
 import { itemsForTrack } from '../../../data/curriculum'
@@ -281,7 +282,7 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
       <p className="muted mt8">语音识别可能由浏览器的在线服务处理音频；不想使用麦克风可选择选词练习。</p>
       {!ttsSupport && <p className="muted mt8">浏览器不支持朗读。原句：{item.text}</p>}
       <div className="sentence-blanks" lang="en">{result ? targetWords.map((word, i) => <span key={i} className={`lm-word ${result.hits[i] ? 'lm-hit' : 'lm-miss'}`} aria-label={`${word}，${result.hits[i] ? '已匹配' : '未匹配'}`}>{word}</span>) : listening ? '请读出你听到的句子' : '播放原句后开始跟读'}</div>
-      {result && <div className="score-report" role="status"><strong>命中 {Math.round(result.ratio * 100)}% {result.ratio >= .6 ? '✓ 点亮本句' : '未达标，可重试'}</strong><p>识别结果：{recognized || '未识别到内容'}</p><p lang="en">原句：{item.text}</p><p className="muted">按识别文字匹配，结果不代表发音评分。</p><button className="btn btn-ghost mt8" onClick={resetQuestion} disabled={!!saveError}>再试一次</button><button className="btn btn-primary mt8" onClick={next} disabled={!!saveError}>{qIndex + 1 >= selectedItems.length ? '完成本轮' : '下一句'}</button></div>}
+      {result && <div className="score-report" role="status"><strong>命中 {Math.round(result.ratio * 100)}% {result.ratio >= .6 ? <><Check size={14} aria-hidden /> 点亮本句</> : '未达标，可重试'}</strong><p>识别结果：{recognized || '未识别到内容'}</p><p lang="en">原句：{item.text}</p><p className="muted">按识别文字匹配，结果不代表发音评分。</p><button className="btn btn-ghost mt8" onClick={resetQuestion} disabled={!!saveError}>再试一次</button><button className="btn btn-primary mt8" onClick={next} disabled={!!saveError}>{qIndex + 1 >= selectedItems.length ? '完成本轮' : '下一句'}</button></div>}
     </> : <>
       <p className="muted mt8">选出原句中的单词。{!ttsSupport && '当前浏览器不支持朗读，可展开原句进行阅读练习。'}</p>
       {!ttsSupport && <details className="explain-box"><summary>查看原句</summary><p lang="en">{item.text}</p></details>}

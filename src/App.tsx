@@ -1,4 +1,5 @@
 import { lazy, Suspense, useEffect } from 'react'
+import { Sprout } from 'lucide-react'
 import { useProgress } from './store/progressStore'
 import { useUI, type PageKey } from './store/gameStore'
 import TopBar from './components/layout/TopBar'
@@ -40,7 +41,7 @@ export default function App() {
   }
 
   if (!ready) {
-    return <div className="loading" role="status" aria-live="polite">🌱 正在唤醒心流词境……</div>
+    return <div className="loading" role="status" aria-live="polite"><Sprout size={16} aria-hidden /> 正在唤醒心流词境……</div>
   }
 
   const isModule = isModulePage(page)

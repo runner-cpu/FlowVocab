@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { Earth, CloudFog } from 'lucide-react'
 import { useProgress } from '../../store/progressStore'
 import { planetLevelFromEnergy } from '../../engine/progression'
 
@@ -39,7 +40,9 @@ export default function PlanetView({ compact = false }: { compact?: boolean }) {
       </div>
       <div className="center planet-copy" style={{ marginLeft: 12 }}>
         <div style={{ fontWeight: 800, fontSize: 16 }}>
-          {stale ? '🌫️ 星球进入停滞' : `🌍 词汇星球 Lv.${lv}`}
+          {stale
+            ? <><CloudFog size={15} aria-hidden /> 星球进入停滞</>
+            : <><Earth size={15} aria-hidden /> 词汇星球 Lv.{lv}</>}
         </div>
         <div className="muted" style={{ fontSize: 12, marginTop: 4 }}>
           {stale ? '做一轮复习，让星球重新生长' : `阶段：${stage}`}

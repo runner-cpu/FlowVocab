@@ -29,7 +29,7 @@ export const CHAPTERS: Chapter[] = [
       },
       n2a: {
         id: 'n2a',
-        text: '来到三楼，你在书架上发现一本旧书《校园的秘密》。其中一页被折角，上面写着："钥匙藏在书籍从不入睡的地方。" 你立刻想到——24 小时自习室。',
+        text: '来到三楼，你在书架上发现一本旧书《校园的秘密》。其中一页被折角，上面写着："钥匙藏在书籍从不入睡的地方。" 你立刻想到，24 小时自习室。',
         choices: [
           {
             label: '去 24 小时自习室', next: 'n3a',
@@ -57,8 +57,8 @@ export const CHAPTERS: Chapter[] = [
         text: '木盒里是一张旧照片和一张地图。地图指向 24 小时自习室。你顺着地图找到一把钥匙，谜团就此解开！',
         choices: [{ label: '完成本章', next: 'end-b' }]
       },
-      'end-a': { id: 'end-a', text: '🎉 恭喜完成第一章「校园谜团」！你收获了词汇：basement, note, crooked, founding。', choices: [] },
-      'end-b': { id: 'end-b', text: '🎉 恭喜完成第一章！你通过观察细节破解了谜题。', choices: [] }
+      'end-a': { id: 'end-a', text: '恭喜完成第一章「校园谜团」！你收获了词汇：basement, note, crooked, founding。', choices: [] },
+      'end-b': { id: 'end-b', text: '恭喜完成第一章！你通过观察细节破解了谜题。', choices: [] }
     }
   },
   {
@@ -115,8 +115,8 @@ export const CHAPTERS: Chapter[] = [
         text: '你快速排练了一遍展示，讲解清晰流畅。评委们欣赏你们冷静的现场表现，团队获得了优秀奖。',
         choices: [{ label: '完成本章', next: 'end-b' }]
       },
-      'end-a': { id: 'end-a', text: '🎉 恭喜完成第二章「科创展风波」！你收获了词汇：turbine, renewable, innovation, judge。', choices: [] },
-      'end-b': { id: 'end-b', text: '🎉 恭喜完成第二章！你学会了冷静应对突发状况。', choices: [] }
+      'end-a': { id: 'end-a', text: '恭喜完成第二章「科创展风波」！你收获了词汇：turbine, renewable, innovation, judge。', choices: [] },
+      'end-b': { id: 'end-b', text: '恭喜完成第二章！你学会了冷静应对突发状况。', choices: [] }
     }
   },
   {
@@ -146,7 +146,7 @@ export const CHAPTERS: Chapter[] = [
       },
       n2a: {
         id: 'n2a',
-        text: '第三把钥匙打开了铁柜，备用灯泡就在里面。你踩着窄梯上到旋光室，把新灯泡装上——灯塔重新亮起，货船立刻调整了航向。',
+        text: '第三把钥匙打开了铁柜，备用灯泡就在里面。你踩着窄梯上到旋光室，把新灯泡装上，灯塔重新亮起，货船立刻调整了航向。',
         choices: [
           {
             label: '记录日志', next: 'n3a',
@@ -156,7 +156,7 @@ export const CHAPTERS: Chapter[] = [
       },
       n2b: {
         id: 'n2b',
-        text: '你用手电连打三短三长三短——求救信号。货船立刻回灯，并缓缓转向。趁这个间隙，你取到钥匙修好了旋光。',
+        text: '你用手电连打三短三长三短，求救信号。货船立刻回灯，并缓缓转向。趁这个间隙，你取到钥匙修好了旋光。',
         choices: [
           {
             label: '记录日志', next: 'n3b',
@@ -166,7 +166,7 @@ export const CHAPTERS: Chapter[] = [
       },
       n3a: {
         id: 'n3a',
-        text: '天亮时，老守夜人翻看你的日志，点了点头："守灯塔的人，先要读得懂记录，才守得住光。" 你在日志末尾写下自己的名字——微光港的第一位学生守夜人。',
+        text: '天亮时，老守夜人翻看你的日志，点了点头："守灯塔的人，先要读得懂记录，才守得住光。" 你在日志末尾写下自己的名字，微光港的第一位学生守夜人。',
         choices: [
           {
             label: '完成本章', next: 'end-a',
@@ -179,8 +179,8 @@ export const CHAPTERS: Chapter[] = [
         text: '货船靠港后，船长亲自来道谢：他们的无线电坏了，是你的灯光信号救了整船人。老守夜人听完只说："今晚你做对了。"',
         choices: [{ label: '完成本章', next: 'end-b' }]
       },
-      'end-a': { id: 'end-a', text: '🎉 恭喜完成第三章「灯塔守夜人」！你收获了词汇：vessel, log, beacon, reef。', choices: [] },
-      'end-b': { id: 'end-b', text: '🎉 恭喜完成第三章！你学会了在紧急情况下先传递求救信号。', choices: [] }
+      'end-a': { id: 'end-a', text: '恭喜完成第三章「灯塔守夜人」！你收获了词汇：vessel, log, beacon, reef。', choices: [] },
+      'end-b': { id: 'end-b', text: '恭喜完成第三章！你学会了在紧急情况下先传递求救信号。', choices: [] }
     }
   }
 ]

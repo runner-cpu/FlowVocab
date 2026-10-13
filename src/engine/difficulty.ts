@@ -37,10 +37,10 @@ export function updateDifficulty(
     const slowRatio = window.filter((sample) => sample.slow).length / WINDOW_SIZE
     if (acc > 0.85 && slowRatio < 0.4 && level < MAX_LEVEL) {
       level = (level + 1) as DifficultyLevel
-      feedback = { type: 'levelup', combo: 0, isCritical: false, rageActive: false, message: '🚀 挑战升级！' }
+      feedback = { type: 'levelup', combo: 0, isCritical: false, rageActive: false, message: '挑战升级！' }
     } else if ((acc < 0.6 || slowRatio > 0.6) && level > 0) {
       level = (level - 1) as DifficultyLevel
-      feedback = { type: 'leveldown', combo: 0, isCritical: false, rageActive: false, message: '🌿 帮你稳一稳' }
+      feedback = { type: 'leveldown', combo: 0, isCritical: false, rageActive: false, message: '帮你稳一稳' }
     }
   }
 

@@ -51,15 +51,15 @@ export function evaluateAnswer(input: AnswerInput, prev: ComboState): ComboResul
       const triggerCombo = next.combo
       next.rageActive = true
       next.rageRemaining = RAGE_CHARGES
-      feedback = { type: 'rage', combo: triggerCombo, isCritical, rageActive: true, message: `🔥 怒气爆发 · 接下来 ${RAGE_CHARGES} 次作答双倍经验！` }
+      feedback = { type: 'rage', combo: triggerCombo, isCritical, rageActive: true, message: `怒气爆发 · 接下来 ${RAGE_CHARGES} 次作答双倍经验！` }
     } else {
       // 处于怒气中：正确作答消耗 1 次
       if (rageActive) next.rageRemaining = Math.max(0, prev.rageRemaining - 1)
       next.rageActive = next.rageRemaining > 0
       if (next.combo >= COMBO_TITLE_THRESHOLD) {
-        feedback = { type: 'combo', combo: next.combo, isCritical, rageActive: next.rageActive, message: `🔥 连击 ${next.combo}！` }
+        feedback = { type: 'combo', combo: next.combo, isCritical, rageActive: next.rageActive, message: `连击 ${next.combo}！` }
       } else if (isCritical) {
-        feedback = { type: 'critical', combo: next.combo, isCritical, rageActive: next.rageActive, message: '⚡ 暴击！' }
+        feedback = { type: 'critical', combo: next.combo, isCritical, rageActive: next.rageActive, message: '暴击！' }
       } else {
         feedback = { type: 'hit', combo: next.combo, isCritical, rageActive: next.rageActive }
       }

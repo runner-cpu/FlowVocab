@@ -179,14 +179,19 @@ export const TRACK_MODULE_FOCUS: Record<LearningTrack, Record<ModuleKey, string>
 /**
  * 模块元数据。name 的“模块名”部分与航线地图的灯塔名保持一致，
  * desc 描述真实玩法（而不是早期设计阶段的旧玩法）。
+ *
+ * color 是六个模块在全站的唯一色源（雷达图例、进度条、当日明细、航线地图共用）。
+ * 取值从品牌 accent / gold / info 派生：保留色相辨识度，饱和度压到 60% 以下，
+ * 不使用任何第三方产品的原厂品牌色。
+ * 图标不放这里：types 会被数据层与 store 引入，图标属于 UI 层，见 components/ui/moduleIcons.ts。
  */
-export const MODULE_META: Record<ModuleKey, { name: string; icon: string; color: string; desc: string }> = {
-  vocab: { name: '词汇·微光港', icon: '⚔️', color: '#5B8DEF', desc: '连击节奏背词' },
-  grammar: { name: '语法·语法花园', icon: '🌳', color: '#34A853', desc: '技能树点亮规则' },
-  sentence: { name: '句子·桥梁工坊', icon: '🧩', color: '#F4B400', desc: '长难句拆解与翻译' },
-  listening: { name: '听力·星际电台', icon: '🎧', color: '#EA4335', desc: '听写与语音陪练' },
-  writing: { name: '写作·灵感工作室', icon: '🃏', color: '#9334E6', desc: '句型排序与改错' },
-  reading: { name: '阅读·故事图书馆', icon: '📖', color: '#00ACC1', desc: '剧情推进读考点' }
+export const MODULE_META: Record<ModuleKey, { name: string; color: string; desc: string }> = {
+  vocab: { name: '词汇·微光港', color: '#3F7FD6', desc: '连击节奏背词' },
+  grammar: { name: '语法·语法花园', color: '#2F9E6B', desc: '技能树点亮规则' },
+  sentence: { name: '句子·桥梁工坊', color: '#C99128', desc: '长难句拆解与翻译' },
+  listening: { name: '听力·星际电台', color: '#C9614F', desc: '听写与语音陪练' },
+  writing: { name: '写作·灵感工作室', color: '#7A63C9', desc: '句型排序与改错' },
+  reading: { name: '阅读·故事图书馆', color: '#2E8FA3', desc: '剧情推进读考点' }
 }
 
 // ---------- 雷达 ----------

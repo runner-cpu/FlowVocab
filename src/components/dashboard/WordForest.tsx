@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from 'react'
+import { Sprout, TreeDeciduous, TreePine, Trees, type LucideIcon } from 'lucide-react'
 import { WORDS } from '../../data/words'
 import { db } from '../../store/db'
 import type { UserWord } from '../../types'
@@ -16,7 +17,8 @@ export function classifyWordTree(word: UserWord, now = Date.now()): TreeHealth {
 
 const healthOrder: TreeHealth[] = ['fragile', 'due', 'learning', 'mastered']
 const labels: Record<TreeHealth, string> = { fragile: '脆弱', due: '到期', learning: '生长中', mastered: '茂盛' }
-const crowns: Record<TreeHealth, string> = { fragile: '🥀', due: '🌲', learning: '🌱', mastered: '🌳' }
+/** 树木形态用 Lucide 图标表达：脆弱（枯枝）/ 到期（松树）/ 生长中（幼苗）/ 茂盛（树丛）。 */
+const crowns: Record<TreeHealth, LucideIcon> = { fragile: TreeDeciduous, due: TreePine, learning: Sprout, mastered: Trees }
 const builtInWords = new Map(WORDS.map((word) => [word.id, word.word]))
 
 /** 复习日期的人类可读文案：今天 / 明天 / N 天后 / YYYY-MM-DD。 */
@@ -80,7 +82,7 @@ export default function WordForest({ words, onReview, onStart }: { words: UserWo
   const earliest = reviewable[0] ?? trees.find((word) => word.status !== 'mastered')
 
   return <section className="card word-forest" aria-labelledby="word-forest-title">
-    <div className="card-title" id="word-forest-title">🌲 错词森林 <span className="chart-hint">错误率、复习日期与掌握度共同决定树木状态</span></div>
+    <div className="card-title" id="word-forest-title"><TreePine size={16} /> 错词森林 <span className="chart-hint">错误率、复习日期与掌握度共同决定树木状态</span></div>
     {trees.length === 0 ? <div className="forest-empty">
       <ResponsiveSceneImage assetStem="flowvocab-memory-garden" sizes="(max-width: 640px) 100vw, 50vw" alt="发光记忆花园插画" />
       <div className="forest-empty-copy"><strong>你的记忆花园还在等第一颗种子</strong><p className="muted">完成一轮词汇任务，错词森林会记录每个词的成长状态。</p>{onStart && <button className="btn btn-primary" onClick={onStart}>开始词汇任务</button>}</div>
@@ -99,6 +101,7 @@ export default function WordForest({ words, onReview, onStart }: { words: UserWo
           const canReview = Boolean(label) && (health === 'fragile' || health === 'due')
           const displayLabel = label || '词条暂不可用'
           const detail = `${labels[health]} · 错 ${errorRatio}% · ${reviewLabel(word.nextReview, now)}`
+          const Crown = crowns[health]
           return <button
             key={word.id}
             className={`forest-tree ${health}`}
@@ -109,7 +112,7 @@ export default function WordForest({ words, onReview, onStart }: { words: UserWo
               setNotice(`${displayLabel} 属于「${labels[health]}」，${reviewLabel(word.nextReview, now)}复习；先处理脆弱与到期的树更划算。`)
             }}
             aria-label={`${displayLabel}，${detail}${canReview ? '，开始复习' : ''}`}
-          ><span className="tree-crown" aria-hidden="true">{crowns[health]}</span><strong>{displayLabel}</strong><small>{detail}</small></button>
+          ><span className="tree-crown" aria-hidden="true"><Crown size={26} /></span><strong>{displayLabel}</strong><small>{detail}</small></button>
         })}</div>
       </section>)}</div>
       {notice && <p className="forest-status" role="status">{notice} <button type="button" className="btn btn-ghost" onClick={() => setNotice('')}>知道了</button></p>}

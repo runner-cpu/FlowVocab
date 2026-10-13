@@ -5,11 +5,8 @@ import ResponsiveSceneImage from '../ui/ResponsiveSceneImage'
 import { LEARNING_SCENES } from '../../data/learningScenes'
 import { useProgress } from '../../store/progressStore'
 import { Lock, Star, Sparkles } from 'lucide-react'
+import StarRating from '../ui/StarRating'
 import './WorldMap.css'
-
-function Stars({ count, label }: { count: number; label: string }) {
-  return <span className="chapter-stars" role="img" aria-label={label}><span aria-hidden="true">{'★'.repeat(count)}{'☆'.repeat(3 - count)}</span></span>
-}
 
 /** 航线地图：把六座灯塔串成一条可解锁的港口航线。 */
 export default function WorldMap({ chapters, onEnter }: { chapters: ChapterView[]; onEnter: (chapter: ChapterView) => void }) {
@@ -52,7 +49,7 @@ export default function WorldMap({ chapters, onEnter }: { chapters: ChapterView[
               <small>{String(chapter.order).padStart(2, '0')} · {chapter.place}</small>
               <strong>{chapter.title}</strong>
               <em>{description}</em>
-              <Stars count={chapter.stars} label={`${chapter.place}：${chapter.stars} / 3 星`} />
+              <StarRating count={chapter.stars} className="chapter-stars" label={`${chapter.place}：${chapter.stars} / 3 星`} />
               {chapter.stardust > 0 && <small className="map-node-dust">星尘 +{chapter.stardust}</small>}
             </span>
           </button>

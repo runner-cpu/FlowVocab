@@ -1,0 +1,17 @@
+.star-rating {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  line-height: 1;
+}
+
+.star-rating .star-on {
+  fill: var(--gold);
+  color: var(--gold);
+}
+
+.star-rating .star-off {
+  fill: none;
+  color: var(--control-line);
+  opacity: .55;
+}

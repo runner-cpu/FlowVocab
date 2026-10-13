@@ -2,6 +2,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { DialogueQuestion, DialogueScene } from '../../../data/dialogue'
 import { DIALOGUE_RULE_LABELS } from '../../../data/dialogue'
 import { dialogueStars, matchDialogueAnswer, referenceFlags, type DialogueMatchResult } from '../../../engine/dialogue'
+import StarRating from '../../ui/StarRating'
 import './DialogueMode.css'
 
 /** 浏览器语音识别的最小接口（能力探测时可能为 undefined）。 */
@@ -221,9 +222,7 @@ export default function DialogueMode({ scene, passedIds, onScored, onSceneComple
         <p className="dialogue-eyebrow">{scene.place} · 离线语音对话</p>
         <h2 className="dialogue-title">{scene.title}</h2>
       </div>
-      <div className="dialogue-stars" aria-label={`场景进度 ${sceneStars} 星`}>
-        {[1, 2, 3].map((value) => <span key={value} className={`dialogue-star ${value <= sceneStars ? 'dialogue-star-on' : ''}`} aria-hidden="true">★</span>)}
-      </div>
+      <StarRating className="dialogue-stars" count={sceneStars} size={16} label={`场景进度 ${sceneStars} 星`} />
     </header>
 
     <div className="dialogue-hero">

@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from 'react'
-import { Volume2 } from 'lucide-react'
+import { Check, Volume2, X } from 'lucide-react'
 import { useProgress } from '../../../store/progressStore'
 import { ensureWordLevels, getWordPool, wordBankFallbackMessage } from '../../../store/wordBank'
 import { vocabLevelsForTrack } from '../../../data/curriculum'
@@ -254,7 +254,7 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
         </div>
         {question.mode === 'spelling' ? <form className="spelling-form" onSubmit={event => { event.preventDefault(); submit(spelling) }}>
           <label htmlFor="vocab-spelling">输入对应的英文单词</label><input ref={spellingInput} id="vocab-spelling" value={spelling} onChange={event => setSpelling(event.target.value)} disabled={answered || !!saveError} autoComplete="off" autoCapitalize="none" spellCheck={false} /><button className="btn btn-primary" disabled={answered || !!saveError || !spelling.trim()}>提交拼写</button>
-        </form> : <div className="options" role="group" aria-label="答案选项">{question.options.map((option, i) => <button key={option.text} className={'option' + (answered && option.correct ? ' correct' : answered && picked === option.text ? ' wrong' : '')} disabled={answered || !!saveError} onClick={() => submit(option.text)}><kbd aria-hidden="true">{i + 1}</kbd><span>{option.text}</span>{answered && option.correct && <span aria-label="正确答案">✓</span>}{answered && !option.correct && picked === option.text && <span aria-label="本次答错">×</span>}</button>)}</div>}
+        </form> : <div className="options" role="group" aria-label="答案选项">{question.options.map((option, i) => <button key={option.text} className={'option' + (answered && option.correct ? ' correct' : answered && picked === option.text ? ' wrong' : '')} disabled={answered || !!saveError} onClick={() => submit(option.text)}><kbd aria-hidden="true">{i + 1}</kbd><span>{option.text}</span>{answered && option.correct && <span aria-label="正确答案"><Check size={15} aria-hidden /></span>}{answered && !option.correct && picked === option.text && <span aria-label="本次答错"><X size={15} aria-hidden /></span>}</button>)}</div>}
         <AnswerHint key={index + ':' + question.word.id} question={question} disabled={answered} onUse={() => { hintUsed.current = true }} />
         {answered && <div className="mission-feedback" role="status"><strong>{isVocabAnswerCorrect(question, picked!) ? '回答正确' : '记住这条新线索'} · {question.word.word}</strong><p>{formatMeaning(question.word.meaning)}</p>{question.word.example && <p lang="en">{question.word.example}</p>}{question.word.exampleCn && <p className="muted">{question.word.exampleCn}</p>}{!question.word.example && <p className="muted">这个词暂未收录例句，可以先记住释义与搭配。</p>}</div>}
         {answered && wrongAnswer && <ErrorCard tag={wrongAnswer.tag} word={question.word.word} chosen={wrongAnswer.chosen} correctAnswer={question.mode === 'spelling' ? question.word.word : question.options.find(option => option.correct)?.text} explain={question.word.phrases?.[0]?.translation} />}

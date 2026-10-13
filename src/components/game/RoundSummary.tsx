@@ -1,5 +1,6 @@
 import { useEffect, useRef } from 'react'
 import FlowGuide from './FlowGuide'
+import StarRating from '../ui/StarRating'
 
 export interface RoundResult { total: number; correct: number; maxCombo: number; xp: number; rewards: string[] }
 export default function RoundSummary({ result, onRestart, busy }: { result: RoundResult; onRestart: () => void; busy: boolean }) {
@@ -12,7 +13,7 @@ export default function RoundSummary({ result, onRestart, busy }: { result: Roun
     <p className="mission-eyebrow">EXPEDITION COMPLETE</p>
     <h2 tabIndex={-1} ref={heading}>航程完成</h2>
     <p className="muted">已抵达 {result.total} 站 · 答对 {result.correct} 题</p>
-    <div className="summary-stars" aria-label="本轮星级"><span aria-hidden="true">{'★'.repeat(stars)}{'☆'.repeat(3 - stars)}</span><small>{stars} / 3</small></div>
+    <div className="summary-stars" aria-label="本轮星级"><StarRating count={stars} size={30} /><small>{stars} / 3</small></div>
     <div className="mission-result-grid">
       <div><span>正确率</span><strong aria-label="正确率">{accuracy}%</strong></div>
       <div><span>最高连击</span><strong aria-label="本轮最高连击">{result.maxCombo}</strong></div>

@@ -6,6 +6,7 @@ import { isModuleAvailable } from '../../data/curriculum'
 import { useProgress } from '../../store/progressStore'
 import { useUI } from '../../store/gameStore'
 import type { ModuleKey } from '../../types'
+import StarRating from '../ui/StarRating'
 import './WorldMap.css'
 
 /**
@@ -100,9 +101,7 @@ export default function ChapterShell({ module, children }: { module: ModuleKey; 
           <strong>{view.title}</strong>
           <small>{view.subtitle}</small>
         </div>
-        <span className="chapter-stars" role="img" aria-label={`本章最好成绩：${view.stars} / ${MAX_STARS} 星`}>
-          <span aria-hidden="true">{'★'.repeat(view.stars)}{'☆'.repeat(MAX_STARS - view.stars)}</span>
-        </span>
+        <StarRating className="chapter-stars" count={view.stars} max={MAX_STARS} size={15} label={`本章最好成绩：${view.stars} / ${MAX_STARS} 星`} />
         <div className="chapter-strip-actions">
           <span className="muted" style={{ fontSize: 11 }}>星尘 {progress?.stardust ?? 0}</span>
           {next && <button className="btn btn-ghost" onClick={() => go(next.module)}>下一站：{next.place} <ArrowRight size={15} /></button>}
@@ -115,9 +114,7 @@ export default function ChapterShell({ module, children }: { module: ModuleKey; 
           <p className="mission-eyebrow">CHAPTER CLEAR</p>
           <h2 tabIndex={-1} ref={heading}>{result.stars > 0 ? '灯塔点亮' : '再试一次'}</h2>
           <p className="muted">完成 {result.total} 题 · 答对 {result.correct} 题</p>
-          <div className="chapter-summary-stars" role="img" aria-label={`本章结算：${result.stars} / 3 星`}>
-            <span aria-hidden="true">{'★'.repeat(result.stars)}{'☆'.repeat(3 - result.stars)}</span>
-          </div>
+          <StarRating className="chapter-summary-stars" count={result.stars} size={30} label={`本章结算：${result.stars} / 3 星`} />
           <p className="chapter-dust">{result.stardust > 0 ? `获得星尘 +${result.stardust}` : '本章星尘已拿满，重玩不再重复掉落'}</p>
           <div className="chapter-strip-actions" style={{ justifyContent: 'center' }}>
             <button className="btn btn-ghost" onClick={resetRun}><RotateCcw size={15} /> 再来一轮</button>

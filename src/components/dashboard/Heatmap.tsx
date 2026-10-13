@@ -7,6 +7,7 @@ import { dayKey } from '../../engine/forget'
 import { heatmapScale } from '../../engine/progression'
 import { useProgress } from '../../store/progressStore'
 import { MODULE_META, type DailyStat, type ModuleKey } from '../../types'
+import { MODULE_ICONS } from '../ui/moduleIcons'
 
 function localDate(value: Date): Date {
   return new Date(value.getFullYear(), value.getMonth(), value.getDate())
@@ -146,7 +147,10 @@ export default function Heatmap({ days = 90, today: todayKey }: { days?: number;
             : <p>这一天没有学习记录。</p>}
           {picked.detail && picked.detail.modules.length > 0 && (
             <ul className="heatmap-detail-modules">
-              {picked.detail.modules.map(({ module, count }) => <li key={module}>{MODULE_META[module].icon} {MODULE_META[module].name.split('·')[0]} · {count} 题</li>)}
+              {picked.detail.modules.map(({ module, count }) => {
+                const ModuleIcon = MODULE_ICONS[module]
+                return <li key={module}><ModuleIcon size={12} aria-hidden /> {MODULE_META[module].name.split('·')[0]} · {count} 题</li>
+              })}
             </ul>
           )}
           <button type="button" className="btn btn-ghost" onClick={() => setPickedDate(null)}>收起当日明细</button>

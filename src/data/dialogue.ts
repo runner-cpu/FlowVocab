@@ -436,7 +436,7 @@ export const DIALOGUE_SCENES: DialogueScene[] = [
     id: 'weather-tower',
     title: '气象塔',
     place: '气象观测塔',
-    heroLine: 'Wind, rain, and stars — I read them all. Ask me about the weather before you sail.',
+    heroLine: 'Wind, rain, and stars. I read them all. Ask me about the weather before you sail.',
     questions: [
       {
         id: 'weather-tower-q1',

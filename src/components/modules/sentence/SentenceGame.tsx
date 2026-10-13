@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Puzzle, Wrench } from 'lucide-react'
 import { elapsedSince } from '../../../engine/sessionTiming'
 import { useProgress } from '../../../store/progressStore'
 import { SENTENCE_QUESTS } from '../../../data/sentences'
@@ -126,10 +127,10 @@ export default function SentenceGame() {
   const bucketCorrect = (bucket: Bucket) => quest?.type === 'puzzle' && quest.segments!.filter((segment) => segment.bucket === bucket).every((segment) => placed[quest.segments!.findIndex((candidate) => candidate === segment)] === bucket)
   if (!quest && !done) return <div className="quiz-panel"><div className="card center"><h2>当前路线暂无句子练习</h2><p className="muted">请切换学习路线后重试。</p></div></div>
 
-  if (done) return <div className="quiz-panel"><div className="card center"><div style={{ fontSize: 44 }}>🧩</div><h2 className="mt8">拆解工坊全部完成！</h2><p className="muted mt8">长难句拆解与翻译对决已经全部通关。</p><button className="btn btn-primary mt14" onClick={() => { setQIndex(0); setDone(false); resetPuzzle('') }}>再来一轮</button></div></div>
+  if (done) return <div className="quiz-panel"><div className="card center"><Puzzle size={44} aria-hidden /><h2 className="mt8">拆解工坊全部完成！</h2><p className="muted mt8">长难句拆解与翻译对决已经全部通关。</p><button className="btn btn-primary mt14" onClick={() => { setQIndex(0); setDone(false); resetPuzzle('') }}>再来一轮</button></div></div>
 
   return <div className="quiz-panel"><GameHud module="sentence" /><div className="card">
-    <div className="card-title">{quest.type === 'puzzle' ? '🧩 长难句拼图' : '🔧 翻译对决'}<span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--muted)' }}>{qIndex + 1} / {quests.length}</span></div>
+    <div className="card-title">{quest.type === 'puzzle' ? <><Puzzle size={16} aria-hidden /> 长难句拼图</> : <><Wrench size={16} aria-hidden /> 翻译对决</>}<span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--muted)' }}>{qIndex + 1} / {quests.length}</span></div>
     <div className="story-box" style={{ fontSize: 14.5 }}>{quest.sentence}</div>
     {quest.type === 'puzzle' && quest.segments && <>
       <div className="chips segment-pool">{segments.map((segment) => <button type="button" key={segment.idx} draggable={placed[segment.idx] === undefined} disabled={placed[segment.idx] !== undefined} aria-pressed={picked === segment.idx} onDragStart={() => setDragged(segment.idx)} onDragEnd={() => setDragged(null)} onClick={() => setPicked(picked === segment.idx ? null : segment.idx)} className={`chip segment-chip ${picked === segment.idx ? 'picked' : ''} ${placed[segment.idx] !== undefined ? 'placed' : ''} ${flashWrong === segment.idx ? 'wrong-flash' : ''}`}>{segment.text}</button>)}</div>

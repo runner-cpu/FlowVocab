@@ -3,6 +3,7 @@ import { useProgress } from '../store/progressStore'
 import { useUI } from '../store/gameStore'
 import { LEARNING_TRACKS, MODULE_META, TRACK_MODULE_FOCUS, type ModuleKey } from '../types'
 import { isModuleAvailable } from '../data/curriculum'
+import { MODULE_ICONS } from '../components/ui/moduleIcons'
 import ChapterShell from '../components/game/ChapterShell'
 import VocabGame from '../components/modules/vocab/VocabGame'
 import GrammarGame from '../components/modules/grammar/GrammarGame'
@@ -18,6 +19,7 @@ export default function ModulePage({ module }: { module: ModuleKey }) {
   const go = useUI((s) => s.go)
   const track = useUI((s) => s.track)
   const meta = MODULE_META[module]
+  const ModuleIcon = MODULE_ICONS[module]
   const available = isModuleAvailable(track, module)
 
   useEffect(() => {
@@ -43,7 +45,7 @@ export default function ModulePage({ module }: { module: ModuleKey }) {
   return <div className="module-shell">
     <div className="module-context">
       <button className="back-link" onClick={() => go('home')}>← 返回航线地图</button>
-      <div className="module-context-title"><span>{meta.icon}</span><div><strong>{meta.name}</strong><small>{LEARNING_TRACKS[track].shortLabel} · {TRACK_MODULE_FOCUS[track][module]} · 专注练习中</small></div></div>
+      <div className="module-context-title"><span><ModuleIcon size={18} aria-hidden /></span><div><strong>{meta.name}</strong><small>{LEARNING_TRACKS[track].shortLabel} · {TRACK_MODULE_FOCUS[track][module]} · 专注练习中</small></div></div>
       <div className="module-context-stats"><span>本轮 {session.total} 题</span><span>正确率 {session.total ? Math.round(session.correct / session.total * 100) : 0}%</span></div>
     </div>
     <ChapterShell module={module}>{render()}</ChapterShell>

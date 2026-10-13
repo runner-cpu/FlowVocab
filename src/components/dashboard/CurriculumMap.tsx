@@ -65,7 +65,7 @@ export default function CurriculumMap() {
                   if (!available || !scope) {
                     return (
                       <td key={item} className={isCurrent ? 'is-current' : undefined}>
-                        <span className="curriculum-cell is-closed" aria-label={`${LEARNING_TRACKS[item].label} 未开放 ${MODULE_META[module].name}，该学段暂未涉及这类训练`}>—</span>
+                        <span className="curriculum-cell is-closed" aria-label={`${LEARNING_TRACKS[item].label} 未开放 ${MODULE_META[module].name}，该学段暂未涉及这类训练`}><span aria-hidden="true">–</span><span className="sr-only">未开放</span></span>
                       </td>
                     )
                   }

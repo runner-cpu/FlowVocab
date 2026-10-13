@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from 'react'
+import { Check, CircleCheck, Diamond, GitBranch, Lock, MessageSquare, Pin } from 'lucide-react'
 import { elapsedSince } from '../../../engine/sessionTiming'
 import { useProgress } from '../../../store/progressStore'
 import { GRAMMAR_BRANCHES, GRAMMAR_NODES } from '../../../data/grammar'
@@ -87,21 +88,21 @@ export default function GrammarGame() {
   }
 
   return <div className="quiz-panel"><GameHud module="grammar" />
-    {!activeNode && <div className="card"><div className="card-title">🌦️ 语法技能树</div><p className="muted">沿着连接路径逐步点亮节点；锁定节点会明确显示前置技能。</p>
+    {!activeNode && <div className="card"><div className="card-title"><GitBranch size={16} /> 语法技能树</div><p className="muted">沿着连接路径逐步点亮节点；锁定节点会明确显示前置技能。</p>
       {activeBranches.length === 0
         ? <p className="muted mt14" role="status">当前路线暂无语法节点，请切换学习路线后重试。</p>
         : <>
           <div className="skill-tree spatial-tree mt14">{activeBranches.map(({ branch, nodes }) => (
             <section className="skill-branch" key={branch.id}><h4>{branch.name}</h4><div className="skill-branch-map"><svg className="skill-paths" viewBox="0 0 300 64" preserveAspectRatio="none" aria-hidden="true"><path d="M42 32 C92 32 88 32 138 32 S212 32 258 32" /></svg><div className="skill-nodes">{nodes.map((node) => {
               const lit = !!skillTree[node.id]; const locked = isLocked(node); const prerequisite = node.parent ? nodeById[node.parent]?.name : null
-              return <button key={node.id} className={`skill-node ${lit ? 'lit' : ''} ${locked ? 'locked' : ''}`} disabled={locked} aria-label={locked ? `${node.name}，锁定，需要先完成 ${prerequisite}` : node.name} onClick={() => startNode(node)}><span>{lit ? '✓' : locked ? '🔒' : '◆'} {node.name}</span>{locked && <small>先完成 {prerequisite}</small>}</button>
+              return <button key={node.id} className={`skill-node ${lit ? 'lit' : ''} ${locked ? 'locked' : ''}`} disabled={locked} aria-label={locked ? `${node.name}，锁定，需要先完成 ${prerequisite}` : node.name} onClick={() => startNode(node)}><span>{lit ? <Check size={13} aria-hidden /> : locked ? <Lock size={13} aria-hidden /> : <Diamond size={13} aria-hidden />} {node.name}</span>{locked && <small>先完成 {prerequisite}</small>}</button>
             })}</div></div></section>
           ))}</div>
           {activeBranches.length < GRAMMAR_BRANCHES.length && <p className="muted mt14" role="note">当前路线开放 {activeBranches.length} / {GRAMMAR_BRANCHES.length} 个语法分支；切换学习路线可以看到更多节点。</p>}
           <RoadmapNote module="grammar" />
         </>}
     </div>}
-    {activeNode && !finished && <div className="card"><div className="card-title">📌 {activeNode.name}<button className="btn btn-ghost" style={{ marginLeft: 'auto' }} onClick={() => setActiveNode(null)}>返回技能树</button></div><p className="muted">{activeNode.desc}</p>{activeNode.examples.map((example) => <div key={example} className="explain-box mt8">💬 {example}</div>)}<div className="mt14">第 {qIndex + 1} / {activeNode.quizzes.length} 题</div><div className="options mt8">{activeNode.quizzes[qIndex].options.map((option, index) => { let className = 'option'; if (answered) { if (index === activeNode.quizzes[qIndex].answer) className += ' correct'; else if (picked === index) className += ' wrong' } return <button key={option} className={className} disabled={answered} onClick={() => onPick(index)}>{option}</button> })}</div>{answered && <div className="explain-box">{activeNode.quizzes[qIndex].explain}{picked !== activeNode.quizzes[qIndex].answer && <div className="mt8"><button className="btn btn-ghost" onClick={() => { setPicked(null); setAnswered(false); setErrorCard(null) }}>重新作答</button></div>}</div>}{errorCard && <ErrorCard tag={errorCard.tag} chosen={errorCard.chosen} correctAnswer={errorCard.correctAnswer} explain={errorCard.explain} onDismiss={() => setErrorCard(null)} />}</div>}
-    {finished && <div className="card center"><div style={{ fontSize: 44 }}>✓</div><h2>技能点亮成功！</h2><p className="muted">{activeNode?.name} 已加入你的语法技能树。</p><button className="btn btn-primary mt14" onClick={() => setActiveNode(null)}>返回技能树</button></div>}
+    {activeNode && !finished && <div className="card"><div className="card-title"><Pin size={16} /> {activeNode.name}<button className="btn btn-ghost" style={{ marginLeft: 'auto' }} onClick={() => setActiveNode(null)}>返回技能树</button></div><p className="muted">{activeNode.desc}</p>{activeNode.examples.map((example) => <div key={example} className="explain-box mt8"><MessageSquare size={14} aria-hidden /> {example}</div>)}<div className="mt14">第 {qIndex + 1} / {activeNode.quizzes.length} 题</div><div className="options mt8">{activeNode.quizzes[qIndex].options.map((option, index) => { let className = 'option'; if (answered) { if (index === activeNode.quizzes[qIndex].answer) className += ' correct'; else if (picked === index) className += ' wrong' } return <button key={option} className={className} disabled={answered} onClick={() => onPick(index)}>{option}</button> })}</div>{answered && <div className="explain-box">{activeNode.quizzes[qIndex].explain}{picked !== activeNode.quizzes[qIndex].answer && <div className="mt8"><button className="btn btn-ghost" onClick={() => { setPicked(null); setAnswered(false); setErrorCard(null) }}>重新作答</button></div>}</div>}{errorCard && <ErrorCard tag={errorCard.tag} chosen={errorCard.chosen} correctAnswer={errorCard.correctAnswer} explain={errorCard.explain} onDismiss={() => setErrorCard(null)} />}</div>}
+    {finished && <div className="card center"><CircleCheck size={44} aria-hidden /><h2>技能点亮成功！</h2><p className="muted">{activeNode?.name} 已加入你的语法技能树。</p><button className="btn btn-primary mt14" onClick={() => setActiveNode(null)}>返回技能树</button></div>}
   </div>
 }

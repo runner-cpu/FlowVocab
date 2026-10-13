@@ -1,6 +1,8 @@
+import { CircleCheck, Flame, Sparkles, Trophy } from 'lucide-react'
 import { useProgress } from '../../store/progressStore'
 import { DIFFICULTY_COLORS, DIFFICULTY_NAMES } from '../../engine/difficulty'
 import { MODULE_META, type ModuleKey } from '../../types'
+import { MODULE_ICONS } from '../ui/moduleIcons'
 import ComboCrown from './ComboCrown'
 
 export default function GameHud({ module }: { module: ModuleKey }) {
@@ -11,14 +13,15 @@ export default function GameHud({ module }: { module: ModuleKey }) {
   const charge = rage ? 5 : combo.combo % 5
 
   const meta = MODULE_META[module]
+  const ModuleIcon = MODULE_ICONS[module]
 
   return (
     <div>
       <div className="game-hud">
         <span className={`combo-chip ${combo.combo > 0 ? 'hot' : ''}`}>
-          🔥 连击 ×{combo.combo}
+          <Flame size={13} aria-hidden /> 连击 ×{combo.combo}
         </span>
-        {rage && <span className="rage-chip">💥 怒气爆发 · 双倍经验 ×{combo.rageRemaining}</span>}
+        {rage && <span className="rage-chip"><Sparkles size={13} aria-hidden /> 怒气爆发 · 双倍经验 ×{combo.rageRemaining}</span>}
         <ComboCrown />
         {module === 'vocab' && <span className="flame-meter" role="meter" aria-label="五连击蓄能" aria-valuemin={0} aria-valuemax={5} aria-valuenow={charge} aria-valuetext={rage ? '双倍经验，剩余 ' + combo.rageRemaining + ' 题' : charge + ' / 5，蓄满后接下来三题双倍经验'}>
           {Array.from({ length: 5 }, (_, i) => <i key={i} className={i < charge ? 'charged' : ''} aria-hidden="true" />)}
@@ -32,12 +35,12 @@ export default function GameHud({ module }: { module: ModuleKey }) {
           {DIFFICULTY_NAMES[difficulty.level]} 难度
         </span>
         <span className="progress-strip">
-          <span>✅ {session.correct}/{session.total}</span>
-          <span>🏆 本轮最佳连击 {session.comboMax}</span>
+          <span><CircleCheck size={13} aria-hidden /> {session.correct}/{session.total}</span>
+          <span><Trophy size={13} aria-hidden /> 本轮最佳连击 {session.comboMax}</span>
         </span>
       </div>
       <div className="subtitle">
-        {meta.icon} {meta.name} · {meta.desc}
+        <ModuleIcon size={14} aria-hidden /> {meta.name} · {meta.desc}
       </div>
     </div>
   )

@@ -10,10 +10,10 @@
   padding: 14px 16px;
   border: 1px solid var(--line);
   border-left: 4px solid var(--info);
-  border-radius: 12px;
+  border-radius: var(--r-lg);
   background: var(--card);
   box-shadow: var(--shadow);
-  font-size: 13.5px;
+  font-size: var(--fs-base);
   line-height: 1.7;
 }
 
@@ -50,7 +50,7 @@
 }
 
 .error-card-title {
-  font-size: 15px;
+  font-size: var(--fs-md);
   font-weight: 800;
   color: var(--ink);
 }
@@ -58,10 +58,10 @@
 .error-card-badge {
   padding: 3px 10px;
   border: 1px solid var(--line);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   background: var(--accent-bg);
   color: var(--accent-ink);
-  font-size: 11.5px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: .06em;
 }
@@ -71,7 +71,7 @@
   padding: 6px 12px;
   min-height: 44px;
   border: 1px solid var(--control-line);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: var(--surface-raised);
   color: var(--ink2);
   cursor: pointer;
@@ -87,7 +87,7 @@
   padding: 8px 12px;
   border-left: 3px solid var(--accent);
   background: var(--surface-soft);
-  border-radius: 8px;
+  border-radius: var(--r-sm);
   color: var(--ink);
 }
 
@@ -98,29 +98,29 @@
   color: var(--ink2);
 }
 
-.error-card-answers dt { color: var(--muted); font-size: 12px; }
+.error-card-answers dt { color: var(--muted); font-size: var(--fs-sm); }
 
 .error-card-answers dd { margin: 0; color: var(--ink); font-weight: 600; overflow-wrap: anywhere; }
 
-.error-card-explain { color: var(--ink2); font-size: 13px; }
+.error-card-explain { color: var(--ink2); font-size: var(--fs-base); }
 
 .error-card-contrast {
   margin-top: 4px;
   padding: 12px;
   border: 1px dashed var(--line);
-  border-radius: 10px;
+  border-radius: var(--r-md);
   background: var(--surface-soft);
 }
 
-.error-card-contrast-title { font-size: 14px; font-weight: 700; color: var(--ink); }
+.error-card-contrast-title { font-size: var(--fs-base); font-weight: 700; color: var(--ink); }
 
-.error-card-caption { caption-side: top; padding-bottom: 6px; color: var(--muted); font-size: 12px; text-align: left; }
+.error-card-caption { caption-side: top; padding-bottom: 6px; color: var(--muted); font-size: var(--fs-sm); text-align: left; }
 
 .error-card-contrast-table {
   width: 100%;
   margin-top: 6px;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--fs-base);
 }
 
 .error-card-contrast-table th,
@@ -131,7 +131,7 @@
   vertical-align: top;
 }
 
-.error-card-contrast-table thead th { color: var(--muted); font-size: 11.5px; letter-spacing: .04em; }
+.error-card-contrast-table thead th { color: var(--muted); font-size: var(--fs-xs); letter-spacing: .04em; }
 
 .error-card-contrast-table tbody tr.is-focus { background: var(--accent-bg); }
 
@@ -141,9 +141,9 @@
   margin-left: 8px;
   padding: 1px 7px;
   border: 1px solid var(--accent);
-  border-radius: 999px;
+  border-radius: var(--r-pill);
   color: var(--accent-ink);
-  font-size: 10.5px;
+  font-size: var(--fs-2xs);
   font-weight: 700;
 }
 
@@ -151,7 +151,7 @@
 
 .error-card-tip { margin-top: 10px; color: var(--ink); font-weight: 600; }
 
-.error-card-example { margin-top: 6px; color: var(--ink2); font-size: 12.5px; }
+.error-card-example { margin-top: 6px; color: var(--ink2); font-size: var(--fs-sm); }
 
 .error-card-example span { display: block; }
 
@@ -161,7 +161,7 @@
   .error-card { padding: 12px; }
   .error-card-dismiss { width: 100%; margin-left: 0; }
   .error-card-contrast-table th,
-  .error-card-contrast-table td { padding: 6px; font-size: 12px; }
+  .error-card-contrast-table td { padding: 6px; font-size: var(--fs-sm); }
 }
 
 @media (prefers-reduced-motion: reduce) {
