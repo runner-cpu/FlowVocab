@@ -41,7 +41,7 @@ export default function App() {
   }
 
   if (!ready) {
-    return <div className="loading" role="status" aria-live="polite"><Sprout size={16} aria-hidden /> 正在唤醒心流词境……</div>
+    return <div className="loading" role="status" aria-live="polite"><Sprout size={16} aria-hidden /> 正在唤醒微光港……</div>
   }
 
   const isModule = isModulePage(page)

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { Download, RotateCcw, Upload, X } from 'lucide-react'
 import { useProgress } from '../../store/progressStore'
 import { exportProgressBackup, importProgressBackup, resetProgress } from '../../store/backup'
+import AboutSection from './AboutSection'
 
 const MAX_BACKUP_BYTES = 10 * 1024 * 1024
 
@@ -61,7 +62,9 @@ export default function SettingsPanel({ onClose, opener }: { onClose: () => void
   const trapFocus = (event: React.KeyboardEvent<HTMLElement>) => {
     if (event.key === 'Escape') { event.preventDefault(); close(); return }
     if (event.key !== 'Tab') return
-    const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), input:not([disabled]):not([hidden])'))
+    // 链接也要纳入回绕范围：「关于与许可」区里的外链与安装按钮同样是可聚焦元素，
+    // 只算按钮会让键盘用户按 Tab 时直接跳过它们。
+    const focusable = Array.from(event.currentTarget.querySelectorAll<HTMLElement>('button:not([disabled]), a[href], input:not([disabled]):not([hidden])'))
     const first = focusable[0], last = focusable[focusable.length - 1]
     if (event.shiftKey && document.activeElement === first) { event.preventDefault(); last?.focus() }
     else if (!event.shiftKey && document.activeElement === last) { event.preventDefault(); first?.focus() }
@@ -75,6 +78,7 @@ export default function SettingsPanel({ onClose, opener }: { onClose: () => void
       <p className="settings-status" role="status">{durable === null ? '正在确认离线存储…' : durable ? '已请求持久离线存储' : '浏览器未授予持久离线存储'}</p>
       {message && <p role="alert" className="settings-message">{message}</p>}
       <div className="settings-actions"><button onClick={() => void download()}><Download size={16} />导出学习数据</button><button onClick={() => file.current?.click()}><Upload size={16} />恢复学习数据</button><input ref={file} aria-label="恢复学习数据" type="file" accept="application/json" hidden onChange={(event) => void restore(event.currentTarget)} /></div>
+      <AboutSection />
       <div className="settings-danger">{resetting ? <><p>此操作会清除本设备的学习进度，词库会保留。</p><button className="danger" disabled={resetInFlight} onClick={() => void confirmReset()}>{resetInFlight ? '正在重置…' : '确认重置'}</button><button disabled={resetInFlight} onClick={() => setResetting(false)}>取消</button></> : <button className="danger" onClick={() => setResetting(true)}><RotateCcw size={16} />重置学习数据</button>}</div>
     </section>
   </div>

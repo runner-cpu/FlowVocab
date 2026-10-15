@@ -1,5 +1,5 @@
 import 'fake-indexeddb/auto'
-import { afterEach, beforeEach, expect, it } from 'vitest'
+import { afterEach, beforeEach, expect, it, vi } from 'vitest'
 import { cleanup, fireEvent, render, screen, within } from '@testing-library/react'
 import { useUI } from '../../store/gameStore'
 import { db } from '../../store/db'
@@ -29,4 +29,35 @@ it('uses direct, task-oriented labels for the four primary destinations', () => 
   expect(navigation).toHaveTextContent('词汇')
   expect(navigation).toHaveTextContent('语法')
   expect(navigation).toHaveTextContent('学习数据')
+})
+
+it('highlights exactly one navigation entry for every navigable page', () => {
+  const pages = ['home', 'dashboard', 'vocab', 'grammar', 'sentence', 'listening', 'writing', 'reading'] as const
+  for (const page of pages) {
+    useUI.setState({ page })
+    const { unmount } = render(<TopBar />)
+    const active = within(screen.getByRole('navigation', { name: '主导航' })).getAllByRole('button').filter((button) => button.getAttribute('aria-current') === 'page')
+    expect(active).toHaveLength(1)
+    unmount()
+  }
+})
+
+it('keeps the training group highlighted inside the four modules that have no top-bar entry', () => {
+  for (const page of ['sentence', 'listening', 'writing', 'reading'] as const) {
+    useUI.setState({ page })
+    const { unmount } = render(<TopBar />)
+    expect(within(screen.getByRole('navigation', { name: '主导航' })).getByRole('button', { name: '训练场' })).toHaveAttribute('aria-current', 'page')
+    unmount()
+  }
+})
+
+it('returns to the training grid when the training group entry is used', () => {
+  const scrollIntoView = vi.fn()
+  Element.prototype.scrollIntoView = scrollIntoView
+  const section = document.createElement('div'); section.id = 'training-ground'; document.body.append(section)
+  useUI.setState({ page: 'listening' })
+  render(<TopBar />)
+  fireEvent.click(within(screen.getByRole('navigation', { name: '主导航' })).getByRole('button', { name: '训练场' }))
+  expect(useUI.getState().page).toBe('home')
+  section.remove()
 })

@@ -342,7 +342,7 @@ Commit: `perf: consolidate visuals and ship responsive scene media`.
 - Modify: `.gitignore`
 - Modify: `README.md`
 - Modify: `THIRD_PARTY_NOTICES.md`
-- Move: `心流词境_项目计划方案.html` to `docs/心流词境_项目计划方案.html`
+- Move: `心流词境_项目计划方案.html` to `docs/archive/2026-09-04-项目计划方案-v2.html`
 - Delete: `index.src.html`
 - Delete: `scripts/prepare-source-index.mjs`
 - Delete: `scripts/sync-pages-root.mjs`

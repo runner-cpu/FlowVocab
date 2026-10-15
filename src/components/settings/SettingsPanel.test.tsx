@@ -1,6 +1,6 @@
 import 'fake-indexeddb/auto'
 import { afterEach, beforeEach, expect, it, vi } from 'vitest'
-import { cleanup, fireEvent, render, screen, waitFor } from '@testing-library/react'
+import { cleanup, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import { db } from '../../store/db'
 import { useProgress } from '../../store/progressStore'
 import SettingsPanel from './SettingsPanel'
@@ -65,6 +65,17 @@ it('traps focus, closes on Escape, and restores the settings opener', () => {
   fireEvent.keyDown(dialog, { key: 'Escape' })
   expect(close).toHaveBeenCalledTimes(1); expect(document.activeElement).toBe(opener)
   opener.remove()
+})
+
+it('credits the third-party corpora and explains how to install the app', () => {
+  render(<SettingsPanel onClose={() => undefined} />)
+  const about = screen.getByRole('region', { name: /微光港：英语星图/ })
+  expect(within(about).getByText('ECDICT 开源词典')).toBeInTheDocument()
+  expect(within(about).getByText('CC-BY 2.0 FR')).toBeInTheDocument()
+  expect(within(about).getByText('SIL OFL 1.1')).toBeInTheDocument()
+  // jsdom 不会派发 beforeinstallprompt，所以这里必须给出可手动执行的主屏安装步骤。
+  expect(within(about).getByText(/添加到主屏幕/)).toBeInTheDocument()
+  expect(within(about).getByText(/不录制、不上传音频/)).toBeInTheDocument()
 })
 
 it('locks background scrolling and closes when the backdrop is clicked', () => {

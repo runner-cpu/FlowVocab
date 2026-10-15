@@ -1603,6 +1603,61 @@ button.review-load-item:disabled { cursor: default; }
 
 .settings-check input { width: 20px; height: 20px; flex-shrink: 0; }
 
+/* 关于与许可：设置面板底部的身份区，评委现场最常追问的三件事（安装 / 隐私 / 授权）。 */
+.settings-about {
+  display: grid; gap: 12px; padding-top: 16px; border-top: 1px solid var(--line);
+  color: var(--ink2); font-size: var(--fs-sm);
+}
+
+.settings-about h3 { font-size: var(--fs-lg); color: var(--ink); }
+
+.settings-about-meta { font-size: var(--fs-xs); color: var(--muted); }
+
+.settings-about-block { display: grid; gap: 6px; }
+
+.settings-about-block strong { display: inline-flex; align-items: center; gap: 6px; color: var(--ink); }
+
+.settings-about-block p { line-height: 1.55; }
+
+.settings-about-block ul { display: grid; gap: 5px; padding-left: 18px; list-style: disc; }
+
+.settings-about-block li { line-height: 1.5; }
+
+.settings-credits { gap: 6px; }
+
+.settings-credits li { display: flex; align-items: baseline; flex-wrap: wrap; gap: 4px 8px; }
+
+.settings-credits span { color: var(--ink); font-weight: 700; }
+
+.settings-credits em { font-style: normal; font-size: var(--fs-xs); }
+
+.settings-credits code {
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: var(--fs-2xs);
+  padding: 1px 6px; border-radius: var(--r-xs); background: var(--surface-soft); color: var(--accent-ink);
+}
+
+.settings-install {
+  justify-self: start; display: inline-flex; align-items: center; gap: 7px; cursor: pointer;
+  border: 1px solid var(--line); border-radius: var(--r-md); padding: 9px 12px;
+  background: var(--accent-bg); color: var(--accent-ink); font: inherit; font-weight: 700;
+}
+
+.settings-about-links { display: flex; flex-wrap: wrap; gap: 6px 16px; font-size: var(--fs-xs); }
+
+.settings-about-links a {
+  display: inline-flex; align-items: center; gap: 4px; color: var(--accent-ink); border-radius: var(--r-xs);
+  transition: color var(--dur-fast) var(--ease-standard);
+}
+
+.settings-about-links a:hover { color: var(--ink); }
+
+.settings-install:focus-visible,
+.settings-about-links a:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+
+.settings-install:active:not(:disabled) { transform: scale(0.98); transition-duration: var(--dur-fast); }
+
+.settings-install:disabled { cursor: progress; opacity: .7; }
+
 /* ===== 9. Motion ===== */
 
 @keyframes shake {
