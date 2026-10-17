@@ -11,6 +11,7 @@ import ErrorCard from '../../game/ErrorCard'
 import { useChapterResult } from '../../game/ChapterShell'
 import RoadmapNote from '../../game/RoadmapNote'
 import { inferErrorTag, type ErrorTag } from '../../../engine/errorRouting'
+import { useOptionKeyboard } from '../../../hooks/useOptionKeyboard'
 
 export default function GrammarGame() {
   const track = useUI((state) => state.track)
@@ -86,6 +87,18 @@ export default function GrammarGame() {
       else { setQIndex((value) => value + 1); setPicked(null); setAnswered(false); setErrorCard(null) }
     }, 1000)
   }
+  function retryQuestion() { setPicked(null); setAnswered(false); setErrorCard(null) }
+
+  const quizOptions = activeNode?.quizzes[qIndex]?.options ?? []
+  const quizCorrect = activeNode?.quizzes[qIndex]?.answer
+  // 引导里承诺过「数字键 1–4 选择答案」，语法节点也要兑现。
+  // 答对后会自动进入下一题，所以只有答错时 Enter 才承担「重新作答」的角色。
+  useOptionKeyboard({
+    enabled: !!activeNode && !finished,
+    count: quizOptions.length,
+    onPick,
+    onConfirm: answered && picked !== quizCorrect ? retryQuestion : undefined
+  })
 
   return <div className="quiz-panel"><GameHud module="grammar" />
     {!activeNode && <div className="card"><div className="card-title"><GitBranch size={16} /> 语法技能树</div><p className="muted">沿着连接路径逐步点亮节点；锁定节点会明确显示前置技能。</p>
@@ -102,7 +115,7 @@ export default function GrammarGame() {
           <RoadmapNote module="grammar" />
         </>}
     </div>}
-    {activeNode && !finished && <div className="card"><div className="card-title"><Pin size={16} /> {activeNode.name}<button className="btn btn-ghost" style={{ marginLeft: 'auto' }} onClick={() => setActiveNode(null)}>返回技能树</button></div><p className="muted">{activeNode.desc}</p>{activeNode.examples.map((example) => <div key={example} className="explain-box mt8"><MessageSquare size={14} aria-hidden /> {example}</div>)}<div className="mt14">第 {qIndex + 1} / {activeNode.quizzes.length} 题</div><div className="options mt8">{activeNode.quizzes[qIndex].options.map((option, index) => { let className = 'option'; if (answered) { if (index === activeNode.quizzes[qIndex].answer) className += ' correct'; else if (picked === index) className += ' wrong' } return <button key={option} className={className} disabled={answered} onClick={() => onPick(index)}>{option}</button> })}</div>{answered && <div className="explain-box">{activeNode.quizzes[qIndex].explain}{picked !== activeNode.quizzes[qIndex].answer && <div className="mt8"><button className="btn btn-ghost" onClick={() => { setPicked(null); setAnswered(false); setErrorCard(null) }}>重新作答</button></div>}</div>}{errorCard && <ErrorCard tag={errorCard.tag} chosen={errorCard.chosen} correctAnswer={errorCard.correctAnswer} explain={errorCard.explain} onDismiss={() => setErrorCard(null)} />}</div>}
+    {activeNode && !finished && <div className="card"><div className="card-title"><Pin size={16} /> {activeNode.name}<button className="btn btn-ghost" style={{ marginLeft: 'auto' }} onClick={() => setActiveNode(null)}>返回技能树</button></div><p className="muted">{activeNode.desc}</p>{activeNode.examples.map((example) => <div key={example} className="explain-box mt8"><MessageSquare size={14} aria-hidden /> {example}</div>)}<div className="mt14">第 {qIndex + 1} / {activeNode.quizzes.length} 题</div><div className="options mt8">{activeNode.quizzes[qIndex].options.map((option, index) => { let className = 'option'; if (answered) { if (index === activeNode.quizzes[qIndex].answer) className += ' correct'; else if (picked === index) className += ' wrong' } return <button key={option} className={className} disabled={answered} onClick={() => onPick(index)}><kbd aria-hidden="true">{index + 1}</kbd><span>{option}</span></button> })}</div>{answered && <div className="explain-box">{activeNode.quizzes[qIndex].explain}{picked !== activeNode.quizzes[qIndex].answer && <div className="mt8"><button className="btn btn-ghost" onClick={retryQuestion}>重新作答</button></div>}</div>}{errorCard && <ErrorCard tag={errorCard.tag} chosen={errorCard.chosen} correctAnswer={errorCard.correctAnswer} explain={errorCard.explain} onDismiss={() => setErrorCard(null)} />}<p className="interaction-hint muted mt8">{answered ? (picked === quizCorrect ? '答对了，正在进入下一题…' : 'Enter 重新作答') : (quizOptions.length > 1 ? `数字键 1–${quizOptions.length} 选择答案` : '')}</p></div>}
     {finished && <div className="card center"><CircleCheck size={44} aria-hidden /><h2>技能点亮成功！</h2><p className="muted">{activeNode?.name} 已加入你的语法技能树。</p><button className="btn btn-primary mt14" onClick={() => setActiveNode(null)}>返回技能树</button></div>}
   </div>
 }

@@ -57,7 +57,7 @@ export default function FirstRunGuide() {
     <section className="first-run-guide" role="dialog" aria-modal="true" aria-labelledby="first-run-title">
       <button ref={closeButton} className="guide-close" aria-label="关闭新手指南" onClick={close}><X size={18} /></button>
       <span className="guide-kicker">FLOWVOCAB EXPEDITION</span><h2 id="first-run-title">选择你的第一条航线</h2><p>所有进度都保存在本机。六个训练模块串成一条港口航线，按章节点亮灯塔，不需要网络。</p>
-      <div className="guide-steps"><div><Map aria-hidden="true" /><strong>航线地图</strong><span>首页按顺序解锁六座灯塔，完成后掉落星尘与星级。</span></div><div><Route aria-hidden="true" /><strong>关卡结算</strong><span>每关按正确率给 1–3 星，只保留最好成绩，重玩不掉星。</span></div><div><Keyboard aria-hidden="true" /><strong>快捷键</strong><span>选择题使用数字键 1–4，答题保存后按 Enter 继续。</span></div><div><BarChart3 aria-hidden="true" /><strong>离线智能</strong><span>听力含语音陪练跟读评分；答错会显示错因卡与形近词对比。</span></div></div>
+      <div className="guide-steps"><div><Map aria-hidden="true" /><strong>航线地图</strong><span>首页按顺序解锁六座灯塔，完成后掉落星尘与星级。</span></div><div><Route aria-hidden="true" /><strong>关卡结算</strong><span>每关按正确率给 1–3 星，只保留最好成绩，重玩不掉星。</span></div><div><Keyboard aria-hidden="true" /><strong>快捷键</strong><span>六个模块的选择题都能用数字键作答：词汇答对后 Enter 进入下一题，语法、句子、阅读、写作答错后 Enter 重新作答。</span></div><div><BarChart3 aria-hidden="true" /><strong>离线智能</strong><span>听力含语音陪练跟读评分；答错会显示错因卡与形近词对比。</span></div></div>
       <div className="guide-actions"><button className="btn btn-ghost" onClick={() => { close(); go('dashboard') }}>先看成长图谱</button><button className="btn btn-primary" onClick={() => { close(); go('home') }}>前往航线地图</button></div>
     </section>
   </div>

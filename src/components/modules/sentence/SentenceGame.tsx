@@ -10,6 +10,7 @@ import GameHud from '../../game/GameHud'
 import ErrorCard from '../../game/ErrorCard'
 import { useChapterResult } from '../../game/ChapterShell'
 import { inferErrorTag, type ErrorTag } from '../../../engine/errorRouting'
+import { useOptionKeyboard } from '../../../hooks/useOptionKeyboard'
 
 export type Bucket = 'main' | 'clause' | 'modifier'
 
@@ -125,9 +126,17 @@ export default function SentenceGame() {
     }, correct ? 1300 : 1000)
   }
   const bucketCorrect = (bucket: Bucket) => quest?.type === 'puzzle' && quest.segments!.filter((segment) => segment.bucket === bucket).every((segment) => placed[quest.segments!.findIndex((candidate) => candidate === segment)] === bucket)
+  const translateOptions = quest?.type === 'translate' ? quest.options ?? [] : []
+  // 翻译对决是标准选择题：数字键选译文，答错后 Enter 重新作答（答对会自动进入下一题）。
+  useOptionKeyboard({
+    enabled: !!quest && quest.type === 'translate' && !done,
+    count: translateOptions.length,
+    onPick: onTranslate,
+    onConfirm: answered && answerPicked !== quest?.answer ? () => { setAnswered(false); setAnswerPicked(null); setErrorCard(null) } : undefined
+  })
   if (!quest && !done) return <div className="quiz-panel"><div className="card center"><h2>当前路线暂无句子练习</h2><p className="muted">请切换学习路线后重试。</p></div></div>
 
-  if (done) return <div className="quiz-panel"><div className="card center"><Puzzle size={44} aria-hidden /><h2 className="mt8">拆解工坊全部完成！</h2><p className="muted mt8">长难句拆解与翻译对决已经全部通关。</p><button className="btn btn-primary mt14" onClick={() => { setQIndex(0); setDone(false); resetPuzzle('') }}>再来一轮</button></div></div>
+  if (done) return <div className="quiz-panel"><div className="card center"><Puzzle size={44} aria-hidden /><h2 className="mt8">桥梁工坊全部完成！</h2><p className="muted mt8">长难句拆解与翻译对决已经全部通关。</p><button className="btn btn-primary mt14" onClick={() => { setQIndex(0); setDone(false); resetPuzzle('') }}>再来一轮</button></div></div>
 
   return <div className="quiz-panel"><GameHud module="sentence" /><div className="card">
     <div className="card-title">{quest.type === 'puzzle' ? <><Puzzle size={16} aria-hidden /> 长难句拼图</> : <><Wrench size={16} aria-hidden /> 翻译对决</>}<span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--muted)' }}>{qIndex + 1} / {quests.length}</span></div>
@@ -138,6 +147,6 @@ export default function SentenceGame() {
       <div className="buckets mt14">{(['main', 'clause', 'modifier'] as Bucket[]).map((bucket) => <div key={bucket} className={`bucket ${bucketCorrect(bucket) ? 'correct' : ''}`} role="button" tabIndex={0} aria-label={`将选中片段放入${bucketNames[bucket]}`} onDragOver={(event) => event.preventDefault()} onDrop={(event) => { event.preventDefault(); if (dragged !== null) placeSeg(dragged, bucket) }} onClick={() => { if (picked !== null) placeSeg(picked, bucket) }} onKeyDown={(event) => { if ((event.key === 'Enter' || event.key === ' ') && picked !== null) { event.preventDefault(); placeSeg(picked, bucket) } }}><h5>{bucketNames[bucket]}</h5><div className="bucket-content">{quest.segments!.filter((_, index) => placed[index] === bucket).map((segment, index) => <span key={index} className="chip">{segment.text}</span>)}</div></div>)}</div>
       <div className="interaction-actions"><button className="btn btn-ghost" disabled={previousPlaced === null} onClick={() => { if (previousPlaced !== null) { setPlaced(previousPlaced); setPreviousPlaced(null); setAnnouncement('已撤回上一步'); setErrorCard(null) } }}>撤回上一步</button><button className="btn btn-ghost" onClick={() => resetPuzzle()}>重置本题</button></div>{errorCard && <ErrorCard tag={errorCard.tag} chosen={errorCard.chosen} correctAnswer={errorCard.correctAnswer} explain={errorCard.explain} onDismiss={() => setErrorCard(null)} />}<p className="sr-only" aria-live="polite">{announcement}</p>
     </>}
-    {quest.type === 'translate' && <><div className="options mt14">{quest.options!.map((option, index) => { let className = 'option'; if (answered) { if (index === quest.answer) className += ' correct'; else if (answerPicked === index) className += ' wrong' } return <button key={index} className={className} disabled={answered} onClick={() => onTranslate(index)}>{option}</button> })}</div>{answered && <div className="explain-box">{quest.explain}</div>}{errorCard && <ErrorCard tag={errorCard.tag} chosen={errorCard.chosen} correctAnswer={errorCard.correctAnswer} explain={errorCard.explain} onDismiss={() => setErrorCard(null)} />}</>}
+    {quest.type === 'translate' && <><div className="options mt14">{quest.options!.map((option, index) => { let className = 'option'; if (answered) { if (index === quest.answer) className += ' correct'; else if (answerPicked === index) className += ' wrong' } return <button key={index} className={className} disabled={answered} onClick={() => onTranslate(index)}><kbd aria-hidden="true">{index + 1}</kbd><span>{option}</span></button> })}</div>{answered && <div className="explain-box">{quest.explain}</div>}{errorCard && <ErrorCard tag={errorCard.tag} chosen={errorCard.chosen} correctAnswer={errorCard.correctAnswer} explain={errorCard.explain} onDismiss={() => setErrorCard(null)} />}<p className="interaction-hint muted mt8">{answered ? (answerPicked === quest.answer ? '答对了，正在进入下一题…' : 'Enter 重新作答') : `数字键 1–${quest.options!.length} 选择译文`}</p></>}
   </div></div>
 }

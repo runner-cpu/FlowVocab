@@ -36,7 +36,7 @@ function alignWords(target: string[], spoken: string[]): boolean[] {
 
 /** 听力模块的两种练习模式：默认仍是听写，语音陪练为增量能力。 */
 const LISTENING_MODES = [
-  { id: 'dictation', label: '听写工坊' },
+  { id: 'dictation', label: '听写练习' },
   { id: 'dialogue', label: '语音陪练' }
 ] as const
 type ListeningMode = (typeof LISTENING_MODES)[number]['id']
@@ -266,7 +266,7 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
       <DialogueMode scene={dialogueScene} passedIds={passedDialogueIds} onScored={openScene} />
     </div>
   </div>
-  const dictationDone = <div className="card center"><h2>听写工坊本轮完成</h2><p className="muted mt8">完成 {selectedItems.length} 句练习。跟读匹配只是练习参考，不是发音能力评分。</p><button className="btn btn-primary mt14" onClick={() => { resetQuestion(); setQIndex(0); setDone(false) }}>再来一轮</button></div>
+  const dictationDone = <div className="card center"><h2>星际电台本轮完成</h2><p className="muted mt8">完成 {selectedItems.length} 句练习。跟读匹配只是练习参考，不是发音能力评分。</p><button className="btn btn-primary mt14" onClick={() => { resetQuestion(); setQIndex(0); setDone(false) }}>再来一轮</button></div>
   const dictationEmpty = <div className="card" role="status"><h2>当前路线暂无听力内容</h2><p>请选择其他学习路线。</p></div>
   return <div className="quiz-panel">{tablist}
     <div id="listening-panel-dictation" role="tabpanel" aria-labelledby="listening-tab-dictation">

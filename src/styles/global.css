@@ -814,6 +814,14 @@ input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color:
 
 .option[disabled] { cursor: default; }
 
+/* 数字键提示：六个模块的选择题共用同一颗键帽，用户一眼能看出按哪个键。 */
+.option kbd {
+  display: inline-flex; align-items: center; justify-content: center;
+  min-width: 1.6em; margin-right: 10px; padding: 3px 7px; border-radius: var(--r-sm);
+  background: var(--accent-bg); color: var(--ink); font-family: inherit;
+  font-size: var(--fs-xs); font-weight: 700; line-height: 1.2;
+}
+
 .explain-box {
   margin-top: 14px; border-radius: var(--r-lg); padding: 12px 14px; background: var(--accent-bg);
   font-size: var(--fs-base); animation: fadein 0.3s;
