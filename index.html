@@ -33,5 +33,100 @@
 <body>
   <div id="root"></div>
   <noscript>微光港：英语星图需要启用 JavaScript 才能运行；你的本地学习数据不会离开浏览器。</noscript>
+  <script>
+    /* 启动兜底提示。
+       开发入口 index.html 的脚本是 ./src/main.tsx。用普通静态服务器（或直接双击，
+       file://）打开时，浏览器会把它当成 application/octet-stream 拒绝执行，页面就停在
+       空白。构建产物 dist/index.html 指向打包后的 assets/*.js，不受这个限制，但同样会
+       带上这段兜底：真出脚本错误时给用户一句可操作的话，而不是一片空白。
+
+       兜底脚本不能是 module（模块加载失败时它自己也不会执行），所以用普通脚本：
+       load 之后轮询 #root，一直为空才显示指引；应用一旦挂载立刻撤掉。
+       文案按入口类型区分，避免在构建产物里说「这是开发入口」。 */
+    (function () {
+      function mounted() {
+        var root = document.getElementById('root')
+        return !!root && root.childElementCount > 0
+      }
+      function remove() {
+        var panel = document.getElementById('boot-fallback')
+        if (panel && panel.parentNode) panel.parentNode.removeChild(panel)
+      }
+      function entryIsDevSource() {
+        // 只认 TypeScript 源码入口（开发时是 ./src/main.tsx）。
+        // 注意不要把 .js 也算进来：打包产物的入口就是 .js，那样在构建产物里会误报成开发入口。
+        var scripts = document.querySelectorAll('script[type="module"][src]')
+        for (var i = 0; i < scripts.length; i += 1) {
+          if (/\.tsx?$/.test(scripts[i].getAttribute('src') || '')) return true
+        }
+        return false
+      }
+      function panelHtml() {
+        // file:// 下 ES Module 一定被 CORS 拦住，不管入口是源码还是打包产物。
+        // 这条要先判，否则会给出「清缓存」这类对不上原因的建议。
+        if (location.protocol === 'file:') {
+          return '<p>这个页面被用 file:// 直接打开了。本站是 ES Module 应用，浏览器出于安全策略不允许这样加载脚本，所以停在空白页。</p>' +
+            '<p class="lead">请改用本地服务器打开：</p>' +
+            '<ol>' +
+            '<li>在项目目录执行 <code>npm run dev</code>，再打开终端提示的地址。</li>' +
+            '<li>或执行 <code>npm run build</code> 后运行 <code>npm run preview</code>。</li>' +
+            '<li>离线交付包请用包内的「启动.bat」或 <code>node start-server.mjs</code>，再打开 http://localhost:8080/。</li>' +
+            '</ol>' +
+            '<p class="note">也可以直接体验线上版本：<a href="https://runner-cpu.github.io/FlowVocab/">runner-cpu.github.io/FlowVocab</a></p>'
+        }
+        if (entryIsDevSource()) {
+          return '<p>这个 index.html 是开发用入口，需要构建工具才能运行，直接打开会停在空白页。</p>' +
+            '<p class="lead">请改用下面任意一种方式打开：</p>' +
+            '<ol>' +
+            '<li>本地开发：在项目目录执行 <code>npm run dev</code>，再打开终端提示的地址。</li>' +
+            '<li>本地预览：执行 <code>npm run build</code>，再执行 <code>npm run preview</code>。</li>' +
+            '<li>直接体验线上版本：<a href="https://runner-cpu.github.io/FlowVocab/">runner-cpu.github.io/FlowVocab</a></li>' +
+            '</ol>' +
+            '<p class="note">离线交付包请使用包内的「启动.bat」或 <code>start-server.mjs</code>，不要直接双击其中的 index.html。</p>'
+        }
+        return '<p>页面脚本没有正常启动，可能没有加载完，或者被浏览器扩展、网络策略拦住了。</p>' +
+          '<p class="lead">可以这样处理：</p>' +
+          '<ol>' +
+          '<li>先刷新一次：<a href="' + location.pathname + location.search + '">重新加载页面</a>。</li>' +
+          '<li>仍然空白时，换一个浏览器或用无痕窗口再打开一次。</li>' +
+          '<li>如果之前装过旧版本，可在浏览器设置里清除本站缓存后重试；学习进度存在本机，清缓存前建议先备份。</li>' +
+          '</ol>' +
+          '<p class="note">你的学习数据保存在本机浏览器里，刷新或清缓存都不会上传到任何服务器。</p>'
+      }
+      function panel() {
+        if (document.getElementById('boot-fallback')) return
+        var el = document.createElement('div')
+        el.id = 'boot-fallback'
+        el.setAttribute('role', 'alert')
+        el.innerHTML = '<h1>微光港：英语星图</h1>' + panelHtml()
+        document.body.appendChild(el)
+      }
+      window.addEventListener('load', function () {
+        var GRACE_MS = 8000, POLL_MS = 400
+        var startedAt = Date.now()
+        var timer = window.setInterval(function () {
+          // 应用一旦挂载就撤掉提示：慢网络下应用晚几秒起来也不会被误报。
+          if (mounted()) { window.clearInterval(timer); remove(); return }
+          if (Date.now() - startedAt >= GRACE_MS) { window.clearInterval(timer); panel() }
+        }, POLL_MS)
+      })
+    })()
+  </script>
+  <style>
+    /* 仅在兜底提示出现时用到；样式内联，避免额外请求，也不依赖任何构建产物。 */
+    #boot-fallback {
+      position: fixed; inset: 0; z-index: 9999; overflow: auto;
+      padding: 8vh 24px 24px; background: #f3f7fb; color: #12243d;
+      font: 1rem/1.7 -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+    }
+    #boot-fallback h1 { margin: 0 0 1rem; font-size: 1.5rem; }
+    #boot-fallback p { margin: 0 0 .75rem; max-width: 46rem; }
+    #boot-fallback .lead { margin-top: 1.25rem; font-weight: 700; }
+    #boot-fallback ol { max-width: 46rem; margin: 0 0 1.25rem; padding-left: 1.4rem; }
+    #boot-fallback li { margin-bottom: .6rem; }
+    #boot-fallback code { padding: .15em .45em; border-radius: .25rem; background: #e4ecf5; font-size: .9em; }
+    #boot-fallback a { color: #1c5fa8; }
+    #boot-fallback .note { padding-top: 1rem; border-top: 1px solid rgba(18, 36, 61, .14); color: #4a5a72; font-size: .9rem; }
+  </style>
 </body>
 </html>
