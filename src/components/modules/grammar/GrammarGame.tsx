@@ -11,6 +11,7 @@ import ErrorCard from '../../game/ErrorCard'
 import { useChapterResult } from '../../game/ChapterShell'
 import RoadmapNote from '../../game/RoadmapNote'
 import { inferErrorTag, type ErrorTag } from '../../../engine/errorRouting'
+import { displayOptions } from '../../../engine/optionOrder'
 import { useOptionKeyboard } from '../../../hooks/useOptionKeyboard'
 
 export default function GrammarGame() {
@@ -50,6 +51,23 @@ export default function GrammarGame() {
     }
   }, [track])
   const nodeById = useMemo(() => Object.fromEntries(nodesForTrack.map((node) => [node.id, node])), [nodesForTrack])
+  // 从错题回顾回到语法时，直接落到那道题的节点与题号上，而不是让学习者自己找。
+  const reviewTarget = useUI((state) => state.reviewTarget)
+  const consumeReviewTarget = useUI((state) => state.consumeReviewTarget)
+  useEffect(() => {
+    if (!reviewTarget || reviewTarget.module !== 'grammar') return
+    const [nodeId, rawIndex] = reviewTarget.contentId.split('#')
+    const node = nodesForTrack.find((candidate) => candidate.id === nodeId)
+    const index = Number(rawIndex)
+    consumeReviewTarget()
+    if (!node || !Number.isInteger(index) || index < 0 || index >= node.quizzes.length) return
+    setActiveNode(node)
+    setQIndex(index)
+    setPicked(null)
+    setAnswered(false)
+    setFinished(false)
+    setErrorCard(null)
+  }, [reviewTarget, nodesForTrack, consumeReviewTarget])
   const isLocked = (node: SkillNode) => !!node.parent && !skillTree[node.parent]
   const belongsToBranch = (node: SkillNode, rootId: string) => {
     let current: SkillNode | undefined = node
@@ -67,14 +85,37 @@ export default function GrammarGame() {
   )
 
   function startNode(node: SkillNode) { if (isLocked(node)) return; setActiveNode(node); setQIndex(0); setPicked(null); setAnswered(false); setFinished(false); setErrorCard(null) }
-  function onPick(index: number) {
+  // 选项按题目种子重排：正确项不再永远停在第一位，位置由 id 决定，刷新也不会跳。
+  const quiz = activeNode?.quizzes[qIndex]
+  const quizView = useMemo(
+    () => (quiz ? displayOptions(quiz.options, quiz.answer, `${activeNode?.id ?? 'node'}#${qIndex}`) : []),
+    [quiz, activeNode?.id, qIndex]
+  )
+  function onPick(displayIndex: number) {
     if (answered || !activeNode) return
-    const quiz = activeNode.quizzes[qIndex]
+    const option = quizView[displayIndex]
+    if (!option || !quiz) return
+    const index = option.sourceIndex
     const correct = index === quiz.answer
     setPicked(index); setAnswered(true)
     // 答错时叠加离线错因路由；答对立即清空，保证同一时刻最多一张错因卡。
-    setErrorCard(correct ? null : { tag: inferErrorTag({ module: 'grammar', prompt: quiz.prompt, options: quiz.options, chosen: quiz.options[index], correctAnswer: quiz.options[quiz.answer], explain: quiz.explain }), chosen: quiz.options[index], correctAnswer: quiz.options[quiz.answer], explain: quiz.explain })
-    void answer({ module: 'grammar', correct, timeMs: elapsedSince(startedAt.current, performance.now()) })
+    const tag = inferErrorTag({ module: 'grammar', prompt: quiz.prompt, options: quiz.options, chosen: quiz.options[index], correctAnswer: quiz.options[quiz.answer], explain: quiz.explain })
+    setErrorCard(correct ? null : { tag, chosen: quiz.options[index], correctAnswer: quiz.options[quiz.answer], explain: quiz.explain })
+    void answer({
+      module: 'grammar',
+      correct,
+      timeMs: elapsedSince(startedAt.current, performance.now()),
+      // 同一节点的同一道题算同一条错题：答错记入、再答对自动移出。
+      mistake: {
+        module: 'grammar',
+        contentId: `${activeNode.id}#${qIndex}`,
+        prompt: quiz.prompt || activeNode.name,
+        chosen: quiz.options[index],
+        correctAnswer: quiz.options[quiz.answer],
+        tag,
+        explain: quiz.explain
+      }
+    })
     runTally.current = { total: runTally.current.total + 1, correct: runTally.current.correct + (correct ? 1 : 0) }
     if (correct) advanceTimer.current = window.setTimeout(() => {
       advanceTimer.current = null
@@ -89,8 +130,8 @@ export default function GrammarGame() {
   }
   function retryQuestion() { setPicked(null); setAnswered(false); setErrorCard(null) }
 
-  const quizOptions = activeNode?.quizzes[qIndex]?.options ?? []
-  const quizCorrect = activeNode?.quizzes[qIndex]?.answer
+  const quizOptions = quizView
+  const quizCorrect = quiz?.answer
   // 引导里承诺过「数字键 1–4 选择答案」，语法节点也要兑现。
   // 答对后会自动进入下一题，所以只有答错时 Enter 才承担「重新作答」的角色。
   useOptionKeyboard({
@@ -115,7 +156,7 @@ export default function GrammarGame() {
           <RoadmapNote module="grammar" />
         </>}
     </div>}
-    {activeNode && !finished && <div className="card"><div className="card-title"><Pin size={16} /> {activeNode.name}<button className="btn btn-ghost" style={{ marginLeft: 'auto' }} onClick={() => setActiveNode(null)}>返回技能树</button></div><p className="muted">{activeNode.desc}</p>{activeNode.examples.map((example) => <div key={example} className="explain-box mt8"><MessageSquare size={14} aria-hidden /> {example}</div>)}<div className="mt14">第 {qIndex + 1} / {activeNode.quizzes.length} 题</div><div className="options mt8">{activeNode.quizzes[qIndex].options.map((option, index) => { let className = 'option'; if (answered) { if (index === activeNode.quizzes[qIndex].answer) className += ' correct'; else if (picked === index) className += ' wrong' } return <button key={option} className={className} disabled={answered} onClick={() => onPick(index)}><kbd aria-hidden="true">{index + 1}</kbd><span>{option}</span></button> })}</div>{answered && <div className="explain-box">{activeNode.quizzes[qIndex].explain}{picked !== activeNode.quizzes[qIndex].answer && <div className="mt8"><button className="btn btn-ghost" onClick={retryQuestion}>重新作答</button></div>}</div>}{errorCard && <ErrorCard tag={errorCard.tag} chosen={errorCard.chosen} correctAnswer={errorCard.correctAnswer} explain={errorCard.explain} onDismiss={() => setErrorCard(null)} />}<p className="interaction-hint muted mt8">{answered ? (picked === quizCorrect ? '答对了，正在进入下一题…' : 'Enter 重新作答') : (quizOptions.length > 1 ? `数字键 1–${quizOptions.length} 选择答案` : '')}</p></div>}
+    {activeNode && !finished && <div className="card"><div className="card-title"><Pin size={16} /> {activeNode.name}<button className="btn btn-ghost" style={{ marginLeft: 'auto' }} onClick={() => setActiveNode(null)}>返回技能树</button></div><p className="muted">{activeNode.desc}</p>{activeNode.examples.map((example) => <div key={example} className="explain-box mt8"><MessageSquare size={14} aria-hidden /> {example}</div>)}<div className="mt14">第 {qIndex + 1} / {activeNode.quizzes.length} 题</div><div className="options mt8">{quizView.map((option, index) => { let className = 'option'; if (answered) { if (option.correct) className += ' correct'; else if (picked === option.sourceIndex) className += ' wrong' } return <button key={option.text} className={className} disabled={answered} onClick={() => onPick(index)}><kbd aria-hidden="true">{index + 1}</kbd><span>{option.text}</span></button> })}</div>{answered && <div className="explain-box">{activeNode.quizzes[qIndex].explain}{picked !== activeNode.quizzes[qIndex].answer && <div className="mt8"><button className="btn btn-ghost" onClick={retryQuestion}>重新作答</button></div>}</div>}{errorCard && <ErrorCard tag={errorCard.tag} chosen={errorCard.chosen} correctAnswer={errorCard.correctAnswer} explain={errorCard.explain} onDismiss={() => setErrorCard(null)} />}<p className="interaction-hint muted mt8">{answered ? (picked === quizCorrect ? '答对了，正在进入下一题…' : 'Enter 重新作答') : (quizOptions.length > 1 ? `数字键 1–${quizOptions.length} 选择答案` : '')}</p></div>}
     {finished && <div className="card center"><CircleCheck size={44} aria-hidden /><h2>技能点亮成功！</h2><p className="muted">{activeNode?.name} 已加入你的语法技能树。</p><button className="btn btn-primary mt14" onClick={() => setActiveNode(null)}>返回技能树</button></div>}
   </div>
 }

@@ -225,6 +225,31 @@ export interface DailyStat {
   modules: Record<ModuleKey, number>
 }
 
+// ---------- 错题本 ----------
+/**
+ * 一条错题记录。
+ * 内容 id 由各模块自己给（词条 id、语法节点#题号、句子题 id……），
+ * 同一条内容重复答错只累加 count，不新增条目。
+ */
+export interface MistakeRecord {
+  /** `${module}:${contentId}`，同一道题同一条记录 */
+  id: string
+  module: ModuleKey
+  /** 内容 id（词条 / 语法节点#题号 / 句子题 / 听力段 / 写作任务 / 章节节点） */
+  contentId: string
+  /** 题干或原句，用来在回顾列表里认出是哪一题 */
+  prompt: string
+  chosen?: string
+  correctAnswer?: string
+  /** 错因标签，取值见 engine/errorRouting.ts 的 ERROR_TAGS */
+  tag: string
+  explain?: string
+  /** 累计答错次数 */
+  count: number
+  firstAt: number
+  lastAt: number
+}
+
 // ---------- 进度 ----------
 export interface Progress {
   id: number
@@ -233,6 +258,8 @@ export interface Progress {
   cards: string[]
   narrative: Record<string, string>
   writingLog: { taskId: string; score: number; time: number }[]
+  /** 待回顾的错题（最多 80 条，按最近答错时间倒序） */
+  mistakes?: MistakeRecord[]
   // 模块完成度计数
   sentencePassed: number
   listeningPassed: number

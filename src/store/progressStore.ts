@@ -15,6 +15,7 @@ import { SoundBank } from '../engine/audio'
 import { updateStreak } from '../engine/streak'
 import { applyChapterResult, starsForResult, convertStardustToEnergy, CHAPTERS as ROUTE_CHAPTERS } from '../engine/chapters'
 import { ACTIVE_VOCAB_TARGET, planetLevelFromEnergy, vocabMasteryScore } from '../engine/progression'
+import { recordMistake, resolveMistake, type MistakeInput } from '../engine/mistakes'
 import { deriveProfileProgress } from './progressModel'
 import {
   WORDS,
@@ -225,7 +226,9 @@ interface ProgressStore {
   retryInit: () => Promise<void>
   startSession: (module: ModuleKey) => Promise<void>
   finishSession: () => Promise<void>
-  answer: (opts: { module: ModuleKey; wordId?: string; correct: boolean; timeMs: number; medianMs?: number; hintUsed?: boolean }) => Promise<void>
+  answer: (opts: { module: ModuleKey; wordId?: string; correct: boolean; timeMs: number; medianMs?: number; hintUsed?: boolean; mistake?: MistakeInput }) => Promise<void>
+  /** 同一条内容再次答对时移出错题本。 */
+  clearMistake: (module: ModuleKey, contentId: string) => Promise<void>
   completeGrammarNode: (nodeId: string) => Promise<void>
   passSentence: (questId?: string) => Promise<void>
   passListening: (itemId?: string) => Promise<void>
@@ -236,6 +239,8 @@ interface ProgressStore {
   convertStardust: () => Promise<void>
   toggleZen: () => void
   updateSettings: (patch: Partial<UserProfile['settings']>) => Promise<void>
+  /** 每日目标（XP）：设置面板里可调，范围 40–400，取 10 的整数倍。 */
+  updateDailyGoal: (goal: number) => Promise<void>
   clearFeedback: () => void
 }
 
@@ -357,7 +362,7 @@ export const useProgress = create<ProgressStore>((set, get) => ({
     set({ session: { ...emptySession } })
   }),
 
-  answer: ({ module, wordId, correct, timeMs, medianMs, hintUsed }) => serializeWrite(async (now) => {
+  answer: ({ module, wordId, correct, timeMs, medianMs, hintUsed, mistake }) => serializeWrite(async (now) => {
     const s = get()
     if (!s.profile || !s.planet || !s.progress) return
     const med = medianMs ?? median(rollingTimes)
@@ -428,6 +433,13 @@ export const useProgress = create<ProgressStore>((set, get) => ({
 
     // 雷达
     const progress = { ...s.progress }
+    // 错题本：答错时写入（同一题累加），答对时把同一题移出。
+    // 只依赖调用方给的 contentId，缺省时保持原样，避免误删别的记录。
+    if (mistake && correct) {
+      progress.mistakes = resolveMistake(progress.mistakes ?? [], mistake.module, mistake.contentId)
+    } else if (mistake && !correct) {
+      progress.mistakes = recordMistake(progress.mistakes ?? [], mistake, now)
+    }
     if (progress) {
       progress.radar = computeRadar(progress, userWords)
     }
@@ -491,6 +503,18 @@ export const useProgress = create<ProgressStore>((set, get) => ({
       await db.dailyStats.put(daily)
     })
     set({ profile, planet, daily })
+  }),
+
+  clearMistake: (module, contentId) => serializeWrite(async () => {
+    const s = get()
+    if (!s.progress) return
+    const current = s.progress.mistakes ?? []
+    const next = resolveMistake(current, module, contentId)
+    // 没有命中就不落库，避免一次无意义的写事务。
+    if (next.length === current.length) return
+    const progress: Progress = { ...s.progress, mistakes: next }
+    await db.progress.put(progress)
+    set({ progress })
   }),
 
   completeGrammarNode: (nodeId) => serializeWrite(async () => {
@@ -619,6 +643,16 @@ export const useProgress = create<ProgressStore>((set, get) => ({
     SoundBank.setVolume(next.settings.volume)
     SoundBank.setMuted(next.settings.zenMode)
     set({ profile: next })
+  }),
+
+  updateDailyGoal: (goal) => serializeWrite(async () => {
+    const planet = get().planet
+    if (!planet || !Number.isFinite(goal)) return
+    // 夹到 40–400 并取 10 的整数倍：太小的目标没有挑战，太大的目标只会制造挫败。
+    const next = { ...planet, dailyGoal: Math.max(40, Math.min(400, Math.round(goal / 10) * 10)) }
+    if (next.dailyGoal === planet.dailyGoal) return
+    await db.planet.put(next)
+    set({ planet: next })
   }),
 
   clearFeedback: () => set({ feedback: null })

@@ -160,12 +160,29 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
     pending.current = { wordId: question.word.id, total: (state.userWords.find(word => word.wordId === question.word.id)?.total ?? 0) + 1, correct, level: levelFromXp(state.profile?.totalXp ?? 0) }
     setPicked(value)
     // 答错时叠加一层离线错因路由（规则引擎，无需网络）。
-    setWrongAnswer(correct ? null : { tag: inferErrorTag({ module: 'vocab', mode: question.mode, word: question.word.word, chosen: value, correctAnswer: question.mode === 'spelling' ? question.word.word : question.options.find(option => option.correct)?.text }), chosen: value })
+    const correctAnswer = question.mode === 'spelling' ? question.word.word : question.options.find(option => option.correct)?.text
+    const tag = inferErrorTag({ module: 'vocab', mode: question.mode, word: question.word.word, chosen: value, correctAnswer })
+    setWrongAnswer(correct ? null : { tag, chosen: value })
     if (!correct && !requeued.current.has(question.word.id)) {
       requeued.current.add(question.word.id)
       requeueAt.current = reserveRetry(requeueAt.current, index, target, question.word.id, randomSource.current)
     }
-    void state.answer({ module: 'vocab', wordId: question.word.id, correct, timeMs: elapsedSince(timer.current, performance.now()), hintUsed: hintUsed.current })
+    void state.answer({
+      module: 'vocab',
+      wordId: question.word.id,
+      correct,
+      timeMs: elapsedSince(timer.current, performance.now()),
+      hintUsed: hintUsed.current,
+      mistake: {
+        module: 'vocab',
+        contentId: question.word.id,
+        prompt: question.word.word,
+        chosen: value,
+        correctAnswer,
+        tag,
+        explain: question.word.phrases?.[0]?.translation
+      }
+    })
   }
 
   function advance() {

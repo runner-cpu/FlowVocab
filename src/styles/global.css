@@ -653,6 +653,11 @@ input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color:
 
 .return-strip .btn { display: inline-flex; align-items: center; gap: 7px; padding: 8px 12px; font-size: var(--fs-xs); }
 
+/* 错题回看入口：与复习卡同一视觉语言，但换成蓝色信息色，避免和「到期复习」混淆。 */
+.mistake-strip { border-color: rgba(63,127,214,.28); background: rgba(63,127,214,.07); }
+
+.mistake-strip .return-mark { background: rgba(63,127,214,.14); color: #2F6FC0; }
+
 .track-switcher {
   display: grid; grid-template-columns: minmax(180px, .7fr) 1.3fr; align-items: center; gap: 20px;
   padding: 16px 18px; margin: 0 0 18px; border: 1px solid var(--line); border-radius: var(--r-2xl);
@@ -1382,6 +1387,58 @@ button.review-load-item:disabled { cursor: default; }
 
 .review-load-item.mint { border-color: rgba(22,184,138,.24); background: rgba(22,184,138,.07); }
 
+/* 错题回顾：一条一行，左侧模块色条用来在长列表里快速分区。 */
+.mistake-card { margin-top: 14px; }
+
+.mistake-intro { font-size: var(--fs-sm); }
+
+.mistake-empty { font-size: var(--fs-sm); line-height: 1.6; }
+
+.mistake-list { display: grid; gap: 8px; margin-top: 10px; list-style: none; padding: 0; }
+
+.mistake-row { display: flex; align-items: stretch; gap: 6px; }
+
+.mistake-main {
+  flex: 1; min-width: 0; display: flex; align-items: center; gap: 10px; text-align: left;
+  border: 1px solid var(--line); border-radius: var(--r-md); padding: 10px 12px;
+  background: var(--surface-soft); color: var(--ink); font: inherit; cursor: pointer;
+  transition: border-color var(--dur-fast) var(--ease-standard), transform var(--dur-fast) var(--ease-standard);
+}
+
+.mistake-main:hover { border-color: var(--accent-light); }
+
+.mistake-main:active { transform: scale(0.995); }
+
+.mistake-main:focus-visible, .mistake-dismiss:focus-visible { outline: 3px solid var(--focus-ring); outline-offset: 2px; }
+
+.mistake-module { flex: 0 0 4px; align-self: stretch; border-radius: var(--r-pill); }
+
+.mistake-copy { flex: 1; min-width: 0; display: grid; gap: 3px; }
+
+.mistake-copy strong {
+  font-size: var(--fs-base); font-weight: 700; color: var(--ink);
+  overflow: hidden; text-overflow: ellipsis; white-space: nowrap;
+}
+
+.mistake-copy small { color: var(--muted); font-size: var(--fs-xs); }
+
+.mistake-dismiss {
+  flex: 0 0 auto; display: grid; place-items: center; width: 40px;
+  border: 1px solid var(--line); border-radius: var(--r-md); background: var(--card);
+  color: var(--muted); cursor: pointer;
+  transition: color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
+}
+
+.mistake-dismiss:hover { color: var(--err); border-color: rgba(234,67,53,.45); }
+
+.mistake-dismiss:active { transform: scale(0.95); }
+
+.mistake-actions { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+
+@media (max-width: 640px) {
+  .mistake-copy strong { white-space: normal; }
+}
+
 .word-forest { margin-top: 14px; }
 
 .forest-empty {
@@ -1579,6 +1636,8 @@ button.review-load-item:disabled { cursor: default; }
 .settings-range output { color: var(--accent-ink); }
 
 .settings-range input { grid-column: 1 / -1; width: 100%; accent-color: var(--accent-ink); }
+
+.settings-range .settings-hint { grid-column: 1 / -1; color: var(--muted); font-size: var(--fs-xs); font-weight: 400; line-height: 1.5; }
 
 .settings-check {
   display: flex; align-items: center; gap: 9px; color: var(--ink2); cursor: pointer;

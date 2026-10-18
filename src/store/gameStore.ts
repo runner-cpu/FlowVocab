@@ -1,6 +1,6 @@
 import { create } from 'zustand'
 import { readPreference, savePreference } from './preferences'
-import type { DifficultyLevel, LearningTrack } from '../types'
+import type { DifficultyLevel, LearningTrack, ModuleKey } from '../types'
 
 export type NavigablePageKey =
   | 'home'
@@ -23,6 +23,10 @@ interface GameUI {
   reviewWordLevel: DifficultyLevel | null
   reviewWord: (wordId: string, level?: DifficultyLevel) => void
   consumeReviewWord: () => void
+  /** 从错题回顾跳到非词汇模块时，携带要重练的那一题的定位信息。 */
+  reviewTarget: { module: ModuleKey; contentId: string } | null
+  reviewMistake: (module: ModuleKey, contentId: string) => void
+  consumeReviewTarget: () => void
   guideOpen: boolean
   openGuide: () => void
   closeGuide: () => void
@@ -85,6 +89,13 @@ export const useUI = create<GameUI>((set) => ({
     set({ page: 'vocab' })
   },
   consumeReviewWord: () => set({ reviewWordId: null, reviewWordLevel: null }),
+  reviewTarget: null,
+  reviewMistake: (module, contentId) => {
+    set({ reviewTarget: { module, contentId } })
+    writePageHash(module)
+    set({ page: module })
+  },
+  consumeReviewTarget: () => set({ reviewTarget: null }),
   guideOpen: typeof window !== 'undefined' && readPreference('flowvocab-first-run-complete') !== '1',
   openGuide: () => set({ guideOpen: true }),
   closeGuide: () => {

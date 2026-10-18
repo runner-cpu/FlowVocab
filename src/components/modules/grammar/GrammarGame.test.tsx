@@ -22,8 +22,9 @@ describe('grammar keyboard answering', () => {
     const options = await screen.findAllByRole('button', { name: /^(go|goes|went|going)$/ })
     expect(options).toHaveLength(4)
 
-    // 第 2 个选项是正确答案，按 2 应当直接判对。
-    fireEvent.keyDown(window, { key: '2' })
+    // 选项按题目种子打乱过，找正确项当前的实际位置，再按对应数字键。
+    const answerPosition = options.findIndex((option) => option.textContent?.includes('goes')) + 1
+    fireEvent.keyDown(window, { key: String(answerPosition) })
     await waitFor(() => expect(screen.getByText(/一般现在时，主语第三人称单数/)).toBeInTheDocument())
   })
 

@@ -26,6 +26,29 @@ export const SENTENCE_QUESTS: SentenceQuest[] = [
     ]
   },
   {
+    id: 'p3',
+    type: 'puzzle',
+    sentence: 'What surprised the teacher most was that the quiet student answered every question confidently.',
+    segments: [
+      { text: 'What surprised the teacher most', bucket: 'clause' },
+      { text: 'was', bucket: 'main' },
+      { text: 'that the quiet student answered every question', bucket: 'clause' },
+      { text: 'confidently', bucket: 'modifier' }
+    ]
+  },
+  {
+    id: 'p4',
+    type: 'puzzle',
+    sentence: 'The scientists who examined the samples concluded that the water had been polluted for years.',
+    segments: [
+      { text: 'The scientists', bucket: 'main' },
+      { text: 'who examined the samples', bucket: 'clause' },
+      { text: 'concluded', bucket: 'main' },
+      { text: 'that the water had been polluted', bucket: 'clause' },
+      { text: 'for years', bucket: 'modifier' }
+    ]
+  },
+  {
     id: 't1',
     type: 'translate',
     sentence: 'Not until the deadline did he finish the report.',

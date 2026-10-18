@@ -3,6 +3,7 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest'
 import { db } from './db'
 import { exportProgressBackup, importProgressBackup } from './backup'
 import { useProgress } from './progressStore'
+import { SENTENCE_QUESTS } from '../data/sentences'
 
 const profile = { id: 1, totalXp: 12, bestCombo: 3, streakDays: 2, lastStudyDate: null, claimedQuestDates: [], unlockedAchievements: [], createdAt: 1, settings: { zenMode: false, volume: .8, voiceRate: .9 } }
 const progress = { id: 1, legacySentenceFloor: 0, legacyListeningFloor: 0, radar: { vocab: 0, grammar: 0, sentence: 0, listening: 0, writing: 0, reading: 0 }, skillTree: {}, cards: [], narrative: {}, writingLog: [], sentencePassed: 0, listeningPassed: 0, writingDone: 0, writingScoreSum: 0, readingDone: 0 }
@@ -48,18 +49,19 @@ describe('local progress backup', () => {
   it('replaces every user table while retaining the lexical bank', async () => {
     const next = await exportProgressBackup()
     next.profile.totalXp = 99; next.userWords = []; next.dailyStats = []; next.sessions = []
-    next.progress.sentencePassed = 8; next.progress.legacySentenceFloor = 8; next.progress.radar = { vocab: 77, grammar: 66, sentence: 55, listening: 44, writing: 33, reading: 22 }; next.planet.energy = 88
+    next.progress.sentencePassed = SENTENCE_QUESTS.length + 4; next.progress.legacySentenceFloor = SENTENCE_QUESTS.length + 4; next.progress.radar = { vocab: 77, grammar: 66, sentence: 55, listening: 44, writing: 33, reading: 22 }; next.planet.energy = 88
     await importProgressBackup(next)
     expect(await db.userProfile.get(1)).toMatchObject({ totalXp: 99 })
     expect(await db.userWords.count()).toBe(0)
     expect(await db.dailyStats.count()).toBe(0)
     expect(await db.sessions.count()).toBe(0)
-    expect(await db.progress.get(1)).toMatchObject({ sentencePassed: 6 })
+    // 备份里的进度会被裁到当前内容库规模，避免恢复出比题库还多的「已通过」数。
+    expect(await db.progress.get(1)).toMatchObject({ sentencePassed: SENTENCE_QUESTS.length })
     expect((await db.progress.get(1))?.radar).toEqual(next.progress.radar)
     expect(await db.planet.get(1)).toMatchObject({ energy: 88 })
     expect(await db.wordBank.get('bank-1')).toMatchObject({ word: 'retain' })
     expect(useProgress.getState().profile?.totalXp).toBe(99)
-    expect(useProgress.getState().progress?.sentencePassed).toBe(6)
+    expect(useProgress.getState().progress?.sentencePassed).toBe(SENTENCE_QUESTS.length)
     expect(useProgress.getState().progress?.radar).toEqual(next.progress.radar)
   })
 

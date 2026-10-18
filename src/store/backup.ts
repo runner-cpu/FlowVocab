@@ -1,5 +1,6 @@
 import { db } from './db'
 import { normalizeSuccessfulReviews } from '../engine/forget'
+import { sanitizeMistakes } from '../engine/mistakes'
 import { pausePersistenceWrites, useProgress } from './progressStore'
 import type { DailyStat, ModuleKey, Planet, Progress, Session, UserProfile, UserWord } from '../types'
 
@@ -69,7 +70,12 @@ function normalizeProgress(value: unknown): Progress {
   if (value.chapterStars !== undefined) {
     if (!object(value.chapterStars) || !Object.entries(value.chapterStars).every(([id, stars]) => id.length > 0 && count(stars) && stars <= 3)) fail('chapterStars')
   }
-  return value as unknown as Progress
+  // 错题本是可选字段：旧备份没有它，损坏的条目直接丢掉而不是整份备份作废，
+  // 因为错题只是回顾用的辅助数据，不该阻止用户恢复真正重要的学习进度。
+  return {
+    ...(value as unknown as Progress),
+    mistakes: sanitizeMistakes(value.mistakes)
+  }
 }
 function normalizePlanet(value: unknown): Planet {
   if (!idOne(value) || !nonNegative(value.energy) || !count(value.level) || value.level > 10 || !nonNegative(value.lastActive) || !count(value.dailyGoal) || value.dailyGoal === 0) fail('planet')

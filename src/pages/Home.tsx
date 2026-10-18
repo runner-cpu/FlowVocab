@@ -1,4 +1,4 @@
-import { ArrowRight, BookOpen, BookOpenText, Check, Flame, GitBranch, Headphones, PenLine, Play, Puzzle, Sparkles, Star, Target, Trophy } from 'lucide-react'
+import { ArrowRight, BookOpen, BookOpenText, Check, ClipboardList, Flame, GitBranch, Headphones, PenLine, Play, Puzzle, Sparkles, Star, Target, Trophy } from 'lucide-react'
 import type { CSSProperties } from 'react'
 import { useUI } from '../store/gameStore'
 import { useProgress } from '../store/progressStore'
@@ -47,6 +47,8 @@ export default function Home() {
   const journey = JOURNEY.map(item => isModuleAvailable(track, item.module) ? item : { module: 'grammar' as const, title: '完成 3 次语法作答', target: 3, icon: GitBranch })
   const mapChapters = chapterView(CHAPTERS, progress?.chapterStars ?? {}, (module) => isModuleAvailable(track, module), track)
   const stardust = progress?.stardust ?? 0
+  /** 待回顾错题数：首页给一个入口，不必先去成长图谱找。 */
+  const mistakeCount = progress?.mistakes?.length ?? 0
 
   return <div className="adventure-home">
     <header className="mission-heading">
@@ -81,5 +83,7 @@ export default function Home() {
           style={{ '--scene-accent': meta.color } as CSSProperties} onClick={available ? () => go(key) : undefined}><ResponsiveSceneImage className="scene-visual" assetStem={scene.visual} sizes="(max-width: 640px) 100vw, (max-width: 900px) 50vw, 33vw" alt={`${scene.title}学习场景插画`} /><span className="scene-shade" /><span className="scene-index">0{index + 1}</span><span className="scene-icon" aria-hidden="true"><Icon size={19} /></span><span className="scene-copy"><small>{scene.eyebrow}</small><strong>{scene.title}</strong><em>{available ? scene.prompt : '此路线暂未开放'}</em></span><span className="scene-progress"><i style={{ width: `${mastery}%` }} /><small>{mastery}%</small></span><ArrowRight className="scene-arrow" size={18} /></SpotlightCard> })}</section>
 
     <section className="return-strip"><div className="return-mark"><Trophy size={22} /></div><div><h2>{dueWords > 0 ? `${dueWords} 张记忆卡正在等你` : '今天的复习卡已经清空'}</h2><p>{dueWords > 0 ? '先复习即将遗忘的内容，新知识才会真正留下。' : '可以探索新场景，明天我们会按记忆节奏再次相遇。'}</p></div><button className="btn btn-ghost" onClick={() => go('vocab')}>{dueWords > 0 ? '开始复习' : '继续探索'} <ArrowRight size={16} /></button></section>
+
+    {mistakeCount > 0 && <section className="return-strip mistake-strip"><div className="return-mark"><ClipboardList size={22} /></div><div><h2>{mistakeCount} 道错题等你回看</h2><p>错因、正确答案和讲解都留在成长图谱里，同一题再答对会自动移出。</p></div><button className="btn btn-ghost" onClick={() => go('dashboard')}>去回看 <ArrowRight size={16} /></button></section>}
   </div>
 }

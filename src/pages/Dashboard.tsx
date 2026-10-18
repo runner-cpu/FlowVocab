@@ -12,6 +12,7 @@ import SpotlightCard from '../components/ui/SpotlightCard'
 import ProgressionPanel from '../components/dashboard/ProgressionPanel'
 import { planetLevelFromEnergy } from '../engine/progression'
 import WordForest from '../components/dashboard/WordForest'
+import MistakeReview from '../components/dashboard/MistakeReview'
 import LearningEnginePanel from '../components/dashboard/LearningEnginePanel'
 import { findStoredWordLevel } from '../store/wordBank'
 import { useNow } from '../hooks/useNow'
@@ -102,6 +103,8 @@ export default function Dashboard() {
       </div>
 
       <WordForest words={userWords} onReview={reviewWord} onStart={() => go('vocab')} />
+
+      <MistakeReview />
 
       <div className="card">
         <div className="card-title"><Activity size={16} /> 难度流 · 心流质量</div>

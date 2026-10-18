@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
+import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { Check } from 'lucide-react'
 import { useProgress } from '../../../store/progressStore'
 import { LISTENING_ITEMS } from '../../../data/listening'
@@ -10,7 +10,10 @@ import type { LearningTrack, ListeningItem } from '../../../types'
 import DialogueMode from './DialogueMode'
 import { useChapterResult } from '../../game/ChapterShell'
 import GameHud from '../../game/GameHud'
+import ErrorCard from '../../game/ErrorCard'
 import { elapsedSince } from '../../../engine/sessionTiming'
+import { displayOptions } from '../../../engine/optionOrder'
+import { inferErrorTag, type ErrorTag } from '../../../engine/errorRouting'
 
 interface Recognition {
   lang: string
@@ -77,6 +80,9 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
   const [mode, setMode] = useState<ListeningMode>('dictation')
   const [dialogueSceneId, setDialogueSceneId] = useState(() => defaultDialogueSceneId(track))
   const [passedDialogueIds, setPassedDialogueIds] = useState<Set<string>>(() => new Set())
+  // 听力是六个模块里唯一没接错因卡的：答错只显示「本题有错误」。
+  // 它的错误几乎都来自漏听细节，用同一离线规则给出卡片并与其它模块保持一致。
+  const [errorCard, setErrorCard] = useState<{ tag: ErrorTag; chosen?: string; correctAnswer?: string; explain?: string } | null>(null)
   const chapterResult = useChapterResult()
   /** 本次进入模块的累计成绩，够章节门槛才结算。 */
   const tally = useRef({ total: 0, correct: 0 })
@@ -116,6 +122,7 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
     setRecognized('')
     setListening(false)
     setSpeaking(false)
+    setErrorCard(null)
   }
   useEffect(() => {
     resetQuestion()
@@ -129,6 +136,22 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [track, contentKey])
   useEffect(() => { resetQuestion() }, [qIndex])
+
+  // 从错题回顾回到听力时，切回听写标签并直接定位到那道句子。
+  const reviewTarget = useUI((state) => state.reviewTarget)
+  const consumeReviewTarget = useUI((state) => state.consumeReviewTarget)
+  useEffect(() => {
+    if (!reviewTarget || reviewTarget.module !== 'listening') return
+    const index = selectedItems.findIndex((candidate) => candidate.id === reviewTarget.contentId)
+    consumeReviewTarget()
+    if (index < 0) return
+    setMode('dictation')
+    setQIndex(index)
+    setDone(false)
+    resetQuestion()
+    // resetQuestion 只读 ref 与 setter，不需要进入依赖列表。
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [reviewTarget, selectedItems, consumeReviewTarget])
 
   function speak() {
     if (!item || !ttsSupport) return
@@ -149,11 +172,27 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
     submitted.current = true
     const hits = alignWords(targetWords, transcript.split(/\s+/).map(clean).filter(Boolean))
     const ratio = hits.filter(Boolean).length / Math.max(hits.length, 1)
+    const correct = ratio >= .6
     setRecognized(transcript)
     setResult({ hits, ratio })
-    void answer({ module: 'listening', correct: ratio >= .6, timeMs: elapsedSince(t0.current, performance.now()) })
-    tally.current = { total: tally.current.total + 1, correct: tally.current.correct + (ratio >= .6 ? 1 : 0) }
-    if (ratio >= .6) void passListening(item.id)
+    if (!correct) setErrorCard({ tag: 'listening-detail', chosen: transcript || undefined, correctAnswer: item.text, explain: '跟读匹配按识别文字逐词比对；漏听或吞音会让关键词缺失，先慢速重听一遍再跟读。' })
+    void answer({
+      module: 'listening',
+      correct,
+      timeMs: elapsedSince(t0.current, performance.now()),
+      mistake: {
+        module: 'listening',
+        contentId: item.id,
+        prompt: item.text,
+        chosen: transcript || undefined,
+        correctAnswer: item.text,
+        // 听写的错基本都是漏听/听错细节，统一走 listening-detail 标签订口。
+        tag: 'listening-detail',
+        explain: '跟读匹配只看识别文字与参考句的重合度，慢速重听一遍再跟读通常能补齐漏听的词。'
+      }
+    })
+    tally.current = { total: tally.current.total + 1, correct: tally.current.correct + (correct ? 1 : 0) }
+    if (correct) void passListening(item.id)
   }
   function startListen() {
     if (!RecognitionCtor || !item || submitted.current || listening || saveError) return
@@ -190,18 +229,42 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
     if (qIndex + 1 >= selectedItems.length) setDone(true)
     else setQIndex(qIndex + 1)
   }
-  function pick(blankIndex: number, optionIndex: number) {
+  function pick(blankIndex: number, displayIndex: number) {
     if (!item || answered || submitted.current || saveError || picked[blankIndex] !== undefined) return
     const blank = item.blanks.find(candidate => candidate.index === blankIndex)
     if (!blank) return
+    // 展示顺序被打乱过，这里把展示位映射回选项原文下标，判定与记录都仍用原下标。
+    const optionIndex = blankViews.find(view => view.blankIndex === blankIndex)?.options[displayIndex]?.sourceIndex
+    if (optionIndex === undefined) return
     const choices = { ...picked, [blankIndex]: optionIndex }
     setPicked(choices)
     if (!item.blanks.every(candidate => choices[candidate.index] !== undefined)) return
     const correct = item.blanks.every(candidate => candidate.options[choices[candidate.index]] === candidate.answer)
     submitted.current = true
     setAnswered(true)
-    void answer({ module: 'listening', correct, timeMs: elapsedSince(t0.current, performance.now()) })
+    const chosenText = item.blanks.map(candidate => candidate.options[choices[candidate.index]]).join(' / ')
+    const correctText = item.blanks.map(candidate => candidate.answer).join(' / ')
+    void answer({
+      module: 'listening',
+      correct,
+      timeMs: elapsedSince(t0.current, performance.now()),
+      mistake: {
+        module: 'listening',
+        contentId: item.id,
+        prompt: item.text,
+        chosen: chosenText,
+        correctAnswer: correctText,
+        tag: 'listening-detail',
+        explain: '选词题的答案就藏在原句里，先慢速听一遍抓关键词，再逐词核对。'
+      }
+    })
     tally.current = { total: tally.current.total + 1, correct: tally.current.correct + (correct ? 1 : 0) }
+    setErrorCard(correct ? null : {
+      tag: inferErrorTag({ module: 'listening', prompt: item.text, options: item.blanks.flatMap(blank => blank.options), chosen: chosenText, correctAnswer: correctText }),
+      chosen: chosenText,
+      correctAnswer: correctText,
+      explain: '选词题的答案就藏在原句里，先慢速听一遍抓关键词，再逐词核对。'
+    })
     if (correct) {
       void passListening(item.id)
       advanceTimer.current = window.setTimeout(() => {
@@ -209,6 +272,14 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
       }, 1100)    }
   }
   const allCorrect = !!item && item.blanks.every(blank => blank.options[picked[blank.index]] === blank.answer)
+  // 每个挖空单独按「句子 id + 挖空序号」重排，正确词不再固定在第一个按钮。
+  const blankViews = useMemo(
+    () => (item?.blanks ?? []).map(blank => ({
+      blankIndex: blank.index,
+      options: displayOptions(blank.options, blank.options.indexOf(blank.answer), `${item?.id ?? 'item'}:${blank.index}`)
+    })),
+    [item]
+  )
 
   function selectMode(next: ListeningMode) {
     if (next !== mode) chapterResult.report(tally.current.total, tally.current.correct)
@@ -283,14 +354,16 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
       {!ttsSupport && <p className="muted mt8">浏览器不支持朗读。原句：{item.text}</p>}
       <div className="sentence-blanks" lang="en">{result ? targetWords.map((word, i) => <span key={i} className={`lm-word ${result.hits[i] ? 'lm-hit' : 'lm-miss'}`} aria-label={`${word}，${result.hits[i] ? '已匹配' : '未匹配'}`}>{word}</span>) : listening ? '请读出你听到的句子' : '播放原句后开始跟读'}</div>
       {result && <div className="score-report" role="status"><strong>命中 {Math.round(result.ratio * 100)}% {result.ratio >= .6 ? <><Check size={14} aria-hidden /> 点亮本句</> : '未达标，可重试'}</strong><p>识别结果：{recognized || '未识别到内容'}</p><p lang="en">原句：{item.text}</p><p className="muted">按识别文字匹配，结果不代表发音评分。</p><button className="btn btn-ghost mt8" onClick={resetQuestion} disabled={!!saveError}>再试一次</button><button className="btn btn-primary mt8" onClick={next} disabled={!!saveError}>{qIndex + 1 >= selectedItems.length ? '完成本轮' : '下一句'}</button></div>}
+      {errorCard && <ErrorCard tag={errorCard.tag} chosen={errorCard.chosen} correctAnswer={errorCard.correctAnswer} explain={errorCard.explain} onDismiss={() => setErrorCard(null)} />}
     </> : <>
       <p className="muted mt8">选出原句中的单词。{!ttsSupport && '当前浏览器不支持朗读，可展开原句进行阅读练习。'}</p>
       {!ttsSupport && <details className="explain-box"><summary>查看原句</summary><p lang="en">{item.text}</p></details>}
       <div className="sentence-blanks" lang="en">{targetWords.map((word, index) => { const blank = item.blanks.find(candidate => candidate.index === index); return <span key={index}>{blank ? picked[index] !== undefined ? blank.options[picked[index]] : '_____' : word} </span> })}</div>
-      {item.blanks.map(blank => <div key={blank.index} className="word-options" role="group" aria-label={`第 ${blank.index + 1} 个词`}>
-        {blank.options.map((option, index) => <button key={option} className={`btn ${picked[blank.index] !== undefined && option === blank.answer ? 'btn-success' : 'btn-ghost'}`} disabled={picked[blank.index] !== undefined || !!saveError} onClick={() => pick(blank.index, index)}>{option}</button>)}
+      {blankViews.map(view => <div key={view.blankIndex} className="word-options" role="group" aria-label={`第 ${view.blankIndex + 1} 个词`}>
+        {view.options.map((option, index) => <button key={option.text} className={`btn ${picked[view.blankIndex] !== undefined && option.correct ? 'btn-success' : 'btn-ghost'}`} disabled={picked[view.blankIndex] !== undefined || !!saveError} onClick={() => pick(view.blankIndex, index)}>{option.text}</button>)}
       </div>)}
       {answered && <div className="score-report" role="status"><strong>{allCorrect ? '回答正确' : '本题有错误，请继续练习。'}</strong>{!allCorrect && <button className="btn btn-primary mt8" onClick={resetQuestion} disabled={!!saveError}>再试一次</button>}<button className="btn btn-ghost mt8" onClick={next} disabled={!!saveError}>{allCorrect ? '下一句' : '跳过本题'}</button></div>}
+      {errorCard && <ErrorCard tag={errorCard.tag} chosen={errorCard.chosen} correctAnswer={errorCard.correctAnswer} explain={errorCard.explain} onDismiss={() => setErrorCard(null)} />}
     </>}
     <p className="muted mt14">第 {qIndex + 1} / {selectedItems.length} 句</p>
   </div></>}

@@ -51,7 +51,7 @@ describe('writing order movement', () => {
 describe('single-step undo', () => {
   beforeEach(() => {
     vi.spyOn(Math, 'random').mockReturnValue(0)
-    useUI.setState({ track: 'cet' })
+    useUI.setState({ track: 'cet', reviewTarget: null })
     useProgress.setState({
       answer: vi.fn().mockResolvedValue(undefined),
       passSentence: vi.fn().mockResolvedValue(undefined),
@@ -416,5 +416,72 @@ describe('offline error-reason layer', () => {
     expect(card.textContent).toContain(task.explain!)
     fireEvent.click(screen.getByRole('button', { name: '收起错因卡片' }))
     expect(document.querySelector('.error-card')).toBeNull()
+  })
+})
+
+describe('mistake review deep links', () => {
+  beforeEach(() => {
+    vi.spyOn(Math, 'random').mockReturnValue(0)
+    useUI.setState({ track: 'cet', reviewTarget: null })
+    useProgress.setState({
+      answer: vi.fn().mockResolvedValue(undefined),
+      passSentence: vi.fn().mockResolvedValue(undefined),
+      submitWriting: vi.fn().mockResolvedValue(undefined),
+      completeGrammarNode: vi.fn().mockResolvedValue(undefined),
+      completeReading: vi.fn().mockResolvedValue(undefined),
+      passListening: vi.fn().mockResolvedValue(undefined)
+    })
+  })
+  afterEach(() => { cleanup(); vi.restoreAllMocks() })
+
+  it('lands on the exact grammar node and question', async () => {
+    useUI.setState({ reviewTarget: { module: 'grammar', contentId: 'relative-pronoun#1' } })
+    render(createElement(GrammarGame))
+    // 第 2 题的四个选项都是关系代词；题号能证明落点不是节点首页。
+    expect(await screen.findByRole('button', { name: /which/ })).toBeInTheDocument()
+    expect(screen.getByText('第 2 / 2 题')).toBeInTheDocument()
+    expect(useUI.getState().reviewTarget).toBeNull()
+  })
+
+  it('jumps to the recorded sentence quest', async () => {
+    useUI.setState({ reviewTarget: { module: 'sentence', contentId: 't2' } })
+    render(createElement(SentenceGame))
+    expect(screen.getByText("It is generally believed that reading widely broadens one's mind.")).toBeInTheDocument()
+    expect(screen.getByText('6 / 8')).toBeInTheDocument()
+  })
+
+  it('opens the recorded listening sentence in dictation mode', async () => {
+    useUI.setState({ reviewTarget: { module: 'listening', contentId: 'l4' } })
+    render(createElement(ListeningGame))
+    expect(await screen.findByText(/half past seven/)).toBeInTheDocument()
+    expect(screen.getByText('第 4 / 8 句')).toBeInTheDocument()
+  })
+
+  it('explains a listening mistake with the same offline rule card as other modules', () => {
+    useUI.setState({ track: 'cet', reviewTarget: null })
+    render(createElement(ListeningGame))
+    fireEvent.click(screen.getByRole('button', { name: 'opened' }))
+    const card = document.querySelector('.error-card') as HTMLElement | null
+    expect(card).not.toBeNull()
+    expect(card!.getAttribute('data-error-tag')).toBe('listening-detail')
+    expect(card!.querySelector('.error-card-answers')?.textContent).toContain('opened')
+    expect(card!.querySelector('.error-card-answers')?.textContent).toContain('opens')
+    fireEvent.click(screen.getByRole('button', { name: '收起错因卡片' }))
+    expect(document.querySelector('.error-card')).toBeNull()
+  })
+
+  it('opens the recorded writing task', async () => {
+    useUI.setState({ reviewTarget: { module: 'writing', contentId: 'w-err-3' } })
+    render(createElement(WritingGame))
+    // 原句与错误选项都含 more taller，这里只要求原句已被打开。
+    expect((await screen.findAllByText(/more taller/)).length).toBeGreaterThan(0)
+    expect(screen.getAllByText(/比较级冗余/).length).toBeGreaterThan(0)
+  })
+
+  it('restores the recorded reading chapter node with its quiz', async () => {
+    useUI.setState({ reviewTarget: { module: 'reading', contentId: 'ch3:n2b' } })
+    render(createElement(ReadingGame))
+    expect(await screen.findByText(/三短三长三短/)).toBeInTheDocument()
+    expect(screen.getByText(/考点题/)).toBeInTheDocument()
   })
 })

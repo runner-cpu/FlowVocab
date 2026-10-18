@@ -8,7 +8,9 @@ const MAX_BACKUP_BYTES = 10 * 1024 * 1024
 
 export default function SettingsPanel({ onClose, opener }: { onClose: () => void; opener?: HTMLElement | null }) {
   const profile = useProgress((state) => state.profile)
+  const planet = useProgress((state) => state.planet)
   const updateSettings = useProgress((state) => state.updateSettings)
+  const updateDailyGoal = useProgress((state) => state.updateDailyGoal)
   const durable = useProgress((state) => state.durableStorage)
   const [resetting, setResetting] = useState(false)
   const [resetInFlight, setResetInFlight] = useState(false)
@@ -74,6 +76,7 @@ export default function SettingsPanel({ onClose, opener }: { onClose: () => void
       <header><div><p>本地优先</p><h2 id="settings-title">学习设置</h2></div><button className="settings-close" onClick={close} aria-label="关闭设置"><X size={18} /></button></header>
       <div className="settings-range"><label htmlFor="settings-volume">音效音量</label> <output>{Math.round(settings.volume * 100)}%</output><input id="settings-volume" type="range" min="0" max="1" step=".05" value={settings.volume} onChange={(event) => void updateSettings({ volume: Number(event.target.value) })} /></div>
       <div className="settings-range"><label htmlFor="settings-rate">语音速度</label> <output>{settings.voiceRate.toFixed(1)}x</output><input id="settings-rate" type="range" min=".6" max="1.4" step=".1" value={settings.voiceRate} onChange={(event) => void updateSettings({ voiceRate: Number(event.target.value) })} /></div>
+      <div className="settings-range"><label htmlFor="settings-goal">每日目标</label> <output>{planet?.dailyGoal ?? 100} XP</output><input id="settings-goal" type="range" min="40" max="400" step="10" value={planet?.dailyGoal ?? 100} onChange={(event) => void updateDailyGoal(Number(event.target.value))} /><small className="settings-hint">按自己的节奏定；目标只影响首页进度环，不会改变任何评分。</small></div>
       <label className="settings-check"><input type="checkbox" checked={settings.zenMode} onChange={(event) => void updateSettings({ zenMode: event.target.checked })} /> 安静模式（关闭音效）</label>
       <p className="settings-status" role="status">{durable === null ? '正在确认离线存储…' : durable ? '已请求持久离线存储' : '浏览器未授予持久离线存储'}</p>
       {message && <p role="alert" className="settings-message">{message}</p>}

@@ -10,6 +10,7 @@ import GameHud from '../../game/GameHud'
 import ErrorCard from '../../game/ErrorCard'
 import { useChapterResult } from '../../game/ChapterShell'
 import { inferErrorTag, type ErrorTag } from '../../../engine/errorRouting'
+import { displayOptions } from '../../../engine/optionOrder'
 import { useOptionKeyboard } from '../../../hooks/useOptionKeyboard'
 
 function shuffle<T>(values: T[]): T[] {
@@ -60,6 +61,22 @@ export default function WritingGame() {
     startedAt.current = performance.now()
   }, [track])
   useEffect(() => { setOrder(initialOrder); setPreviousOrder(null); setPickErr(null); setResult(null); setErrorCard(null); setAnnouncement(''); startedAt.current = performance.now() }, [initialOrder])
+  // 从错题回顾回到写作模块时，直接打开那道题。
+  const reviewTarget = useUI((state) => state.reviewTarget)
+  const consumeReviewTarget = useUI((state) => state.consumeReviewTarget)
+  useEffect(() => {
+    if (!reviewTarget || reviewTarget.module !== 'writing') return
+    const index = tasks.findIndex((candidate) => candidate.id === reviewTarget.contentId)
+    consumeReviewTarget()
+    if (index < 0) return
+    setTaskIdx(index)
+    setPreviousOrder(null)
+    setPickErr(null)
+    setResult(null)
+    setErrorCard(null)
+    setAnnouncement('')
+    startedAt.current = performance.now()
+  }, [reviewTarget, tasks, consumeReviewTarget])
   const sortDone = task?.type === 'sort' && order.length === (task.segments?.length ?? 0)
   const errDone = task?.type === 'error' && pickErr !== null
 
@@ -81,18 +98,37 @@ export default function WritingGame() {
     // 判定失败时叠加离线错因路由；判定通过或重新提交时清空，同一时刻最多一张错因卡。
     const chosen = pickErr !== null ? task.options?.[pickErr] : undefined
     const correctAnswer = task.answer !== undefined ? task.options?.[task.answer] : undefined
-    setErrorCard(pass ? null : { tag: inferErrorTag({ module: 'writing', prompt: task.prompt, sentence: task.sentence, options: task.options, chosen, correctAnswer, explain: task.explain }), chosen, correctAnswer, explain: task.explain })
-    void answer({ module: 'writing', correct: pass, timeMs: elapsedSince(startedAt.current, performance.now()) }); void submitWriting(task.id, pass ? 5 : 1)
+    const tag = inferErrorTag({ module: 'writing', prompt: task.prompt, sentence: task.sentence, options: task.options, chosen, correctAnswer, explain: task.explain })
+    setErrorCard(pass ? null : { tag, chosen, correctAnswer, explain: task.explain })
+    void answer({
+      module: 'writing',
+      correct: pass,
+      timeMs: elapsedSince(startedAt.current, performance.now()),
+      mistake: {
+        module: 'writing',
+        contentId: task.id,
+        prompt: task.sentence ?? task.prompt,
+        chosen,
+        correctAnswer,
+        tag,
+        explain: task.explain
+      }
+    }); void submitWriting(task.id, pass ? 5 : 1)
     tally.current = { total: tally.current.total + 1, correct: tally.current.correct + (pass ? 1 : 0) }
     chapterResult.report(tally.current.total, tally.current.correct)
   }
   // 改错题只有一个动作（选错项 → 提交），数字键先选中，Enter 提交；
   // 排序题的 Enter 已经归「提交判定」按钮，这里不再接管。
-  const errorOptions = task?.type === 'error' ? task.options ?? [] : []
+  // 选项按题目 id 重排，正确改法不再固定在第一位；pickErr 仍存原始下标，判定逻辑不变。
+  const errorView = useMemo(
+    () => (task?.type === 'error' && task.options ? displayOptions(task.options, task.answer ?? 0, task.id) : []),
+    [task]
+  )
+  const errorOptions = errorView
   useOptionKeyboard({
     enabled: !!task && task.type === 'error' && !result,
     count: errorOptions.length,
-    onPick: (index) => { setPickErr(index); setErrorCard(null) },
+    onPick: (index) => { setPickErr(errorView[index]?.sourceIndex ?? null); setErrorCard(null) },
     onConfirm: pickErr !== null ? submit : undefined
   })
 
@@ -109,7 +145,7 @@ export default function WritingGame() {
       {result && <div className={`score-report ${result.pass ? '' : 'miss'}`}><strong>{result.pass ? <><Check size={14} aria-hidden /> 排序正确！</> : <><X size={14} aria-hidden /> 顺序有误</>}</strong><div className="ex-eg mt8"><Lightbulb size={14} aria-hidden /> {task.explain}</div></div>}
       {errorCard && <ErrorCard tag={errorCard.tag} chosen={errorCard.chosen} correctAnswer={errorCard.correctAnswer} explain={errorCard.explain} onDismiss={() => setErrorCard(null)} />}
     </>}
-    {task.type === 'error' && <><div className="explain-box mt8"><div className="ex-eg">“{task.sentence}”</div></div><div className="options mt14">{(task.options ?? []).map((option, index) => { let className = 'option'; if (result) { if (index === task.answer) className += ' correct'; else if (pickErr === index) className += ' wrong' } else if (pickErr === index) className += ' picked'; return <button key={index} className={className} disabled={!!result} onClick={() => { setPickErr(index); setErrorCard(null) }}><kbd aria-hidden="true">{index + 1}</kbd><span>{option}</span></button> })}</div>{!result && <p className="interaction-hint muted mt8">数字键 1–{(task.options ?? []).length} 选中要改的位置{pickErr !== null ? ' · Enter 提交判定' : ''}</p>}{result && <div className={`score-report ${result.pass ? '' : 'miss'}`}><strong>{result.pass ? <><Check size={14} aria-hidden /> 改对了！</> : <><X size={14} aria-hidden /> 再想想</>}</strong><div className="ex-eg mt8"><Lightbulb size={14} aria-hidden /> {task.explain}</div></div>}{errorCard && <ErrorCard tag={errorCard.tag} chosen={errorCard.chosen} correctAnswer={errorCard.correctAnswer} explain={errorCard.explain} onDismiss={() => setErrorCard(null)} />}</>}
+    {task.type === 'error' && <><div className="explain-box mt8"><div className="ex-eg">“{task.sentence}”</div></div><div className="options mt14">{errorView.map((option, index) => { let className = 'option'; if (result) { if (option.correct) className += ' correct'; else if (pickErr === option.sourceIndex) className += ' wrong' } else if (pickErr === option.sourceIndex) className += ' picked'; return <button key={option.text} className={className} disabled={!!result} onClick={() => { setPickErr(option.sourceIndex); setErrorCard(null) }}><kbd aria-hidden="true">{index + 1}</kbd><span>{option.text}</span></button> })}</div>{!result && <p className="interaction-hint muted mt8">数字键 1–{errorView.length} 选中要改的位置{pickErr !== null ? ' · Enter 提交判定' : ''}</p>}{result && <div className={`score-report ${result.pass ? '' : 'miss'}`}><strong>{result.pass ? <><Check size={14} aria-hidden /> 改对了！</> : <><X size={14} aria-hidden /> 再想想</>}</strong><div className="ex-eg mt8"><Lightbulb size={14} aria-hidden /> {task.explain}</div></div>}{errorCard && <ErrorCard tag={errorCard.tag} chosen={errorCard.chosen} correctAnswer={errorCard.correctAnswer} explain={errorCard.explain} onDismiss={() => setErrorCard(null)} />}</>}
     <div className="progress-strip mt14"><button className="btn btn-primary" onClick={submit} disabled={!sortDone && !errDone}>{result ? '已判定' : '提交判定'}</button>{result && tasks.length > 0 && <button className="btn btn-ghost" onClick={() => setTaskIdx((taskIdx + 1) % tasks.length)}>{taskIdx + 1 >= tasks.length ? '再来一轮' : <><span>下一题</span> <ArrowRight size={14} aria-hidden /></>}</button>}</div>
   </div></div>
 }
