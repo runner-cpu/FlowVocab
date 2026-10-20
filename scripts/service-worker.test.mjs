@@ -60,5 +60,15 @@ test('keeps the freshly generated versioned caches during activation', async () 
 })
 
 test('does not force an update into an open practice session', () => {
-  assert.doesNotMatch(source, /self\.skipWaiting\(\)/)
+  // 只有「没有练习中的页面」或用户点「立即更新」时才允许 skipWaiting；
+  // 无条件调用会让所有打开的练习页在下次导航时被换掉。
+  const installBlock = source.slice(source.indexOf("self.addEventListener('install'"), source.indexOf("self.addEventListener('message'"))
+  assert.match(installBlock, /#\/module\//, '安装阶段必须先检查是否有练习页')
+  assert.match(installBlock, /skipWaiting/)
+  assert.match(source, /addEventListener\('message'[\s\S]*SKIP_WAITING[\s\S]*skipWaiting/)
+})
+
+test('serves navigations network-first so deployments are visible', () => {
+  assert.match(source, /request\.mode === 'navigate'[\s\S]*networkFirst/)
+  assert.doesNotMatch(source, /isStaticAsset = \(request, pathname\) => request\.mode === 'navigate'/)
 })

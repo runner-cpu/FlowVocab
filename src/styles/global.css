@@ -2168,3 +2168,28 @@ button.review-load-item:disabled { cursor: default; }
 .map-node-button:not(:disabled):active {
   transform: translateY(-1px) scale(0.99);
 }
+
+/* ===== 新版本提示 =====
+ * 部署新资源后 Service Worker 会进入 waiting；没有提示条时用户会长期停在旧页面。
+ * 固定在底部导航之上，不遮挡内容，也不抢焦点。 */
+.update-banner {
+  position: fixed; left: 50%; bottom: calc(var(--mobile-nav-h) + 16px); transform: translateX(-50%);
+  z-index: 90; display: flex; align-items: center; gap: 10px; max-width: min(560px, calc(100vw - 32px));
+  padding: 10px 12px 10px 14px; border-radius: var(--r-pill); border: 1px solid var(--accent);
+  background: var(--card); color: var(--ink); box-shadow: var(--shadow); font-size: var(--fs-sm);
+}
+
+.update-banner > svg { color: var(--accent-ink); flex: 0 0 auto; }
+
+.update-banner span { flex: 1; min-width: 0; }
+
+.update-banner .btn { white-space: nowrap; }
+
+.update-banner-later {
+  flex: 0 0 auto; display: grid; place-items: center; width: 28px; height: 28px; padding: 0;
+  border: 0; border-radius: var(--r-pill); background: transparent; color: var(--ink2); cursor: pointer;
+}
+
+@media (min-width: 861px) {
+  .update-banner { bottom: 20px; }
+}

@@ -10,6 +10,7 @@ const Dashboard = lazy(() => import('./pages/Dashboard'))
 const ModulePage = lazy(() => import('./pages/ModulePage'))
 import { SaveStatus } from './components/dashboard/ProgressionPanel'
 import FirstRunGuide from './components/onboarding/FirstRunGuide'
+import UpdateBanner from './components/system/UpdateBanner'
 import type { ModuleKey } from './types'
 
 const MODULE_KEYS: readonly ModuleKey[] = ['vocab', 'grammar', 'sentence', 'listening', 'writing', 'reading']
@@ -63,6 +64,7 @@ export default function App() {
       </main>
       <FeedbackFx />
       <FirstRunGuide />
+      <UpdateBanner />
     </div>
   )
 }

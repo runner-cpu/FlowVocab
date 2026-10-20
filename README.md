@@ -105,6 +105,13 @@ npm run preview
 ### 安装到桌面 / 主屏
 线上地址用 Chrome / Edge 打开后，地址栏右侧会出现安装图标；也可以打开「设置」面板，在「关于与许可」区点「安装到本机」。iPhone / iPad 需要在 Safari 里点「分享」→「添加到主屏幕」。安装后以独立窗口运行，断网仍可练习。应用图标（192 / 512 / maskable）与 iOS 的 apple-touch-icon 都由 `scripts/build-app-icons.py` 从矢量标记确定生成，分享预览图 `public/assets/social-card.png` 由 `scripts/build-social-card.py` 生成。
 
+### 更新到最新版本
+Service Worker 会预缓存整个应用外壳，因此发布新版本后旧标签页不会自己变。正确做法：
+
+1. 页面导航走网络优先，正常刷新一次就能拿到新的 `index.html`。
+2. 新版本在后台装好后通常直接接管；若当前有练习页打开，会停在 waiting，右下角出现「发现新版本」提示条，点「立即更新」切换，不会打断正在进行的练习。
+3. 如果仍看到旧界面，在 DevTools → Application → Service Workers 勾选 Update on reload，或点 Unregister 后刷新；也可以用无痕窗口打开线上地址，确认部署本身是否正常。
+
 ---
 
 ## 📚 词库与数据来源
