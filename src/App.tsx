@@ -47,11 +47,11 @@ export default function App() {
   const isModule = isModulePage(page)
 
   return (
-    <div className="app">
+    <div className={isModule ? 'app app-practice' : 'app'}>
       <a className="skip-link" href="#main-content" onClick={event => { event.preventDefault(); document.getElementById('main-content')?.focus() }}>跳到主要内容</a>
-      <HarborBackdrop />
+      <HarborBackdrop quiet={isModule} />
       <TopBar />
-      <main className="main" id="main-content" tabIndex={-1}>
+      <main className={isModule ? 'main main-practice' : 'main'} id="main-content" tabIndex={-1}>
         <p className="sr-only" role="status" aria-live="polite">已进入{PAGE_LABELS[page]}</p>
         <SaveStatus />
         <Suspense fallback={<div className="loading route-loading" role="status">正在加载航线…</div>}>

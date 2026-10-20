@@ -17,6 +17,8 @@ import AnswerHint from '../../game/AnswerHint'
 import RoundSummary, { type RoundResult } from '../../game/RoundSummary'
 import { useChapterResult } from '../../game/ChapterShell'
 import ErrorCard from '../../game/ErrorCard'
+import WordPicture from '../../ui/WordPicture'
+import { wordPictureFor } from '../../../data/wordPictures'
 import { inferErrorTag } from '../../../engine/errorRouting'
 import { formatMeaning } from '../../../engine/meaning'
 import '../../game/VocabMission.css'
@@ -70,15 +72,23 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
     const state = useProgress.getState()
     const allowedLevels = vocabLevelsForTrack(track, state.difficulty.level, reviewWordLevel)
     const pool = words ?? allowedLevels.flatMap((level) => loadedPools.current?.[level] ?? getWordPool(level))
-    if (!pool.length) { setEmpty(true); return }
+    // 小学路线优先出带插画的词：图是这一学段的主要记忆锚点，
+    // 若混在 1000+ 个四六级词里随机抽，插画会被稀释到几乎看不到。
+    const picturePool = track === 'primary' ? pool.filter(word => wordPictureFor(word.word)) : []
+    const usePicturePool = picturePool.length >= target
+    const requestedWord = reviewWordId ? pool.find(word => word.id === reviewWordId || word.word === reviewWordId) ?? null : null
+    const sourcePool = usePicturePool
+      ? (requestedWord && !picturePool.includes(requestedWord) ? [...picturePool, requestedWord] : picturePool)
+      : pool
+    if (!sourcePool.length) { setEmpty(true); return }
     const reservedWordIds = new Set(requeueAt.current.values())
-    const available = pool.filter(word => !reservedWordIds.has(word.id))
+    const available = sourcePool.filter(word => !reservedWordIds.has(word.id))
     const fresh = available.filter(word => !used.current.has(word.id))
     const requestedWordId = nextIndex === 0 ? reviewWordId : null
     const candidates = orderReviewCandidates(fresh.length ? fresh : available.length ? available : pool, state.userWords, Date.now(), randomSource.current, requestedWordId)
     const consumed = consumeRetry(requeueAt.current, nextIndex)
     const requeuedWord = consumed.wordId
-    const word = requeuedWord ? pool.find((candidate) => candidate.id === requeuedWord) ?? candidates[0] : candidates[0]
+    const word = requeuedWord ? sourcePool.find((candidate) => candidate.id === requeuedWord) ?? candidates[0] : candidates[0]
     requeueAt.current = consumed.slots
     if (requestedWordId && word && (word.id === requestedWordId || word.word === requestedWordId)) useUI.getState().consumeReviewWord()
     used.current.add(word.id)
@@ -249,6 +259,10 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
 
   const percent = bank.total ? Math.min(100, Math.floor(bank.loaded / bank.total * 100)) : 0
   const answered = picked !== null
+  // 小学路线以「图像认词」为主：题面优先给插画，词形留在下方辅助。
+  // 听音题在作答前不显示插画，否则图片直接泄露答案；答题后再补上帮助记忆。
+  const pictureStem = track === 'primary' && question ? wordPictureFor(question.word.word) : null
+  const showPicture = !!pictureStem && (question?.mode !== 'listening' || answered)
   return <div className="quiz-panel vocab-mission">
     <GameHud module="vocab" />
     {saveError && <div className="bank-fallback" role="alert"><p>{saveError}</p><button className="btn btn-ghost" onClick={() => void useProgress.getState().retrySave()}>重试保存</button></div>}
@@ -260,15 +274,25 @@ export default function VocabGame({ words, roundSize = 30, random = Math.random,
       {fallback && <p className="bank-fallback" role="status">{fallback}</p>}
       <ol className="mission-route" aria-label={target + ' 站航线'}>{Array.from({ length: target }, (_, stop) => <li key={stop} className={(stop < index || (stop === index && persisted) ? 'reached ' : '') + ((stop + 1) % 10 === 0 ? 'boss-stop' : '')} aria-label={'第 ' + (stop + 1) + ' 站' + ((stop + 1) % 10 === 0 ? '，首领关' : '')} aria-current={stop === index ? 'step' : undefined}>{(stop + 1) % 10 === 0 && <span>{stop + 1}</span>}</li>)}</ol>
       <div className="mission-route-caption"><span>第 {index + 1} / {target} 站</span><span>每 10 站 · 首领挑战</span></div>
-      <section className={'card mission-card' + (question.boss ? ' is-boss' : '')}>
+      <section className={'card mission-card' + (question.boss ? ' is-boss' : '') + (showPicture ? ' has-picture' : '')}>
         <FlowGuide state={guide} />
         <div className="mission-topline"><span className="mission-eyebrow">{MODE_NAMES[question.mode]}</span>{question.boss && <span className="mission-boss">BOSS · 第 {index + 1} 站首领挑战</span>}</div>
-        <div className="word-display">
-          <h2 ref={heading} tabIndex={-1}>{question.prompt}</h2>
-          {question.mode === 'meaning' && <><div className="w-phonetic">{question.word.phonetic}</div><div className="w-pos">{question.word.pos}</div></>}
-          <button className="btn btn-ghost mission-pronounce" aria-label="播放单词发音" onClick={pronounce}><Volume2 size={17} aria-hidden="true" />{question.mode === 'listening' ? '听发音' : '单词发音'}</button>
-          {speechMessage && <p className="muted" role="status">{speechMessage}</p>}
-        </div>
+        {showPicture && pictureStem
+          ? <div className="word-stage has-art">
+            <figure className="word-picture-card"><WordPicture assetStem={pictureStem} alt={`${question.word.word} 的插画`} /><figcaption>{question.mode === 'meaning' || answered ? `看图认词 · ${question.word.word}` : '看图回想'}</figcaption></figure>
+            <div className="word-display">
+              <h2 ref={heading} tabIndex={-1}>{question.prompt}</h2>
+              {question.mode === 'meaning' && <><div className="w-phonetic">{question.word.phonetic}</div><div className="w-pos">{question.word.pos}</div></>}
+              <button className="btn btn-ghost mission-pronounce" aria-label="播放单词发音" onClick={pronounce}><Volume2 size={17} aria-hidden="true" />{question.mode === 'listening' ? '听发音' : '单词发音'}</button>
+              {speechMessage && <p className="muted" role="status">{speechMessage}</p>}
+            </div>
+          </div>
+          : <div className="word-display">
+            <h2 ref={heading} tabIndex={-1}>{question.prompt}</h2>
+            {question.mode === 'meaning' && <><div className="w-phonetic">{question.word.phonetic}</div><div className="w-pos">{question.word.pos}</div></>}
+            <button className="btn btn-ghost mission-pronounce" aria-label="播放单词发音" onClick={pronounce}><Volume2 size={17} aria-hidden="true" />{question.mode === 'listening' ? '听发音' : '单词发音'}</button>
+            {speechMessage && <p className="muted" role="status">{speechMessage}</p>}
+          </div>}
         {question.mode === 'spelling' ? <form className="spelling-form" onSubmit={event => { event.preventDefault(); submit(spelling) }}>
           <label htmlFor="vocab-spelling">输入对应的英文单词</label><input ref={spellingInput} id="vocab-spelling" value={spelling} onChange={event => setSpelling(event.target.value)} disabled={answered || !!saveError} autoComplete="off" autoCapitalize="none" spellCheck={false} /><button className="btn btn-primary" disabled={answered || !!saveError || !spelling.trim()}>提交拼写</button>
         </form> : <div className="options" role="group" aria-label="答案选项">{question.options.map((option, i) => <button key={option.text} className={'option' + (answered && option.correct ? ' correct' : answered && picked === option.text ? ' wrong' : '')} disabled={answered || !!saveError} onClick={() => submit(option.text)}><kbd aria-hidden="true">{i + 1}</kbd><span>{option.text}</span>{answered && option.correct && <span aria-label="正确答案"><Check size={15} aria-hidden /></span>}{answered && !option.correct && picked === option.text && <span aria-label="本次答错"><X size={15} aria-hidden /></span>}</button>)}</div>}

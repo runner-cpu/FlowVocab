@@ -7,6 +7,8 @@ import { useProgress } from '../../store/progressStore'
 import { useUI } from '../../store/gameStore'
 import type { ModuleKey } from '../../types'
 import StarRating from '../ui/StarRating'
+import ResponsiveSceneImage from '../ui/ResponsiveSceneImage'
+import { LEARNING_SCENES } from '../../data/learningScenes'
 import './WorldMap.css'
 
 /**
@@ -92,10 +94,12 @@ export default function ChapterShell({ module, children }: { module: ModuleKey; 
 
   const nextId = nextChapterId(views, chapter.id)
   const next = nextId ? views.find((entry) => entry.id === nextId) ?? null : null
+  const scene = LEARNING_SCENES.find((entry) => entry.module === module)
 
   return <ChapterResultContext.Provider value={{ report }}>
     <div className="chapter-shell">
       <div className="chapter-strip">
+        {scene ? <span className="chapter-strip-thumb"><ResponsiveSceneImage assetStem={scene.visual} sizes="72px" alt="" /></span> : null}
         <div className="chapter-strip-copy">
           <small>第 {view.order} 站 · {view.place}</small>
           <strong>{view.title}</strong>

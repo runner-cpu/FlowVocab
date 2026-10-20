@@ -5,6 +5,14 @@
 
 .harbor-layer { position: absolute; inset: 0; display: block; }
 
+/* 练习页自带完整深色场景，背景层只保留极弱的氛围光，不再叠加山带与水面横纹。
+   这两层曾经在浅色页面上形成一条横贯屏幕的灰白色带，是「白色块」投诉的直接来源。 */
+.harbor-backdrop-quiet .harbor-hills,
+.harbor-backdrop-quiet .harbor-water,
+.harbor-backdrop-quiet .harbor-lights { display: none; }
+
+.harbor-backdrop-quiet .harbor-sky { opacity: .55; }
+
 .harbor-sky {
   background:
     radial-gradient(circle at 78% -8%, var(--harbor-glow, rgba(84, 215, 176, .16)), transparent 42%),
