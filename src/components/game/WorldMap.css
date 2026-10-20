@@ -64,12 +64,17 @@
 .map-node.node-cleared .map-node-mark { color: var(--gold-ink); }
 
 /* 关卡壳 */
-.chapter-shell { display: grid; gap: 12px; }
-.chapter-strip { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 10px 14px; border-radius: var(--r-xl); border: 1px solid var(--line); background: var(--card); box-shadow: var(--shadow); }
+.chapter-shell { display: grid; gap: 10px; }
+/* 章节条是导航信息而非内容：高度压到 60 上下，把首屏留给题目本身。 */
+.chapter-strip { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 8px 14px; border-radius: var(--r-xl); border: 1px solid var(--line); background: var(--card); box-shadow: var(--shadow); }
 
-/* 练习页里的章节条属于深色竞技场：改用半透明深色表面，避免出现一块浅色卡片。 */
-.main-practice .chapter-strip { background: rgba(9, 40, 70, .72); border-color: var(--line); box-shadow: none; }
+/* 练习页里的章节条属于深色竞技场：改用半透明深色表面，避免出现一块浅色卡片。
+   同时压缩高度：首屏要留给题目，不该让一条导航信息占掉近 90px。 */
+.main-practice .chapter-strip { background: rgba(9, 40, 70, .72); border-color: var(--line); box-shadow: none; padding: 6px 14px; }
 .main-practice .chapter-strip .muted { color: var(--muted); }
+.main-practice .chapter-strip-thumb { width: 56px; }
+/* 练习页只需要「第几站 + 站名」两行；副标题留在关卡地图里，避免章节条吃掉首屏高度。 */
+.main-practice .chapter-strip-copy small:last-child { display: none; }
 
 .chapter-strip-thumb {
   flex: 0 0 auto; width: 72px; aspect-ratio: 4 / 3; border-radius: var(--r-md); overflow: hidden;

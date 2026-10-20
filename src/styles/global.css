@@ -182,10 +182,9 @@ input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color:
 
 .app { display: flex; flex-direction: column; min-height: 100dvh; position: relative; z-index: 1; }
 
-/* 大屏不再把内容锁在 1360px：1920 屏两侧曾各留 273px 空白，
-   视觉上像内容被挤在中间一条窄带里。改用接近视口的内容宽度，
-   小屏仍靠 clamp 保持安全边距。 */
-.main { flex: 1; width: 100%; margin: 0 auto; max-width: 1560px; padding: 34px clamp(20px, 2.4vw, 40px) 80px; min-width: 0; }
+/* 大屏尽量用满视口：1720 的上限在 1920 屏只留 100px 边距，
+   内容不再像被挤在中间一条窄带里；小屏靠 clamp 保持安全边距。 */
+.main { flex: 1; width: 100%; margin: 0 auto; max-width: 1720px; padding: 30px clamp(20px, 2.2vw, 34px) 56px; min-width: 0; }
 
 .topbar {
   position: sticky; top: 0; z-index: 100; height: var(--nav-h); backdrop-filter: blur(10px);
@@ -194,8 +193,8 @@ input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color:
 }
 
 .topbar-inner {
-  margin: 0 auto; height: 100%; display: flex; align-items: center; gap: 8px; max-width: 1560px;
-  padding: 0 clamp(20px, 2.4vw, 40px);
+  margin: 0 auto; height: 100%; display: flex; align-items: center; gap: 8px; max-width: 1720px;
+  padding: 0 clamp(20px, 2.2vw, 34px);
 }
 
 .logo {
@@ -274,11 +273,13 @@ input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color:
 
 .app-practice .topbar { border-bottom-color: var(--line); }
 
-.app-practice .topbar-inner { max-width: 1560px; }
+.app-practice .topbar-inner { max-width: 1720px; }
 
-.main-practice { max-width: none; padding-top: 22px; }
+.main-practice { max-width: none; padding-top: 10px; padding-bottom: 10px; }
 
-.main-practice .module-shell { max-width: 1200px; }
+/* 练习页与全站共用同一条 1720 内容轴：章节条、题卡、选项对齐，
+   1920 屏两侧只留约 100px 安全边距，不再出现一条窄柱。 */
+.main-practice .module-shell { max-width: 1720px; }
 
 .main-practice .module-context {
   background: rgba(9, 40, 70, .72); border-color: var(--line); box-shadow: none;
@@ -288,8 +289,8 @@ input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color:
 .main-practice .module-context-title > span { background: rgba(22, 184, 138, .16); }
 
 .module-context {
-  display: flex; align-items: center; gap: 14px; margin-bottom: 15px; border: 1px solid var(--line);
-  border-radius: var(--r-xl); padding: 10px 14px; box-shadow: var(--shadow);
+  display: flex; align-items: center; gap: 14px; margin-bottom: 10px; border: 1px solid var(--line);
+  border-radius: var(--r-xl); padding: 8px 14px; box-shadow: var(--shadow);
   background: var(--surface-raised);
 }
 
@@ -373,7 +374,10 @@ input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color:
 
 .section-heading-row .section-title { margin-bottom: 10px; }
 
-.subtitle { font-size: var(--fs-sm); margin-bottom: 8px; color: var(--muted); }
+.subtitle { font-size: var(--fs-sm); margin-bottom: 4px; color: var(--muted); }
+
+/* 练习页顶部已经有一条模块信息，这一行是重复文案；隐藏后 1440x900 能一屏放下整题。 */
+.main-practice .subtitle { display: none; }
 
 .btn {
   border: none; cursor: pointer; font-size: var(--fs-base); font-weight: 600; padding: 10px 18px;
@@ -489,7 +493,8 @@ input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color:
 
 .streak-dots span.on i { color: var(--accent); text-shadow: 0 0 8px rgba(91,127,212,.45); }
 
-.adventure-home { margin: 0 auto; max-width: 1440px; }
+/* 首页与 .main 使用同一条内容轴：1440 的旧上限会在 1920 屏再切掉一圈，形成双重留白。 */
+.adventure-home { margin: 0 auto; max-width: none; }
 
 .mission-heading { display: flex; justify-content: space-between; align-items: end; gap: 24px; margin-bottom: 26px; }
 
@@ -797,7 +802,7 @@ input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color:
 
 /* ===== 6. Components — practice, feedback and learning controls ===== */
 
-.game-hud { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 14px; }
+.game-hud { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; margin-bottom: 8px; }
 
 .combo-chip {
   display: inline-flex; align-items: center; gap: 6px; font-weight: 800; padding: 6px 14px;
@@ -845,11 +850,13 @@ input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color:
   padding: 10px 18px; font-size: var(--fs-3xl); box-shadow: 0 6px 20px rgba(127,29,29,.2);
 }
 
-/* 答题卡按「阅读行长」收窄，但不至于在大屏上缩成一条窄柱。 */
-.quiz-panel { max-width: 920px; margin: 0 auto; }
+/* 答题卡不再按「阅读行长」收窄成一条窄柱：练习页是沉浸式舞台，
+   卡片跟着 1720 的外壳铺满，1920 屏两侧只剩约 100px 安全边距。
+   题干与两列选项因此都有足够宽度，不必上下滚动。 */
+.quiz-panel { max-width: none; margin: 0 auto; }
 
 /* 关卡壳是网格容器：margin:auto 会取消网格项的拉伸，让整个练习区缩成内容宽度。
-   显式拉满是让 1200 的舞台真正被用起来，同时保留 920 的阅读行长上限。 */
+   显式拉满是让 1600 的舞台真正被用起来，同时保留 1180 的阅读行长上限。 */
 .chapter-shell .quiz-panel { width: 100%; }
 
 .word-display { text-align: center; padding: 26px 20px; }
@@ -893,7 +900,13 @@ input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color:
 
 .word-display .w-pos { font-size: var(--fs-base); margin-top: 8px; color: var(--accent-ink); }
 
-.options { display: flex; flex-direction: column; gap: 10px; margin-top: 18px; }
+.options { display: flex; flex-direction: column; gap: 10px; margin-top: 16px; }
+
+/* 宽屏把四个选项排成 2×2：一列到底会让答题卡被拉长到必须滚动，
+   两列后题干、选项、提示与操作按钮能完整落在一屏内。 */
+@media (min-width: 1080px) {
+  .quiz-panel .options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); align-items: stretch; }
+}
 
 .option {
   border: 2px solid var(--control-line); background: var(--card); border-radius: var(--r-lg);
@@ -1103,7 +1116,7 @@ textarea.essay:focus { border-color: var(--accent-ink); }
 /* Practice is intentionally dark, including inherited forms, skills, stories and spelling inputs. */
 
 .module-shell .quiz-panel {
-  padding: 14px 16px 20px; border-radius: var(--r-2xl);
+  padding: 12px 18px 16px; border-radius: var(--r-2xl);
   background: linear-gradient(160deg, #082949, #061b34);
   box-shadow: 0 20px 44px rgba(8, 30, 53, .16); color-scheme: dark;
   --bg: #061b34;
@@ -1413,7 +1426,7 @@ textarea.essay:focus { border-color: var(--accent-ink); }
 
 .heatmap-card { padding: 12px 16px; }
 
-.growth-page { max-width: 1440px; margin: 0 auto; }
+.growth-page { max-width: none; margin: 0 auto; }
 
 .growth-heading {
   display: flex; align-items: flex-end; justify-content: space-between; gap: 20px;
