@@ -90,3 +90,33 @@ test('gives every transition a duration token and the shared easing token', () =
   }
   assert.deepEqual(offenders, [], 'transition 必须带时长与统一缓动令牌')
 })
+
+/**
+ * 主题一致性：练习页曾把整套深色令牌写死在 `.app-practice` 里，
+ * 于是切到浅色后词汇、语法等模块仍然全黑。这里钉住两条规则：
+ *  1. 未被 `:root[data-theme='dark']` 守卫的 `.app-practice` 只能定义 `--practice-*` 派生变量；
+ *  2. 练习页的深色值必须全部落在 `:root[data-theme='dark'] .app-practice` 里。
+ */
+test('keeps the practice shell on theme tokens instead of a hardcoded dark palette', () => {
+  const css = read(join(srcRoot, 'styles/global.css'))
+  const blocks = [...css.matchAll(/([^{}]*)\{([^{}]*)\}/g)]
+  const themeTokens = ['--bg', '--card', '--surface-soft', '--ink', '--ink2', '--muted', '--line', '--control-line']
+  const offenders = []
+
+  for (const [, selector, body] of blocks) {
+    const name = selector.trim()
+    if (!/(^|,)\s*\.app-practice\s*$/.test(name)) continue
+    if (name.includes("data-theme='dark'")) continue
+    for (const token of themeTokens) {
+      if (new RegExp(`${token}\\s*:`).test(body)) offenders.push(`${name} 在浅色下重定义了 ${token}`)
+    }
+    const declareds = [...body.matchAll(/(--[a-z0-9-]+)\s*:/g)].map((match) => match[1])
+    for (const variable of declareds) {
+      if (!variable.startsWith('--practice-')) offenders.push(`${name} 声明了非练习页变量 ${variable}`)
+    }
+  }
+
+  assert.deepEqual(offenders, [], '练习页必须跟随主题，只能定义 --practice-* 派生变量')
+  assert.match(css, /:root\[data-theme='dark'\] \.app-practice\s*\{/, '深色练习页必须由 data-theme 守卫')
+})
+

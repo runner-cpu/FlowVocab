@@ -68,9 +68,9 @@
 /* 章节条是导航信息而非内容：高度压到 60 上下，把首屏留给题目本身。 */
 .chapter-strip { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; padding: 8px 14px; border-radius: var(--r-xl); border: 1px solid var(--line); background: var(--card); box-shadow: var(--shadow); }
 
-/* 练习页里的章节条属于深色竞技场：改用半透明深色表面，避免出现一块浅色卡片。
-   同时压缩高度：首屏要留给题目，不该让一条导航信息占掉近 90px。 */
-.main-practice .chapter-strip { background: rgba(9, 40, 70, .72); border-color: var(--line); box-shadow: none; padding: 6px 14px; }
+/* 练习页里的章节条跟随主题：浅色是半透明白卡，深色是半透明深卡。
+   这里曾经写死 rgba(9,40,70,.72)，导致浅色模式下这块永远是深色。 */
+.main-practice .chapter-strip { background: var(--practice-chrome); border-color: var(--line); box-shadow: none; padding: 6px 14px; }
 .main-practice .chapter-strip .muted { color: var(--muted); }
 .main-practice .chapter-strip-thumb { width: 56px; }
 /* 练习页只需要「第几站 + 站名」两行；副标题留在关卡地图里，避免章节条吃掉首屏高度。 */
@@ -78,7 +78,7 @@
 
 .chapter-strip-thumb {
   flex: 0 0 auto; width: 72px; aspect-ratio: 4 / 3; border-radius: var(--r-md); overflow: hidden;
-  border: 1px solid var(--line); background: rgba(4, 20, 38, .4);
+  border: 1px solid var(--line); background: var(--practice-chrome-soft);
 }
 
 .chapter-strip-thumb img { width: 100%; height: 100%; object-fit: cover; display: block; }

@@ -236,10 +236,21 @@ input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color:
 
 .module-shell { margin: 0 auto; max-width: 1120px; }
 
-/* 练习页是完整的深色竞技场。
-   以前只有答题卡是深色，浅色页面会在两侧漏出来，形成一条被误读为「白色块」的带状区域。
-   这里把深色令牌整体作用到应用外壳，顶栏、模块上下文、章节条都属于同一个场景。 */
+/* 练习页是全站唯一带舞台感的区域，但它必须跟随浅色 / 深色主题。
+   早期这里直接写死一套深色令牌，导致切到浅色后词汇、语法等模块仍然全黑。
+   现在只保留舞台用的三个派生令牌（表面、导航条、缩略图底），
+   真正的配色由 :root 与 :root[data-theme='dark'] 决定。 */
 .app-practice {
+  --practice-surface: linear-gradient(160deg, #ffffff 0%, #f1f8fc 60%, #eaf4fa 100%);
+  --practice-chrome: rgba(255, 255, 255, .82);
+  --practice-chrome-soft: rgba(237, 246, 251, .78);
+  background:
+    radial-gradient(1100px 640px at 78% -14%, rgba(22, 184, 138, .10), transparent 62%),
+    radial-gradient(900px 560px at 10% 108%, rgba(63, 127, 214, .10), transparent 60%),
+    linear-gradient(168deg, #f8fcfe 0%, #eef6fb 58%, #e8f2f9 100%);
+}
+
+:root[data-theme='dark'] .app-practice {
   color-scheme: dark;
   --bg: #061b34;
   --card: rgba(9, 40, 70, .94);
@@ -265,6 +276,9 @@ input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color:
   --nav-surface: rgba(4, 18, 34, .88);
   --mobile-nav-surface: rgba(4, 18, 34, .96);
   --progress-track: #24475f;
+  --practice-surface: linear-gradient(160deg, #082949, #061b34);
+  --practice-chrome: rgba(9, 40, 70, .72);
+  --practice-chrome-soft: rgba(4, 18, 34, .4);
   background:
     radial-gradient(1100px 640px at 78% -14%, rgba(57, 217, 171, .16), transparent 62%),
     radial-gradient(900px 560px at 10% 108%, rgba(63, 127, 214, .18), transparent 60%),
@@ -282,11 +296,11 @@ input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color:
 .main-practice .module-shell { max-width: 1720px; }
 
 .main-practice .module-context {
-  background: rgba(9, 40, 70, .72); border-color: var(--line); box-shadow: none;
+  background: var(--practice-chrome); border-color: var(--line); box-shadow: none;
   backdrop-filter: blur(12px);
 }
 
-.main-practice .module-context-title > span { background: rgba(22, 184, 138, .16); }
+.main-practice .module-context-title > span { background: var(--accent-bg); }
 
 .module-context {
   display: flex; align-items: center; gap: 14px; margin-bottom: 10px; border: 1px solid var(--line);
@@ -1137,32 +1151,12 @@ textarea.essay:focus { border-color: var(--accent-ink); }
 
 .quiz-panel .card { box-shadow: 0 16px 40px rgba(10,35,64,.14); }
 
-/* Practice is intentionally dark, including inherited forms, skills, stories and spelling inputs. */
-
+/* 练习卡片沿用主题令牌，深色模式下由 :root[data-theme='dark'] 提供深色值；
+   这里不再重复定义一整套深色变量，避免切换浅色时被局部覆盖。 */
 .module-shell .quiz-panel {
   padding: 12px 18px 16px; border-radius: var(--r-2xl);
-  background: linear-gradient(160deg, #082949, #061b34);
-  box-shadow: 0 20px 44px rgba(8, 30, 53, .16); color-scheme: dark;
-  --bg: #061b34;
-  --card: rgba(9,40,70,.94);
-  --surface-soft: #123959;
-  --ink: #eff8ff;
-  --ink2: #b6c9dc;
-  --muted: #a7bdd0;
-  --line: rgba(121,190,230,.24);
-  --control-line: #62849f;
-  --accent: #39d9ab;
-  --accent-light: #75f3d1;
-  --accent-bg: rgba(22,184,138,.15);
-  --accent-ink: #8fe2cb;
-  --on-accent: #052d25;
-  --ok: #65dfa9;
-  --on-ok: #052d25;
-  --err: #ffab9d;
-  --gold: #ffbd62;
-  --gold-ink: #ffbd62;
-  --info: #a8d0ff;
-  --focus-ring: #8cf0d3;
+  background: var(--practice-surface);
+  box-shadow: 0 20px 44px rgba(8, 30, 53, .12);
   color: var(--ink);
 }
 
@@ -1177,23 +1171,23 @@ textarea.essay:focus { border-color: var(--accent-ink); }
 .module-shell .quiz-panel .muted { color: var(--muted); }
 
 .module-shell .quiz-panel .option {
-  color: #e9f5ff; background: var(--surface-soft); border-color: var(--control-line);
+  color: var(--ink); background: var(--surface-soft); border-color: var(--control-line);
 }
 
 .module-shell .quiz-panel .option:hover:not(:disabled) {
-  border-color: var(--accent); background: rgba(22,184,138,.15);
+  border-color: var(--accent); background: var(--accent-bg);
 }
 
-.module-shell .quiz-panel .option.correct { background: rgba(22,184,138,.2); color: #eafff8; border-color: var(--ok); }
+.module-shell .quiz-panel .option.correct { background: color-mix(in srgb, var(--ok) 14%, var(--card)); color: var(--ink); border-color: var(--ok); }
 
-.module-shell .quiz-panel .option.wrong { background: rgba(242,140,92,.18); color: #fff0e8; border-color: var(--err); }
+.module-shell .quiz-panel .option.wrong { background: color-mix(in srgb, var(--err) 14%, var(--card)); color: var(--ink); border-color: var(--err); }
 
-.module-shell .quiz-panel .word-display .w-word { color: #fff; }
+.module-shell .quiz-panel .word-display .w-word { color: var(--ink); }
 
-.module-shell .quiz-panel .word-display .w-phonetic, .module-shell .quiz-panel .word-display .w-pos { color: #8fe2cb; }
+.module-shell .quiz-panel .word-display .w-phonetic, .module-shell .quiz-panel .word-display .w-pos { color: var(--accent-ink); }
 
 .module-shell .quiz-panel .explain-box {
-  background: rgba(22,184,138,.13); border-color: rgba(77,214,177,.26); color: var(--ink);
+  background: var(--accent-bg); border-color: color-mix(in srgb, var(--accent) 28%, transparent); color: var(--ink);
 }
 
 .module-shell .quiz-panel .progress-strip { color: var(--muted); }
