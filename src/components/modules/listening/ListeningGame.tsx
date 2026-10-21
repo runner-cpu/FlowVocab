@@ -356,8 +356,9 @@ export default function ListeningGame({ items = LISTENING_ITEMS }: { items?: Lis
       {result && <div className="score-report" role="status"><strong>命中 {Math.round(result.ratio * 100)}% {result.ratio >= .6 ? <><Check size={14} aria-hidden /> 点亮本句</> : '未达标，可重试'}</strong><p>识别结果：{recognized || '未识别到内容'}</p><p lang="en">原句：{item.text}</p><p className="muted">按识别文字匹配，结果不代表发音评分。</p><button className="btn btn-ghost mt8" onClick={resetQuestion} disabled={!!saveError}>再试一次</button><button className="btn btn-primary mt8" onClick={next} disabled={!!saveError}>{qIndex + 1 >= selectedItems.length ? '完成本轮' : '下一句'}</button></div>}
       {errorCard && <ErrorCard tag={errorCard.tag} chosen={errorCard.chosen} correctAnswer={errorCard.correctAnswer} explain={errorCard.explain} onDismiss={() => setErrorCard(null)} />}
     </> : <>
-      <p className="muted mt8">选出原句中的单词。{!ttsSupport && '当前浏览器不支持朗读，可展开原句进行阅读练习。'}</p>
-      {!ttsSupport && <details className="explain-box"><summary>查看原句</summary><p lang="en">{item.text}</p></details>}
+      <p className="muted mt8">选出原句中的单词。{!ttsSupport && '当前浏览器不支持朗读：先根据上下文作答，提交后会显示原句供核对。'}</p>
+      {!ttsSupport && !answered && <p className="explain-box" role="note">此环境无法播放语音，原句将在作答后显示，避免直接照抄答案。</p>}
+      {!ttsSupport && answered && <details className="explain-box" open><summary>查看原句</summary><p lang="en">{item.text}</p></details>}
       <div className="sentence-blanks" lang="en">{targetWords.map((word, index) => { const blank = item.blanks.find(candidate => candidate.index === index); return <span key={index}>{blank ? picked[index] !== undefined ? blank.options[picked[index]] : '_____' : word} </span> })}</div>
       {blankViews.map(view => <div key={view.blankIndex} className="word-options" role="group" aria-label={`第 ${view.blankIndex + 1} 个词`}>
         {view.options.map((option, index) => <button key={option.text} className={`btn ${picked[view.blankIndex] !== undefined && option.correct ? 'btn-success' : 'btn-ghost'}`} disabled={picked[view.blankIndex] !== undefined || !!saveError} onClick={() => pick(view.blankIndex, index)}>{option.text}</button>)}

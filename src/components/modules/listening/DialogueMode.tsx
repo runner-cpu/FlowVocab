@@ -240,13 +240,18 @@ export default function DialogueMode({ scene, passedIds, onScored, onSceneComple
 
     <section className="dialogue-question" aria-label="本题目">
       <p className="dialogue-prompt">{question.prompt}</p>
-      <p className="dialogue-reference" lang="en">
-        {reference.map((token, index) => (
-          <span key={`${token.word}-${index}`} className={`dialogue-token ${result ? (token.hit ? 'dialogue-hit' : 'dialogue-miss') : ''}`}>
-            {token.word}
-          </span>
-        ))}
-      </p>
+      {/* 参考句只在作答后出现：它在作答前就是标准答案，摆在题面上等于让人照着念。 */}
+      {result ? (
+        <p className="dialogue-reference" lang="en">
+          {reference.map((token, index) => (
+            <span key={`${token.word}-${index}`} className={`dialogue-token ${token.hit ? 'dialogue-hit' : 'dialogue-miss'}`}>
+              {token.word}
+            </span>
+          ))}
+        </p>
+      ) : (
+        <p className="dialogue-note" role="note">按中文提示完整说出英文句子，提交后显示参考句与逐词比对。</p>
+      )}
       <p className="dialogue-hint">规则提示：{DIALOGUE_RULE_LABELS[question.rule] ?? question.rule}</p>
     </section>
 

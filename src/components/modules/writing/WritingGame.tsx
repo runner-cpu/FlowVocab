@@ -19,6 +19,15 @@ function shuffle<T>(values: T[]): T[] {
   return result
 }
 
+/** 初始顺序不能正好是答案：排序题一旦开局即正确，等于把答案摆在题面上。 */
+export function shuffledWritingOrder<T>(values: T[]): T[] {
+  const result = shuffle(values)
+  if (values.length < 2) return result
+  const alreadySolved = result.every((item, index) => item === values[index])
+  if (!alreadySolved) return result
+  return [...result.slice(1), result[0]]
+}
+
 export function moveWritingSegment<T>(items: T[], index: number, direction: -1 | 1): T[] {
   const destination = index + direction
   if (index < 0 || index >= items.length || destination < 0 || destination >= items.length) return [...items]
@@ -34,7 +43,7 @@ export default function WritingGame() {
   const submitWriting = useProgress((state) => state.submitWriting)
   const [taskIdx, setTaskIdx] = useState(0)
   const task = tasks[taskIdx] ?? tasks[0]
-  const initialOrder = useMemo(() => shuffle(task?.segments ?? []), [task])
+  const initialOrder = useMemo(() => shuffledWritingOrder(task?.segments ?? []), [task])
   const [order, setOrder] = useState<string[]>(initialOrder)
   const [previousOrder, setPreviousOrder] = useState<string[] | null>(null)
   const [draggedIndex, setDraggedIndex] = useState<number | null>(null)

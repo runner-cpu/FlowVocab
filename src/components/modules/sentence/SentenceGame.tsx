@@ -21,6 +21,21 @@ export function placeSentenceSegment(segments: { bucket: Bucket }[], placed: Rec
   return { placed: next, correct: true, complete: segments.every((_, segmentIndex) => next[segmentIndex] !== undefined) }
 }
 
+/** 片段打乱后必须真的打乱：若正好还是原文顺序，拼图一开始就是答案。 */
+export function shuffledSegments<T extends { bucket: Bucket }>(segments: T[], random: () => number = Math.random): (T & { idx: number })[] {
+  const result = segments.map((segment, index) => ({ ...segment, idx: index }))
+  for (let i = result.length - 1; i > 0; i -= 1) {
+    const j = Math.floor(random() * (i + 1))
+    ;[result[i], result[j]] = [result[j], result[i]]
+  }
+  const solved = result.every((segment, position) => segment.idx === position)
+  if (solved && result.length > 1) {
+    // 保底：把首尾对调，顺序必然与原文不同，同时保留原有的随机性。
+    ;[result[0], result[result.length - 1]] = [result[result.length - 1], result[0]]
+  }
+  return result
+}
+
 const bucketNames: Record<Bucket, string> = { main: '主干', clause: '从句', modifier: '修饰成分' }
 
 export default function SentenceGame() {
@@ -100,12 +115,7 @@ export default function SentenceGame() {
 
   const segments = useMemo(() => {
     if (!quest || quest.type !== 'puzzle' || !quest.segments) return []
-    const result = quest.segments.map((segment, index) => ({ ...segment, idx: index }))
-    for (let i = result.length - 1; i > 0; i -= 1) {
-      const j = Math.floor(Math.random() * (i + 1))
-      ;[result[i], result[j]] = [result[j], result[i]]
-    }
-    return result
+    return shuffledSegments(quest.segments, Math.random)
   }, [quest])
 
   function resetPuzzle(message = '已重置本题') { setPlaced({}); setPreviousPlaced(null); setPicked(null); setDragged(null); setAnnouncement(message); setErrorCard(null) }
@@ -200,6 +210,7 @@ export default function SentenceGame() {
   return <div className="quiz-panel"><GameHud module="sentence" /><div className="card">
     <div className="card-title">{quest.type === 'puzzle' ? <><Puzzle size={16} aria-hidden /> 长难句拼图</> : <><Wrench size={16} aria-hidden /> 翻译对决</>}<span style={{ marginLeft: 'auto', fontSize: 12, color: 'var(--muted)' }}>{qIndex + 1} / {quests.length}</span></div>
     <div className="story-box" style={{ fontSize: 14.5 }}>{quest.sentence}</div>
+    {quest.type === 'translate' && quest.prompt && <p className="muted mt8">{quest.prompt}</p>}
     {quest.type === 'puzzle' && quest.segments && <>
       <div className="chips segment-pool">{segments.map((segment) => <button type="button" key={segment.idx} draggable={placed[segment.idx] === undefined} disabled={placed[segment.idx] !== undefined} aria-pressed={picked === segment.idx} onDragStart={() => setDragged(segment.idx)} onDragEnd={() => setDragged(null)} onClick={() => setPicked(picked === segment.idx ? null : segment.idx)} className={`chip segment-chip ${picked === segment.idx ? 'picked' : ''} ${placed[segment.idx] !== undefined ? 'placed' : ''} ${flashWrong === segment.idx ? 'wrong-flash' : ''}`}>{segment.text}</button>)}</div>
       <p className="muted interaction-hint">拖动片段，或先点选片段再选择目标区域。</p>

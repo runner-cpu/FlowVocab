@@ -13,8 +13,8 @@ import { LISTENING_ITEMS } from '../../data/listening'
 import { WRITING_TASKS } from '../../data/writing'
 import { CHAPTERS } from '../../data/reading'
 import { SENTENCE_QUESTS } from '../../data/sentences'
-import { placeSentenceSegment } from './sentence/SentenceGame'
-import { moveWritingSegment } from './writing/WritingGame'
+import { placeSentenceSegment, shuffledSegments } from './sentence/SentenceGame'
+import { moveWritingSegment, shuffledWritingOrder } from './writing/WritingGame'
 import { ruleExplanation, inferErrorTag } from '../../engine/errorRouting'
 
 describe('sentence bucket placement', () => {
@@ -45,6 +45,41 @@ describe('writing order movement', () => {
   it('does not move a fragment beyond either edge', () => {
     expect(moveWritingSegment(['first', 'second'], 0, -1)).toEqual(['first', 'second'])
     expect(moveWritingSegment(['first', 'second'], 1, 1)).toEqual(['first', 'second'])
+  })
+})
+
+describe('puzzle start states never show the solved answer', () => {
+  const segments = [
+    { text: 'Only when we make full use of time', bucket: 'main' as const },
+    { text: 'can we achieve', bucket: 'main' as const },
+    { text: 'our goals in study', bucket: 'main' as const }
+  ]
+
+  it('re-shuffles a writing task that would otherwise open already solved', () => {
+    // Math.random 恒为 0.999 时洗牌不改变顺序，保底逻辑必须介入。
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0.999)
+    try {
+      expect(shuffledWritingOrder(['a', 'b', 'c'])).not.toEqual(['a', 'b', 'c'])
+    } finally { random.mockRestore() }
+  })
+
+  it('keeps every writing fragment exactly once after the fallback', () => {
+    const random = vi.spyOn(Math, 'random').mockReturnValue(0.999)
+    try {
+      expect([...shuffledWritingOrder(['a', 'b', 'c'])].sort()).toEqual(['a', 'b', 'c'])
+    } finally { random.mockRestore() }
+  })
+
+  it('re-shuffles sentence fragments that would otherwise arrive in source order', () => {
+    let calls = 0
+    const order = shuffledSegments(segments, () => { calls += 1; return 0.999 })
+    expect(calls).toBeGreaterThan(0)
+    expect(order.map((segment) => segment.idx)).not.toEqual([0, 1, 2])
+  })
+
+  it('keeps every sentence fragment exactly once', () => {
+    const order = shuffledSegments(segments, () => 0.999)
+    expect(order.map((segment) => segment.text).sort()).toEqual(segments.map((segment) => segment.text).sort())
   })
 })
 
@@ -453,8 +488,13 @@ describe('mistake review deep links', () => {
   it('opens the recorded listening sentence in dictation mode', async () => {
     useUI.setState({ reviewTarget: { module: 'listening', contentId: 'l4' } })
     render(createElement(ListeningGame))
-    expect(await screen.findByText(/half past seven/)).toBeInTheDocument()
+    // 原句在作答前不整句显示（否则等于把答案摊开），只保留挖空后的题面。
+    const blanks = document.querySelector('.sentence-blanks')
+    expect(blanks?.textContent).toContain('half past')
+    expect(blanks?.textContent).toContain('_____')
+    expect(blanks?.textContent).not.toContain('leaves')
     expect(screen.getByText('第 4 / 8 句')).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: 'leaves' })).toBeInTheDocument()
   })
 
   it('explains a listening mistake with the same offline rule card as other modules', () => {

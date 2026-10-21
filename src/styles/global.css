@@ -946,6 +946,30 @@ input[type="checkbox"], input[type="radio"], input[type="range"] { accent-color:
 
 .explain-box .ex-eg { color: var(--ink2); margin-top: 6px; font-size: var(--fs-sm); }
 
+/* 语法例句默认折叠：它是讲解材料，不是题面的一部分。
+   展开后与题目分属两个视觉区块，避免学习者逐字对照例句抄答案。 */
+.grammar-examples { margin-top: 10px; }
+
+.grammar-examples > summary {
+  display: inline-flex; align-items: center; gap: 6px; cursor: pointer;
+  padding: 5px 12px; border: 1px solid var(--control-line); border-radius: var(--r-pill);
+  font-size: var(--fs-sm); color: var(--ink2); background: var(--surface-soft);
+  transition: color var(--dur-fast) var(--ease-standard), border-color var(--dur-fast) var(--ease-standard);
+}
+
+.grammar-examples > summary:hover { color: var(--ink); border-color: var(--accent-ink); }
+
+.grammar-examples[open] > summary { margin-bottom: 2px; }
+
+.grammar-question { border-top: 1px solid var(--line); padding-top: 12px; }
+
+.grammar-question-label { margin: 0; color: var(--muted); font-size: var(--fs-sm); }
+
+.grammar-question-text {
+  margin: 6px 0 0; color: var(--ink); font-size: var(--fs-xl); font-weight: 600;
+  line-height: 1.5; overflow-wrap: anywhere;
+}
+
 .skill-tree { display: flex; flex-direction: column; gap: 12px; }
 
 .skill-branch { border: 1px solid var(--line); border-radius: var(--r-lg); padding: 12px 14px; background: var(--card); }
