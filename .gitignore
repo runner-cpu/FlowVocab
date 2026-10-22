@@ -19,6 +19,9 @@ data-src/
 .zcode/
 .mimosa/
 
+# 参赛打包产物（PDF、视频、截图与压缩包，体积大，可按文档重新生成）
+submission/
+
 # 系统文件
 .DS_Store
 Thumbs.db
