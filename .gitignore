@@ -16,6 +16,7 @@ data-src/
 # 本地预览缓存
 .preview/
 .worktrees/
+.work/
 .zcode/
 .mimosa/
 
