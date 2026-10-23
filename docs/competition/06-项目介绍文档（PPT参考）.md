@@ -4,7 +4,6 @@
 
 **作品编号：** 452953  
 **参赛赛项：** 自主选题类（七）智慧教育与科普创作类赛项  
-**参赛方向：** 方向（2）虚拟实验、教育游戏和智能学习工具  
 **成果形态：** Web 应用（PWA，可安装、可离线）  
 **线上地址：** https://runner-cpu.github.io/FlowVocab/  
 **源码仓库：** https://github.com/runner-cpu/FlowVocab  
